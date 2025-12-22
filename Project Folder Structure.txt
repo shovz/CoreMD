@@ -1,0 +1,143 @@
+harrison-study-platform/
+├─ backend/
+│  ├─ app/
+│  │  ├─ api/
+│  │  │  ├─ v1/
+│  │  │  │  ├─ routes/
+│  │  │  │  │  ├─ auth.py
+│  │  │  │  │  ├─ chapters.py
+│  │  │  │  │  ├─ questions.py
+│  │  │  │  │  ├─ cases.py
+│  │  │  │  │  ├─ ai.py
+│  │  │  │  │  └─ users.py
+│  │  │  │  └─ __init__.py
+│  │  │  └─ __init__.py
+│  │  ├─ core/
+│  │  │  ├─ config.py        # settings, env vars
+│  │  │  ├─ security.py      # password hashing, JWT utils
+│  │  │  ├─ logging.py
+│  │  │  └─ __init__.py
+│  │  ├─ db/
+│  │  │  ├─ mongo.py         # MongoDB client, connection helpers
+│  │  │  ├─ redis.py         # Redis client, cache helpers
+│  │  │  └─ __init__.py
+│  │  ├─ models/             # DB-level models / schemas used with Mongo
+│  │  │  ├─ user.py
+│  │  │  ├─ chapter.py
+│  │  │  ├─ question.py
+│  │  │  ├─ case.py
+│  │  │  ├─ text_chunk.py
+│  │  │  └─ __init__.py
+│  │  ├─ schemas/            # Pydantic schemas for API I/O
+│  │  │  ├─ auth.py
+│  │  │  ├─ user.py
+│  │  │  ├─ chapter.py
+│  │  │  ├─ question.py
+│  │  │  ├─ case.py
+│  │  │  ├─ ai.py
+│  │  │  └─ __init__.py
+│  │  ├─ services/           # business logic
+│  │  │  ├─ auth_service.py
+│  │  │  ├─ chapter_service.py
+│  │  │  ├─ question_service.py
+│  │  │  ├─ case_service.py
+│  │  │  ├─ ai_service.py    # RAG pipeline
+│  │  │  ├─ ingestion_service.py  # PDF → Mongo/embeddings
+│  │  │  └─ __init__.py
+│  │  ├─ utils/
+│  │  │  ├─ pdf_parser.py    # PDF text extraction helpers
+│  │  │  ├─ chunking.py      # text chunking logic
+│  │  │  ├─ embeddings.py    # embedding API wrappers
+│  │  │  └─ __init__.py
+│  │  ├─ main.py             # FastAPI app, include_router, startup events
+│  │  └─ __init__.py
+│  ├─ tests/
+│  │  ├─ test_auth.py
+│  │  ├─ test_chapters.py
+│  │  ├─ test_questions.py
+│  │  ├─ test_ai.py
+│  │  └─ __init__.py
+│  ├─ scripts/
+│  │  ├─ ingest_harrison_pdf.py   # offline ingestion script
+│  │  ├─ generate_embeddings.py   # offline embedding generation
+│  │  └─ seed_questions.py
+│  ├─ Dockerfile
+│  ├─ pyproject.toml or requirements.txt
+│  └─ README.md
+│
+├─ frontend/
+│  ├─ src/
+│  │  ├─ api/                # API clients (axios/fetch wrappers)
+│  │  │  ├─ authApi.ts
+│  │  │  ├─ chapterApi.ts
+│  │  │  ├─ questionApi.ts
+│  │  │  ├─ caseApi.ts
+│  │  │  └─ aiApi.ts
+│  │  ├─ components/
+│  │  │  ├─ layout/
+│  │  │  │  ├─ Navbar.tsx
+│  │  │  │  ├─ Sidebar.tsx
+│  │  │  │  └─ ProtectedRoute.tsx
+│  │  │  ├─ chapters/
+│  │  │  │  ├─ ChapterList.tsx
+│  │  │  │  ├─ ChapterDetail.tsx
+│  │  │  │  └─ SectionCard.tsx
+│  │  │  ├─ questions/
+│  │  │  │  ├─ QuestionCard.tsx
+│  │  │  │  ├─ QuizResult.tsx
+│  │  │  │  └─ QuestionFilter.tsx
+│  │  │  ├─ cases/
+│  │  │  │  ├─ CaseList.tsx
+│  │  │  │  └─ CaseDetail.tsx
+│  │  │  ├─ ai/
+│  │  │  │  ├─ ChatWindow.tsx
+│  │  │  │  ├─ MessageBubble.tsx
+│  │  │  │  └─ ReferenceList.tsx
+│  │  │  └─ common/
+│  │  │     ├─ Button.tsx
+│  │  │     ├─ Card.tsx
+│  │  │     ├─ Loader.tsx
+│  │  │     └─ ErrorBanner.tsx
+│  │  ├─ pages/
+│  │  │  ├─ LoginPage.tsx
+│  │  │  ├─ RegisterPage.tsx
+│  │  │  ├─ DashboardPage.tsx
+│  │  │  ├─ ChaptersPage.tsx
+│  │  │  ├─ QuestionsPage.tsx
+│  │  │  ├─ CasesPage.tsx
+│  │  │  └─ ChatPage.tsx
+│  │  ├─ context/
+│  │  │  ├─ AuthContext.tsx
+│  │  │  └─ UIContext.tsx
+│  │  ├─ hooks/
+│  │  │  ├─ useAuth.ts
+│  │  │  ├─ useApi.ts
+│  │  │  └─ useChat.ts
+│  │  ├─ types/
+│  │  │  ├─ auth.ts
+│  │  │  ├─ chapter.ts
+│  │  │  ├─ question.ts
+│  │  │  ├─ case.ts
+│  │  │  └─ ai.ts
+│  │  ├─ styles/
+│  │  │  └─ index.css or tailwind.css
+│  │  ├─ App.tsx
+│  │  ├─ main.tsx           # React entry (with Vite) or index.tsx (CRA)
+│  │  └─ router.tsx         # React Router config
+│  ├─ public/
+│  ├─ Dockerfile
+│  ├─ package.json
+│  └─ README.md
+│
+├─ infra/                    # optional: infra-as-code, deployment configs
+│  ├─ docker-compose.yml
+│  ├─ env/
+│  │  ├─ .env.development.example
+│  │  └─ .env.production.example
+│  ├─ aws/
+│  │  ├─ ecs-task-def.json
+│  │  ├─ cloudformation-templates/
+│  │  └─ README.md
+│  └─ README.md
+│
+└─ PROJECT_SPEC.md           # the Markdown spec file you asked for
