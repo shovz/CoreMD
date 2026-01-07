@@ -1,6 +1,8 @@
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
 from app.core.config import settings
+from app.db.mongo import get_db
+
 
 # Import the auth router
 from app.api.v1.routes import auth, chapters, questions, cases, ai, debug
@@ -12,19 +14,19 @@ from app.db.redis import connect_to_redis, close_redis_connection
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # 🔵 STARTUP
     connect_to_mongo()
     print("MongoDB connected")
+
+    db = get_db()
+    db.users.create_index("email", unique=True)
+
     connect_to_redis()
     print("Redis connected")
 
-    yield  # ⬅️ FastAPI runs here
+    yield
 
-    # 🔴 SHUTDOWN
     close_mongo_connection()
-    print("MongoDB connection closed")
     close_redis_connection()
-    print("Redis connection closed")
 
 app = FastAPI(
     title="CoreMD Backend",

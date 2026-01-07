@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import List
 
 
@@ -12,3 +12,7 @@ class ChapterOut(ChapterBase):
 
     class Config:
         orm_mode = True
+
+class ChapterCreate(BaseModel):
+    title: str = Field(..., min_length=3)
+    specialty: str = Field(..., min_length=3)
