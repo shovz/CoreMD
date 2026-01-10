@@ -1,3 +1,4 @@
+from redis import Redis
 from bson import ObjectId
 from app.models.question_attempt import QuestionAttemptInDB
 
@@ -6,6 +7,7 @@ ATTEMPTS_COLLECTION = "question_attempts"
 
 def record_attempt(
     db,
+    redis: Redis,
     *,
     user_id: str,
     question_id: str,
@@ -23,4 +25,8 @@ def record_attempt(
     )
 
     db[ATTEMPTS_COLLECTION].insert_one(attempt.to_mongo())
+
+    redis.delete(f"stats:overview:{user_id}")
+    redis.delete(f"stats:questions:{user_id}")
+    redis.delete(f"stats:chapters:{user_id}")
     return attempt

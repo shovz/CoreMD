@@ -1,11 +1,13 @@
 from fastapi import APIRouter
 from fastapi import Depends, HTTPException
+from redis import Redis
 from pymongo.database import Database
 
 from app.core.auth import get_current_user
 from app.schemas.question_attempt import QuestionAttemptCreate, QuestionAttemptOut
 from app.services.question_attempt_service import record_attempt
 from app.db.deps import mongo_db
+from app.db.deps import redis_db
 
 
 router = APIRouter(
@@ -24,6 +26,8 @@ def attempt_question(
     attempt: QuestionAttemptCreate,
     current_user: str = Depends(get_current_user),
     db: Database = Depends(mongo_db),
+    redis: Redis = Depends(redis_db),
+
 ):
     # TODO: load question from DB
     question = db.questions.find_one({"_id": question_id})
@@ -33,6 +37,7 @@ def attempt_question(
 
     attempt_db = record_attempt(
         db,
+        redis,
         user_id=current_user,
         question_id=question_id,
         selected_option=attempt.selected_option,

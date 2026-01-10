@@ -5,7 +5,7 @@ from app.db.mongo import get_db
 
 
 # Import the auth router
-from app.api.v1.routes import auth, chapters, questions, cases, ai, debug
+from app.api.v1.routes import auth, chapters, questions, cases, ai, debug, stats 
 
 # Database connections
 from app.db.mongo import connect_to_mongo, close_mongo_connection
@@ -40,6 +40,8 @@ app.include_router(questions.router)
 app.include_router(cases.router)
 app.include_router(ai.router)
 app.include_router(debug.router)
+app.include_router(stats.router)
+
 
 
 @app.get("/")
