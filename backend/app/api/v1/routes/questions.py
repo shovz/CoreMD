@@ -7,7 +7,7 @@ from app.core.auth import get_current_user
 from app.schemas.question_attempt import QuestionAttemptCreate, QuestionAttemptOut
 from app.services.question_attempt_service import record_attempt
 from app.db.deps import mongo_db
-from app.db.deps import redis_db
+from app.db.deps import redis_client
 
 
 router = APIRouter(
@@ -26,7 +26,7 @@ def attempt_question(
     attempt: QuestionAttemptCreate,
     current_user: str = Depends(get_current_user),
     db: Database = Depends(mongo_db),
-    redis: Redis = Depends(redis_db),
+    redis: Redis = Depends(redis_client),
 
 ):
     # TODO: load question from DB

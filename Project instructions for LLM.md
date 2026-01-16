@@ -1,3 +1,5 @@
+Project Instructions for LLM Assistant
+
 📘 Project Summary
 
 We are building a full-stack medical learning platform for internal medicine residents using data extracted from Harrison’s Principles of Internal Medicine (21st Edition).

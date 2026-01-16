@@ -4,7 +4,7 @@ from redis import Redis
 import json
 
 
-from app.db.deps import mongo_db, redis_db
+from app.db.deps import mongo_db, redis_client
 
 from app.core.auth import get_current_user
 from app.services import stats_service
@@ -21,7 +21,7 @@ router = APIRouter(prefix="/stats", tags=["stats"])
 @router.get("/overview", response_model=OverviewStatsOut)
 def overview_stats(
     db: Database = Depends(mongo_db),
-    redis: Redis = Depends(redis_db),
+    redis: Redis = Depends(redis_client),
     user_id: str = Depends(get_current_user),
 ):
     cache_key = f"stats:overview:{user_id}"
@@ -38,7 +38,7 @@ def overview_stats(
 @router.get("/questions", response_model=QuestionStatsOut)
 def question_stats(
     db: Database = Depends(mongo_db),
-    redis: Redis = Depends(redis_db),
+    redis: Redis = Depends(redis_client),
     user_id: str = Depends(get_current_user),
 ):
     cache_key = f"stats:questions:{user_id}"
@@ -54,7 +54,7 @@ def question_stats(
 @router.get("/chapters", response_model=ChapterStatsOut)
 def chapter_stats(
     db: Database = Depends(mongo_db),
-    redis: Redis = Depends(redis_db),
+    redis: Redis = Depends(redis_client),
     user_id: str = Depends(get_current_user),
 ):
     cache_key = f"stats:chapters:{user_id}"
