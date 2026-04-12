@@ -86,13 +86,13 @@ and store them in MongoDB so the AI assistant can do vector search later.
 MongoDB instead of returning hardcoded fake data, so the frontend shows real content.
 
 **Acceptance Criteria:**
-- [ ] `GET /chapters/` queries `db.chapters` collection, returns all chapters as `List[ChapterOut]`
-- [ ] `GET /chapters/{chapter_id}` queries by `chapter_id` field, raises 404 if not found
-- [ ] `GET /chapters/{chapter_id}/sections/{section_id}` queries `text_chunks` by `chapter_id` + `section_id`, concatenates chunk texts, returns as `content` field
-- [ ] All three routes still require valid JWT (existing auth guard unchanged)
-- [ ] `ChapterOut.id` mapped from MongoDB `chapter_id` field
-- [ ] Typecheck passes
-- [ ] Verify changes work in browser: chapters list shows real Harrison's chapters
+- [x] `GET /chapters/` queries `db.chapters` collection, returns all chapters as `List[ChapterOut]`
+- [x] `GET /chapters/{chapter_id}` queries by `chapter_id` field, raises 404 if not found
+- [x] `GET /chapters/{chapter_id}/sections/{section_id}` queries `text_chunks` by `chapter_id` + `section_id`, concatenates chunk texts, returns as `content` field
+- [x] All three routes still require valid JWT (existing auth guard unchanged)
+- [x] `ChapterOut.id` mapped from MongoDB `chapter_id` field
+- [x] Typecheck passes
+- [x] Verify changes work in browser: chapters list shows real Harrison's chapters
 
 ## Non-Goals
 
