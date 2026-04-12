@@ -16,6 +16,8 @@ import sys
 from pathlib import Path
 from typing import Any
 
+import tiktoken
+
 import fitz  # PyMuPDF
 from pymongo import MongoClient
 from pymongo.collection import Collection
@@ -289,6 +291,186 @@ def extract_text(doc: fitz.Document, page_start: int, page_end: int) -> str:
     text = _EXCESS_NEWLINES_RE.sub("\n\n", text)
 
     return text.strip()
+
+
+# ---------------------------------------------------------------------------
+# Tokeniser – cl100k_base matches the text-embedding-3-small encoding
+# ---------------------------------------------------------------------------
+
+_ENC: tiktoken.Encoding = tiktoken.get_encoding("cl100k_base")
+
+
+# ---------------------------------------------------------------------------
+# Section detection
+# ---------------------------------------------------------------------------
+
+
+def _is_section_heading(line: str) -> bool:
+    """Return True if *line* looks like a section heading.
+
+    Heading patterns recognised:
+
+    - **All-caps**: every alphabetic character in the line is uppercase
+      (e.g. ``"PATHOPHYSIOLOGY"``).
+    - **Title Case ≥ 3 words**: at least three words whose first alphabetic
+      character is uppercase (e.g. ``"Clinical Manifestations And Treatment"``).
+    """
+    stripped = line.strip()
+    if not stripped:
+        return False
+
+    # All-caps check: must contain at least one alpha char
+    has_alpha = any(c.isalpha() for c in stripped)
+    if has_alpha and all(c.isupper() for c in stripped if c.isalpha()):
+        return True
+
+    # Title-case ≥ 3 words check
+    words = stripped.split()
+    if len(words) >= 3 and all(w[0].isupper() for w in words if w and w[0].isalpha()):
+        return True
+
+    return False
+
+
+def detect_sections(text: str) -> list[dict[str, Any]]:
+    """Split chapter text into sections at heading boundaries.
+
+    A *section heading* is a line that is entirely upper-case **or** is Title
+    Case (every word starts with a capital letter) with at least three words.
+
+    If no headings are detected the whole text is returned as a single section
+    titled ``"Overview"``.
+
+    Args:
+        text: Raw chapter text (as returned by :func:`extract_text`).
+
+    Returns:
+        A list of dicts, each with keys ``title`` (str) and ``text`` (str).
+        The ``text`` value is the section body (heading line excluded).
+    """
+    lines = text.splitlines(keepends=True)
+    sections: list[dict[str, Any]] = []
+    current_title: str = ""
+    current_lines: list[str] = []
+    found_heading = False
+
+    for line in lines:
+        if _is_section_heading(line):
+            # Flush accumulated lines as a section (skip if body is empty)
+            body = "".join(current_lines).strip()
+            if body:
+                title = current_title if current_title else "Overview"
+                sections.append({"title": title, "text": body})
+            current_title = line.strip()
+            current_lines = []
+            found_heading = True
+        else:
+            current_lines.append(line)
+
+    # Flush the final accumulated section
+    body = "".join(current_lines).strip()
+    if body:
+        title = current_title if current_title else "Overview"
+        sections.append({"title": title, "text": body})
+
+    # No headings found → treat entire text as a single "Overview" section
+    if not found_heading:
+        return [{"title": "Overview", "text": text.strip()}]
+
+    return sections
+
+
+# ---------------------------------------------------------------------------
+# Text chunking
+# ---------------------------------------------------------------------------
+
+
+def chunk_section(
+    section_text: str,
+    section_title: str,
+    section_id: str,
+) -> list[dict[str, Any]]:
+    """Split a section's text into overlapping token-bounded chunks.
+
+    Uses the ``cl100k_base`` tiktoken encoding.  Each chunk contains at most
+    :data:`CHUNK_MAX_TOKENS` tokens and consecutive chunks overlap by
+    :data:`CHUNK_OVERLAP_TOKENS` tokens.
+
+    ``chapter_id`` is derived by stripping the trailing ``_s<N>`` suffix from
+    *section_id* (e.g. ``"p02_c015_s01"`` → ``"p02_c015"``).
+
+    Args:
+        section_text: The text body of the section (heading line excluded).
+        section_title: The section heading string (for chunk metadata only).
+        section_id: Section identifier, e.g. ``"p02_c015_s01"``.
+
+    Returns:
+        A list of chunk dicts with keys:
+        ``chunk_id``, ``chapter_id``, ``section_id``, ``section_title``,
+        ``text``, ``token_count``, ``chunk_index``.
+        Returns an empty list when *section_text* is blank.
+    """
+    if not section_text.strip():
+        return []
+
+    # Derive chapter_id by removing the trailing _sNN suffix
+    chapter_id = re.sub(r"_s\d+$", "", section_id)
+
+    tokens = _ENC.encode(section_text)
+    step = CHUNK_MAX_TOKENS - CHUNK_OVERLAP_TOKENS
+    chunks: list[dict[str, Any]] = []
+    start = 0
+    chunk_index = 0
+
+    while start < len(tokens):
+        end = min(start + CHUNK_MAX_TOKENS, len(tokens))
+        chunk_tokens = tokens[start:end]
+        chunk_text = _ENC.decode(chunk_tokens)
+
+        chunks.append(
+            {
+                "chunk_id": f"{section_id}_chunk_{chunk_index}",
+                "chapter_id": chapter_id,
+                "section_id": section_id,
+                "section_title": section_title,
+                "text": chunk_text,
+                "token_count": len(chunk_tokens),
+                "chunk_index": chunk_index,
+            }
+        )
+
+        if end >= len(tokens):
+            break
+        start += step
+        chunk_index += 1
+
+    return chunks
+
+
+# ---------------------------------------------------------------------------
+# Chapter sections update
+# ---------------------------------------------------------------------------
+
+
+def update_chapter_sections(
+    db: Database,  # type: ignore[type-arg]
+    chapter_id: str,
+    sections_meta: list[dict[str, str]],
+) -> None:
+    """Overwrite the ``sections`` field of an existing chapter document.
+
+    Args:
+        db: Active ``pymongo.database.Database`` instance.
+        chapter_id: The chapter's identifier string (e.g. ``"p02_c015"``).
+        sections_meta: List of ``{"id": section_id, "title": section_title}`` dicts.
+    """
+    db["chapters"].update_one(
+        {"chapter_id": chapter_id},
+        {"$set": {"sections": sections_meta}},
+    )
+    logger.info(
+        "Updated sections for chapter %s: %d section(s)", chapter_id, len(sections_meta)
+    )
 
 
 # ---------------------------------------------------------------------------

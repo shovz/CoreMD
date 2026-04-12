@@ -62,12 +62,12 @@ store the chapter document in MongoDB.
 section boundaries and stay under 800 tokens.
 
 **Acceptance Criteria:**
-- [ ] Function `detect_sections(text) -> list[dict]` identifies section headings using regex (all-caps lines or Title Case lines ≥ 3 words followed by newline)
-- [ ] Function `chunk_section(section_text, section_title, section_id) -> list[dict]` splits text at 800-token cap with 100-token overlap using `tiktoken cl100k_base` encoding
-- [ ] Each chunk dict contains: `chunk_id`, `chapter_id`, `section_id`, `section_title`, `text`, `token_count`, `chunk_index`
-- [ ] Chapter with no detected sections treated as one section titled "Overview"
-- [ ] `sections` field on the chapter document updated with `[{"id": section_id, "title": section_title}]` for each unique section
-- [ ] Typecheck passes
+- [x] Function `detect_sections(text) -> list[dict]` identifies section headings using regex (all-caps lines or Title Case lines ≥ 3 words followed by newline)
+- [x] Function `chunk_section(section_text, section_title, section_id) -> list[dict]` splits text at 800-token cap with 100-token overlap using `tiktoken cl100k_base` encoding
+- [x] Each chunk dict contains: `chunk_id`, `chapter_id`, `section_id`, `section_title`, `text`, `token_count`, `chunk_index`
+- [x] Chapter with no detected sections treated as one section titled "Overview"
+- [x] `sections` field on the chapter document updated with `[{"id": section_id, "title": section_title}]` for each unique section
+- [x] Typecheck passes
 
 ### US-005: Embedding generation and text_chunks storage
 **Description:** As a developer, I need to generate OpenAI embeddings for each chunk
