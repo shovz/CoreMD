@@ -74,12 +74,12 @@ section boundaries and stay under 800 tokens.
 and store them in MongoDB so the AI assistant can do vector search later.
 
 **Acceptance Criteria:**
-- [ ] Function `generate_embeddings(texts: list[str]) -> list[list[float]]` calls OpenAI `text-embedding-3-small` in batches of 100
-- [ ] Function `store_chunks(db, chunks: list[dict])` bulk-upserts chunks to `text_chunks` collection using `chunk_id` as key
-- [ ] Progress printed to stdout: `Part 2 | Chapter 15/47 | 12 chunks stored`
-- [ ] Script handles OpenAI rate limit errors with exponential backoff (max 3 retries)
-- [ ] On completion prints: total chapters, total chunks, total tokens processed
-- [ ] Typecheck passes
+- [x] Function `generate_embeddings(texts: list[str]) -> list[list[float]]` calls OpenAI `text-embedding-3-small` in batches of 100
+- [x] Function `store_chunks(db, chunks: list[dict])` bulk-upserts chunks to `text_chunks` collection using `chunk_id` as key
+- [x] Progress printed to stdout: `Part 2 | Chapter 15/47 | 12 chunks stored`
+- [x] Script handles OpenAI rate limit errors with exponential backoff (max 3 retries)
+- [x] On completion prints: total chapters, total chunks, total tokens processed
+- [x] Typecheck passes
 
 ### US-006: Wire chapters API to MongoDB
 **Description:** As a developer, I need the existing chapters API routes to read from

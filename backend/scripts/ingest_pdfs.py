@@ -13,15 +13,18 @@ import logging
 import os
 import re
 import sys
+import time
 from pathlib import Path
 from typing import Any
 
 import tiktoken
 
 import fitz  # PyMuPDF
+import openai
 from pymongo import MongoClient
 from pymongo.collection import Collection
 from pymongo.database import Database
+from pymongo.operations import UpdateOne
 
 from dotenv import load_dotenv
 
@@ -46,6 +49,8 @@ OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
 
 CHUNK_MAX_TOKENS: int = 800
 CHUNK_OVERLAP_TOKENS: int = 100
+EMBEDDING_BATCH_SIZE: int = 100
+MAX_RETRIES: int = 3
 
 # ---------------------------------------------------------------------------
 # Logging
@@ -474,6 +479,100 @@ def update_chapter_sections(
 
 
 # ---------------------------------------------------------------------------
+# Embedding generation
+# ---------------------------------------------------------------------------
+
+
+def generate_embeddings(texts: list[str]) -> list[list[float]]:
+    """Generate embeddings using OpenAI text-embedding-3-small in batches.
+
+    Processes *texts* in batches of :data:`EMBEDDING_BATCH_SIZE` (100).
+    Retries up to :data:`MAX_RETRIES` times on ``RateLimitError`` with
+    exponential backoff (1 s, 2 s, 4 s).
+
+    Args:
+        texts: List of text strings to embed.
+
+    Returns:
+        List of 1536-dimensional embedding vectors (one per input text).
+
+    Raises:
+        RuntimeError: When rate-limit errors persist after all retries.
+    """
+    if not texts:
+        return []
+
+    oai_client = openai.OpenAI(api_key=OPENAI_API_KEY)
+    all_embeddings: list[list[float]] = []
+
+    for batch_start in range(0, len(texts), EMBEDDING_BATCH_SIZE):
+        batch = texts[batch_start : batch_start + EMBEDDING_BATCH_SIZE]
+        last_exc: Exception | None = None
+
+        for attempt in range(MAX_RETRIES + 1):
+            try:
+                response = oai_client.embeddings.create(
+                    model="text-embedding-3-small",
+                    input=batch,
+                )
+                all_embeddings.extend(item.embedding for item in response.data)
+                last_exc = None
+                break
+            except openai.RateLimitError as exc:
+                last_exc = exc
+                if attempt < MAX_RETRIES:
+                    wait_secs = 2 ** attempt  # 1 s, 2 s, 4 s
+                    logger.warning(
+                        "OpenAI rate limit (attempt %d/%d) — retrying in %ds",
+                        attempt + 1,
+                        MAX_RETRIES + 1,
+                        wait_secs,
+                    )
+                    time.sleep(wait_secs)
+
+        if last_exc is not None:
+            raise RuntimeError(
+                f"OpenAI rate limit exceeded after {MAX_RETRIES} retries"
+            ) from last_exc
+
+    return all_embeddings
+
+
+# ---------------------------------------------------------------------------
+# text_chunks storage
+# ---------------------------------------------------------------------------
+
+
+def store_chunks(
+    db: Database,  # type: ignore[type-arg]
+    chunks: list[dict[str, Any]],
+) -> None:
+    """Bulk-upsert text chunks into the ``text_chunks`` MongoDB collection.
+
+    Uses ``chunk_id`` as the unique key for upserts so the operation is
+    idempotent — re-running the pipeline overwrites existing chunks rather
+    than inserting duplicates.
+
+    Args:
+        db: Active ``pymongo.database.Database`` instance.
+        chunks: List of chunk dicts; each must contain a ``chunk_id`` field.
+    """
+    if not chunks:
+        return
+
+    collection: Collection[dict[str, Any]] = db["text_chunks"]
+    operations: list[UpdateOne] = [
+        UpdateOne(
+            {"chunk_id": chunk["chunk_id"]},
+            {"$set": chunk},
+            upsert=True,
+        )
+        for chunk in chunks
+    ]
+    collection.bulk_write(operations, ordered=False)
+
+
+# ---------------------------------------------------------------------------
 # Specialty derivation
 # ---------------------------------------------------------------------------
 
@@ -684,7 +783,104 @@ def main() -> None:
             )
         return
 
-    print("Ingestion pipeline not yet fully implemented — run individual US steps.")
+    # -------------------------------------------------------------------
+    # Extract chapter list from the full PDF TOC
+    # -------------------------------------------------------------------
+    chapters = extract_chapters_from_toc(args.pdf_path)
+    if not chapters:
+        print("No chapters extracted — aborting.")
+        sys.exit(1)
+
+    if args.dry_run:
+        print(f"Extracted {len(chapters)} chapter(s) — dry run, nothing written.")
+        for ch in chapters:
+            print(
+                f"  Part {ch['part_number']:>2} | [{ch['chapter_number']:>3}] {ch['title']}"
+                f"  (pages {ch['page_start']}–{ch['page_end']})"
+            )
+        return
+
+    # -------------------------------------------------------------------
+    # Full ingestion pipeline
+    # -------------------------------------------------------------------
+    mongo_client: MongoClient[dict[str, Any]] = MongoClient(MONGO_URI)
+    db_name: str = MONGO_URI.rsplit("/", 1)[-1].split("?")[0]
+    db: Database[dict[str, Any]] = mongo_client[db_name]
+
+    pdf_doc: fitz.Document = fitz.open(args.pdf_path)
+
+    total_chapters_processed: int = 0
+    total_chunks_all: int = 0
+    total_tokens_all: int = 0
+
+    # Group chapters by part_number for the progress line format
+    chapters_by_part: dict[int, list[dict[str, Any]]] = {}
+    for ch in chapters:
+        chapters_by_part.setdefault(ch["part_number"], []).append(ch)
+
+    try:
+        for part_num in sorted(chapters_by_part.keys()):
+            part_chapters = chapters_by_part[part_num]
+            part_total = len(part_chapters)
+
+            for ch_within_part, chapter in enumerate(part_chapters, 1):
+                chapter_data: dict[str, Any] = {
+                    "part_num": chapter["part_number"],
+                    "chapter_num": chapter["chapter_number"],
+                    "part_title": chapter.get("part_title", ""),
+                    "title": chapter.get("title", ""),
+                    "page_start": chapter.get("page_start", 0),
+                    "page_end": chapter.get("page_end", 0),
+                    "source_pdf": args.pdf_path,
+                }
+                chapter_id = store_chapter(db, chapter_data)
+
+                text = extract_text(
+                    pdf_doc, chapter["page_start"], chapter["page_end"]
+                )
+                sections = detect_sections(text)
+
+                all_chunks: list[dict[str, Any]] = []
+                sections_meta: list[dict[str, str]] = []
+
+                for s_idx, section in enumerate(sections):
+                    section_id = f"{chapter_id}_s{s_idx:02d}"
+                    sections_meta.append({"id": section_id, "title": section["title"]})
+                    all_chunks.extend(
+                        chunk_section(section["text"], section["title"], section_id)
+                    )
+
+                update_chapter_sections(db, chapter_id, sections_meta)
+
+                if all_chunks:
+                    texts_to_embed = [c["text"] for c in all_chunks]
+                    embeddings = generate_embeddings(texts_to_embed)
+                    for chunk, emb in zip(all_chunks, embeddings):
+                        chunk["embedding"] = emb
+
+                store_chunks(db, all_chunks)
+
+                num_chunks = len(all_chunks)
+                chapter_tokens = sum(c.get("token_count", 0) for c in all_chunks)
+                total_chapters_processed += 1
+                total_chunks_all += num_chunks
+                total_tokens_all += chapter_tokens
+
+                print(
+                    f"Part {part_num} | Chapter {ch_within_part}/{part_total}"
+                    f" | {num_chunks} chunks stored"
+                )
+
+    finally:
+        pdf_doc.close()
+        mongo_client.close()
+
+    print(
+        f"\nIngestion complete:"
+        f"  {total_chapters_processed} chapters,"
+        f"  {total_chunks_all} chunks,"
+        f"  {total_tokens_all:,} tokens processed"
+    )
 
 
 if __name__ == "__main__":
