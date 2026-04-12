@@ -8,3 +8,5 @@ passlib[bcrypt]
 pymongo
 redis
 python-jose[cryptography]
+pymupdf
+tiktoken
