@@ -36,11 +36,11 @@ installed so the script can be run.
 PDF so I know each chapter's title and page range.
 
 **Acceptance Criteria:**
-- [ ] Function `extract_chapters_from_pdf(pdf_path) -> list[dict]` implemented using `fitz.open()` and `doc.get_toc()`
-- [ ] Each returned dict contains: `title`, `page_start`, `page_end`, `chapter_number`
-- [ ] If TOC is empty or unreadable, logs a warning and returns empty list (skip that PDF)
-- [ ] Tested manually: running on one Part PDF prints chapter titles to stdout
-- [ ] Typecheck passes
+- [x] Function `extract_chapters_from_pdf(pdf_path) -> list[dict]` implemented using `fitz.open()` and `doc.get_toc()`
+- [x] Each returned dict contains: `title`, `page_start`, `page_end`, `chapter_number`
+- [x] If TOC is empty or unreadable, logs a warning and returns empty list (skip that PDF)
+- [x] Tested manually: running on one Part PDF prints chapter titles to stdout
+- [x] Typecheck passes
 
 ### US-003: Text extraction and chapter storage in MongoDB
 **Description:** As a developer, I need to extract cleaned text for each chapter and
