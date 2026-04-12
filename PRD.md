@@ -25,22 +25,24 @@ This is a one-time setup script — Harrison's 21st Edition content does not cha
 installed so the script can be run.
 
 **Acceptance Criteria:**
-- [x] `backend/scripts/ingest_pdfs.py` created with config constants (PDF_DIR, MONGO_URI, OPENAI_API_KEY, CHUNK_MAX_TOKENS=800, CHUNK_OVERLAP_TOKENS=100)
+- [x] `backend/scripts/ingest_pdfs.py` created with config constants (MONGO_URI, OPENAI_API_KEY, CHUNK_MAX_TOKENS=800, CHUNK_OVERLAP_TOKENS=100)
 - [x] `backend/scripts/__init__.py` created (empty)
 - [x] `pymupdf` and `tiktoken` added to `backend/requirements.txt`
+- [x] Config uses `PDF_FULL_PATH` pointing to `Harrison Book/Harrison's_Principles_of_Internal_Medicine,_Twenty_First_Edition.pdf` (not PDF_DIR for Part PDFs)
 - [x] Script runs without import errors: `python backend/scripts/ingest_pdfs.py --help`
 - [x] Typecheck passes
 
 ### US-002: TOC extraction and chapter boundary detection
-**Description:** As a developer, I need to extract the table of contents from each Part
-PDF so I know each chapter's title and page range.
+**Description:** As a developer, I need to extract the table of contents from the full
+Harrison's PDF so I know each chapter's title, part, and page range.
 
 **Acceptance Criteria:**
-- [x] Function `extract_chapters_from_pdf(pdf_path) -> list[dict]` implemented using `fitz.open()` and `doc.get_toc()`
-- [x] Each returned dict contains: `title`, `page_start`, `page_end`, `chapter_number`
-- [x] If TOC is empty or unreadable, logs a warning and returns empty list (skip that PDF)
-- [x] Tested manually: running on one Part PDF prints chapter titles to stdout
-- [x] Typecheck passes
+- [ ] Function `extract_chapters_from_toc(pdf_path) -> list[dict]` opens the full Harrison's PDF and parses all 580 TOC entries
+- [ ] Identifies level-1 Part entries to track current `part_number` and `part_title` as chapters are iterated
+- [ ] Treats level-2 and level-3 entries whose title starts with a digit as chapters
+- [ ] Each returned dict contains: `chapter_number` (int, from leading digits in title), `title` (str), `part_number` (int), `part_title` (str), `page_start` (int), `page_end` (int, derived from next entry)
+- [ ] Running `python backend/scripts/ingest_pdfs.py --list-chapters` prints all 492 chapters to stdout
+- [ ] Typecheck passes
 
 ### US-003: Text extraction and chapter storage in MongoDB
 **Description:** As a developer, I need to extract cleaned text for each chapter and
@@ -104,10 +106,17 @@ MongoDB instead of returning hardcoded fake data, so the frontend shows real con
 
 ## Technical Considerations
 
-- PDF path: `Harrison Book/By Chapters/` (relative to project root)
-- Skip `PART 21` (index only, 98 MB, no chapter content)
-- PyMuPDF TOC levels: level 1 = chapter, level 2+ = sub-section headings
-- `chapter_id` must be stable across re-runs (deterministic from part + chapter number)
+- **Use the full Harrison's PDF** (not the Part PDFs): `Harrison Book/Harrison's_Principles_of_Internal_Medicine,_Twenty_First_Edition.pdf`
+- The Part PDFs (`Harrison Book/By Chapters/`) have **no embedded TOC bookmarks** — `get_toc()` returns empty for all of them. The full book has 580 TOC entries covering all 492 chapters.
+- **TOC structure in the full PDF:**
+  - Level 1: Parts (e.g. `"PART 2 Cardinal Manifestations and Presentation of Diseases"`) and front matter
+  - Level 2: Chapters (e.g. `"13 Pain: Pathophysiology and Management"`) **OR** Sections for Part 2 (e.g. `"SECTION 1 Pain"`)
+  - Level 3: Actual chapters inside Part 2 sections (e.g. `"13 Pain: Pathophysiology and Management"`)
+  - **Rule:** Treat all level 2 and level 3 entries that start with a number as chapters. Level 1 entries are Parts — use them to derive `part_title` and `specialty`.
+- Chapters are numbered 1–492. Extract the leading number from the TOC title to get `chapter_number`.
+- `chapter_id` format: `p{part_num:02d}_c{chapter_num:03d}` (e.g. `p02_c015`) — must be stable across re-runs
+- `page_end` = next TOC entry's `page_start - 1` (last chapter ends at `doc.page_count - 1`)
+- `specialty` field derived from Part title (e.g. `"Disorders of the Cardiovascular System"` → `"Cardiology"`)
 - OpenAI embedding dimensions: 1536 (`text-embedding-3-small`)
 - Load `OPENAI_API_KEY` and `MONGO_URI` from `backend/.env` via `python-dotenv`
 - MongoDB `text_chunks` will need a vector search index for RAG (set up in a later PRD)

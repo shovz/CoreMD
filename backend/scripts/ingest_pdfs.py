@@ -31,7 +31,14 @@ load_dotenv(_ENV_PATH)
 # Config constants
 # ---------------------------------------------------------------------------
 
-PDF_DIR: str = os.getenv("PDF_DIR", str(Path(__file__).parents[2] / "Harrison Book" / "By Chapters"))
+PDF_FULL_PATH: str = os.getenv(
+    "PDF_FULL_PATH",
+    str(
+        Path(__file__).parents[2]
+        / "Harrison Book"
+        / "Harrison's_Principles_of_Internal_Medicine,_Twenty_First_Edition.pdf"
+    ),
+)
 MONGO_URI: str = os.getenv("MONGO_URI", "mongodb://localhost:27017/CoreMD")
 OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
 
@@ -302,9 +309,9 @@ def main() -> None:
         description="Ingest Harrison's PDF parts into MongoDB (chapters + text_chunks)."
     )
     parser.add_argument(
-        "--pdf-dir",
-        default=PDF_DIR,
-        help=f"Directory containing Part PDF files (default: {PDF_DIR})",
+        "--pdf-path",
+        default=PDF_FULL_PATH,
+        help=f"Path to the full Harrison's PDF (default: {PDF_FULL_PATH})",
     )
     parser.add_argument(
         "--dry-run",
@@ -323,11 +330,11 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    print(f"PDF_DIR           : {args.pdf_dir}")
-    print(f"MONGO_URI         : {MONGO_URI}")
-    print(f"CHUNK_MAX_TOKENS  : {CHUNK_MAX_TOKENS}")
-    print(f"CHUNK_OVERLAP_TOKENS: {CHUNK_OVERLAP_TOKENS}")
-    print(f"Dry run           : {args.dry_run}")
+    print(f"PDF_FULL_PATH        : {args.pdf_path}")
+    print(f"MONGO_URI            : {MONGO_URI}")
+    print(f"CHUNK_MAX_TOKENS     : {CHUNK_MAX_TOKENS}")
+    print(f"CHUNK_OVERLAP_TOKENS : {CHUNK_OVERLAP_TOKENS}")
+    print(f"Dry run              : {args.dry_run}")
     print()
 
     if args.self_test:
