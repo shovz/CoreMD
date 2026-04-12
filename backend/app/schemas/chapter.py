@@ -7,11 +7,18 @@ class ChapterBase(BaseModel):
     specialty: str
 
 
+class SectionOut(BaseModel):
+    id: str
+    title: str
+
+
 class ChapterOut(ChapterBase):
     id: str
+    sections: List[SectionOut] = Field(default_factory=list)
 
     class Config:
         orm_mode = True
+
 
 class ChapterCreate(BaseModel):
     title: str = Field(..., min_length=3)

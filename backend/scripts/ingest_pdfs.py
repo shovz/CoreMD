@@ -11,11 +11,15 @@ Usage:
 import argparse
 import logging
 import os
+import re
 import sys
 from pathlib import Path
 from typing import Any
 
 import fitz  # PyMuPDF
+from pymongo import MongoClient
+from pymongo.collection import Collection
+from pymongo.database import Database
 
 from dotenv import load_dotenv
 
@@ -118,6 +122,174 @@ def extract_chapters_from_pdf(pdf_path: str) -> list[dict[str, Any]]:
         )
 
     return chapters
+
+
+# ---------------------------------------------------------------------------
+# Text extraction
+# ---------------------------------------------------------------------------
+
+# Matches lines that are purely a page number (optional whitespace around digits)
+_PAGE_NUMBER_RE = re.compile(r"^\s*\d+\s*$")
+
+# Matches hyphenated line breaks where the word continues on the next line
+_HYPHEN_BREAK_RE = re.compile(r"-\n(\S)")
+
+# Collapses 3+ consecutive newlines into two
+_EXCESS_NEWLINES_RE = re.compile(r"\n{3,}")
+
+# Collapses runs of spaces/tabs (but not newlines) into a single space
+_EXCESS_SPACES_RE = re.compile(r"[ \t]+")
+
+
+def extract_text(doc: fitz.Document, page_start: int, page_end: int) -> str:
+    """Extract and clean plain text from a page range of a PDF document.
+
+    Page numbers are 1-based (matching PyMuPDF ``get_toc()`` output).
+
+    Cleaning steps applied in order:
+    1. Re-join words hyphenated across line breaks (e.g. ``hyper-\\ntension`` → ``hypertension``).
+    2. Drop lines that consist solely of a page number (bare integers).
+    3. Collapse runs of spaces/tabs to a single space per line.
+    4. Collapse 3+ consecutive blank lines to two.
+
+    Args:
+        doc: An open ``fitz.Document`` instance.
+        page_start: First page to extract (1-based, inclusive).
+        page_end: Last page to extract (1-based, inclusive).
+
+    Returns:
+        A single cleaned string with all extracted text.
+    """
+    parts: list[str] = []
+
+    # PyMuPDF uses 0-based indexing internally
+    first = max(page_start - 1, 0)
+    last = min(page_end - 1, doc.page_count - 1)
+
+    for page_idx in range(first, last + 1):
+        page: fitz.Page = doc[page_idx]
+        raw: str = page.get_text()  # type: ignore[attr-defined]
+        parts.append(raw)
+
+    text = "\n".join(parts)
+
+    # 1. Re-join hyphenated line breaks ("hyper-\ntension" → "hypertension")
+    text = _HYPHEN_BREAK_RE.sub(r"\1", text)
+
+    # 2. Strip bare page-number lines
+    cleaned_lines: list[str] = [
+        line for line in text.splitlines() if not _PAGE_NUMBER_RE.match(line)
+    ]
+    text = "\n".join(cleaned_lines)
+
+    # 3. Collapse multiple spaces/tabs per line
+    text = _EXCESS_SPACES_RE.sub(" ", text)
+
+    # 4. Collapse excess blank lines
+    text = _EXCESS_NEWLINES_RE.sub("\n\n", text)
+
+    return text.strip()
+
+
+# ---------------------------------------------------------------------------
+# Specialty derivation
+# ---------------------------------------------------------------------------
+
+# Ordered keyword mapping: first match wins
+_SPECIALTY_RULES: list[tuple[list[str], str]] = [
+    (["cardiovascular", "cardiac", "heart"], "Cardiology"),
+    (["respiratory", "pulmon", "lung"], "Pulmonology"),
+    (["kidney", "renal", "urinary"], "Nephrology"),
+    (["hepat", "biliary", "liver", "pancrea"], "Hepatology"),
+    (["gastrointestinal", "digestive", "bowel", "colon", "gastro"], "Gastroenterology"),
+    (["rheumat", "connective tissue", "joint", "arthrit"], "Rheumatology"),
+    (["immune", "immunol", "allerg"], "Immunology"),
+    (["endocrin", "metabol", "diabetes", "thyroid"], "Endocrinology"),
+    (["neurol", "nervous", "brain", "spine"], "Neurology"),
+    (["psychiatr", "mental", "behav"], "Psychiatry"),
+    (["oncol", "cancer", "tumor", "neoplas"], "Oncology"),
+    (["hematol", "blood", "coagulat"], "Hematology"),
+    (["infectious", "infect", "microbiol", "parasit", "virus", "bacteri"], "Infectious Disease"),
+    (["critical care", "intensive"], "Critical Care"),
+    (["dermatol", "skin"], "Dermatology"),
+    (["musculoskel", "orthop", "bone", "fracture"], "Orthopedics"),
+    (["ophthal", "eye", "vision"], "Ophthalmology"),
+    (["ent", "otolaryngol", "ear", "nose", "throat"], "ENT"),
+    (["geneti", "heredit", "heritable", "chromosom"], "Genetics"),
+    (["toxicol", "poison", "environmental hazard"], "Toxicology"),
+    (["alcohol", "substance", "drug depend", "addiction"], "Addiction Medicine"),
+]
+
+
+def _derive_specialty(part_title: str) -> str:
+    """Map a Harrison's Part title to a clinical specialty string.
+
+    Uses keyword matching (case-insensitive, first match wins).
+    Falls back to ``"General Medicine"`` when no keyword matches.
+
+    Args:
+        part_title: The full Part title (e.g. ``"Disorders of the Cardiovascular System"``).
+
+    Returns:
+        A specialty label string (e.g. ``"Cardiology"``).
+    """
+    lower = part_title.lower()
+    for keywords, specialty in _SPECIALTY_RULES:
+        if any(kw in lower for kw in keywords):
+            return specialty
+    return "General Medicine"
+
+
+# ---------------------------------------------------------------------------
+# MongoDB storage
+# ---------------------------------------------------------------------------
+
+
+def store_chapter(db: Database, chapter_data: dict[str, Any]) -> str:  # type: ignore[type-arg]
+    """Upsert a chapter document into the ``chapters`` MongoDB collection.
+
+    Constructs a deterministic ``chapter_id`` from ``part_num`` and
+    ``chapter_num``, derives ``specialty`` from ``part_title``, and sets
+    ``sections`` to an empty list.  If a document with that ``chapter_id``
+    already exists the function is a no-op (idempotent).
+
+    Args:
+        db: An active ``pymongo.database.Database`` instance.
+        chapter_data: Dict containing at minimum:
+            ``part_num`` (int), ``chapter_num`` (int), ``part_title`` (str),
+            ``title`` (str), ``page_start`` (int), ``page_end`` (int),
+            ``source_pdf`` (str).
+
+    Returns:
+        The ``chapter_id`` string for the (possibly newly inserted) document.
+    """
+    part_num: int = int(chapter_data["part_num"])
+    chapter_num: int = int(chapter_data["chapter_num"])
+    chapter_id: str = f"p{part_num:02d}_c{chapter_num:03d}"
+
+    collection: Collection[dict[str, Any]] = db["chapters"]
+
+    # Idempotency: skip if already stored
+    if collection.find_one({"chapter_id": chapter_id}, {"_id": 1}):
+        logger.info("Chapter %s already exists — skipping.", chapter_id)
+        return chapter_id
+
+    doc: dict[str, Any] = {
+        "chapter_id": chapter_id,
+        "part_number": part_num,
+        "part_title": chapter_data.get("part_title", ""),
+        "chapter_number": chapter_num,
+        "title": chapter_data.get("title", ""),
+        "specialty": _derive_specialty(chapter_data.get("part_title", "")),
+        "page_start": chapter_data.get("page_start", 0),
+        "page_end": chapter_data.get("page_end", 0),
+        "source_pdf": chapter_data.get("source_pdf", ""),
+        "sections": [],
+    }
+
+    collection.insert_one(doc)
+    logger.info("Stored chapter %s: %s", chapter_id, doc["title"])
+    return chapter_id
 
 
 # ---------------------------------------------------------------------------

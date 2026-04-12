@@ -10,6 +10,21 @@ export interface LoginResponse {
   token_type: string;
 }
 
+export interface RegisterRequest {
+  email: string;
+  password: string;
+}
+
+export interface RegisterResponse {
+  id: string;
+  email: string;
+  role: string;
+}
+
 export const login = (data: LoginRequest) => {
   return api.post<LoginResponse>("/auth/login", data);
+};
+
+export const register = (data: RegisterRequest) => {
+  return api.post<RegisterResponse>("/auth/register", data);
 };

@@ -47,13 +47,13 @@ PDF so I know each chapter's title and page range.
 store the chapter document in MongoDB.
 
 **Acceptance Criteria:**
-- [ ] Function `extract_text(doc, page_start, page_end) -> str` extracts and cleans text (strips page numbers, excessive whitespace, hyphenated line breaks)
-- [ ] Function `store_chapter(db, chapter_data) -> str` upserts chapter to `chapters` collection using `chapter_id` as key; returns `chapter_id`
-- [ ] `chapter_id` format: `p{part_num:02d}_c{chapter_num:03d}` (e.g. `p02_c015`)
-- [ ] `specialty` field derived from part title (e.g. "Disorders of the Cardiovascular System" → "Cardiology")
-- [ ] `sections` field populated as empty list at this stage (filled in US-004)
-- [ ] Idempotent: if `chapter_id` already exists in MongoDB, skip
-- [ ] Typecheck passes
+- [x] Function `extract_text(doc, page_start, page_end) -> str` extracts and cleans text (strips page numbers, excessive whitespace, hyphenated line breaks)
+- [x] Function `store_chapter(db, chapter_data) -> str` upserts chapter to `chapters` collection using `chapter_id` as key; returns `chapter_id`
+- [x] `chapter_id` format: `p{part_num:02d}_c{chapter_num:03d}` (e.g. `p02_c015`)
+- [x] `specialty` field derived from part title (e.g. "Disorders of the Cardiovascular System" → "Cardiology")
+- [x] `sections` field populated as empty list at this stage (filled in US-004)
+- [x] Idempotent: if `chapter_id` already exists in MongoDB, skip
+- [x] Typecheck passes
 
 ### US-004: Hybrid text chunking with section detection
 **Description:** As a developer, I need to split chapter text into chunks that respect

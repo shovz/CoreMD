@@ -1,5 +1,6 @@
 from fastapi import APIRouter, HTTPException, Depends, status
 from pymongo.database import Database
+from pymongo.errors import DuplicateKeyError
 
 from app.schemas.user import UserCreate, UserOut
 from app.services.auth_service import register_user, login_user
@@ -15,13 +16,23 @@ def register(
     db: Database = Depends(mongo_db),
 ):
     try:
+        print("REGISTER endpoint called")
+
         created = register_user(db, user)
         return UserOut(
             id=str(created.id),
             email=created.email,
+            role=created.role,  
         )
-    except Exception:
-        raise HTTPException(status_code=400, detail="Email already registered")
+    # except Exception as e:
+    #     print ('Registration error:', e)
+    except DuplicateKeyError:
+            # This is the ONLY case we translate to "email already registered"
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Email already registered",
+            )
+
 
 
 @router.post("/login")
