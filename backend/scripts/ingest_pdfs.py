@@ -132,6 +132,99 @@ def extract_chapters_from_pdf(pdf_path: str) -> list[dict[str, Any]]:
 
 
 # ---------------------------------------------------------------------------
+# Full-book TOC extraction
+# ---------------------------------------------------------------------------
+
+_PART_TITLE_RE = re.compile(r"^PART\s+(\d+)\s*", re.IGNORECASE)
+_LEADING_DIGIT_RE = re.compile(r"^(\d+)")
+
+
+def extract_chapters_from_toc(pdf_path: str) -> list[dict[str, Any]]:
+    """Extract chapter metadata from the full Harrison's PDF using its embedded TOC.
+
+    The full PDF TOC has three levels:
+    - Level 1: Part headings (e.g. ``"PART 2 Cardinal Manifestations..."``) and front-matter
+    - Level 2: Chapters **or** sections within Part 2 (e.g. ``"SECTION 1 Pain"``)
+    - Level 3: Chapters inside Part 2 sections
+
+    **Rule:** Any level-2 or level-3 entry whose title starts with a digit is a chapter.
+    Level-1 entries whose title starts with ``PART <N>`` update the current
+    ``part_number`` / ``part_title`` context.
+
+    ``page_end`` for each chapter is set to the next chapter's ``page_start - 1``.
+    The final chapter ends at ``doc.page_count``.
+
+    Args:
+        pdf_path: Absolute or relative path to the full Harrison's PDF.
+
+    Returns:
+        A list of dicts, each with keys:
+        ``chapter_number`` (int), ``title`` (str), ``part_number`` (int),
+        ``part_title`` (str), ``page_start`` (int), ``page_end`` (int).
+        Returns an empty list when the TOC is absent or unreadable.
+    """
+    try:
+        doc: fitz.Document = fitz.open(pdf_path)
+    except Exception as exc:
+        logger.warning("Could not open PDF %s: %s", pdf_path, exc)
+        return []
+
+    try:
+        toc: list[list[Any]] = doc.get_toc()
+    except Exception as exc:
+        logger.warning("Could not read TOC from %s: %s", pdf_path, exc)
+        doc.close()
+        return []
+
+    total_pages: int = doc.page_count
+    doc.close()
+
+    if not toc:
+        logger.warning("TOC is empty in %s", pdf_path)
+        return []
+
+    part_number: int = 0
+    part_title: str = ""
+    chapters: list[dict[str, Any]] = []
+
+    for entry in toc:
+        level: int = entry[0]
+        title: str = entry[1]
+        page: int = entry[2]
+
+        if level == 1:
+            part_match = _PART_TITLE_RE.match(title)
+            if part_match:
+                part_number = int(part_match.group(1))
+                part_title = _PART_TITLE_RE.sub("", title).strip()
+            # Non-Part level-1 entries (front matter, appendices) are ignored
+            continue
+
+        if level in (2, 3) and _LEADING_DIGIT_RE.match(title):
+            num_match = _LEADING_DIGIT_RE.match(title)
+            if num_match:
+                chapters.append(
+                    {
+                        "chapter_number": int(num_match.group(1)),
+                        "title": title,
+                        "part_number": part_number,
+                        "part_title": part_title,
+                        "page_start": page,
+                        "page_end": -1,  # filled in after loop
+                    }
+                )
+
+    # Derive page_end: next chapter's page_start - 1; last chapter ends at total_pages
+    for idx, chapter in enumerate(chapters):
+        if idx + 1 < len(chapters):
+            chapter["page_end"] = chapters[idx + 1]["page_start"] - 1
+        else:
+            chapter["page_end"] = total_pages
+
+    return chapters
+
+
+# ---------------------------------------------------------------------------
 # Text extraction
 # ---------------------------------------------------------------------------
 
@@ -305,6 +398,12 @@ def store_chapter(db: Database, chapter_data: dict[str, Any]) -> str:  # type: i
 
 
 def main() -> None:
+    # Ensure stdout can handle the full Unicode range (chapter titles may contain
+    # non-ASCII characters such as diacritics).  reconfigure() is available from
+    # Python 3.7+ and is a no-op when stdout is already in UTF-8 mode.
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")  # type: ignore[union-attr]
+
     parser = argparse.ArgumentParser(
         description="Ingest Harrison's PDF parts into MongoDB (chapters + text_chunks)."
     )
@@ -327,6 +426,11 @@ def main() -> None:
         "--self-test",
         action="store_true",
         help="Create a synthetic PDF with a known TOC and verify extraction.",
+    )
+    parser.add_argument(
+        "--list-chapters",
+        action="store_true",
+        help="Extract chapters from the full Harrison's PDF and print them to stdout.",
     )
     args = parser.parse_args()
 
@@ -369,6 +473,20 @@ def main() -> None:
         print("Self-test PASSED — chapter titles extracted:")
         for ch in chapters:
             print(f"  [{ch['chapter_number']}] {ch['title']}  (pages {ch['page_start']}–{ch['page_end']})")
+        return
+
+    if args.list_chapters:
+        chapters = extract_chapters_from_toc(args.pdf_path)
+        if not chapters:
+            print("No chapters extracted.")
+            sys.exit(1)
+        print(f"Extracted {len(chapters)} chapter(s) from {args.pdf_path}:")
+        for ch in chapters:
+            print(
+                f"  [{ch['chapter_number']:>3}] Part {ch['part_number']:>2}"
+                f" | {ch['title']}"
+                f"  (pages {ch['page_start']}–{ch['page_end']})"
+            )
         return
 
     if args.test_pdf:

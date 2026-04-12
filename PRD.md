@@ -37,12 +37,12 @@ installed so the script can be run.
 Harrison's PDF so I know each chapter's title, part, and page range.
 
 **Acceptance Criteria:**
-- [ ] Function `extract_chapters_from_toc(pdf_path) -> list[dict]` opens the full Harrison's PDF and parses all 580 TOC entries
-- [ ] Identifies level-1 Part entries to track current `part_number` and `part_title` as chapters are iterated
-- [ ] Treats level-2 and level-3 entries whose title starts with a digit as chapters
-- [ ] Each returned dict contains: `chapter_number` (int, from leading digits in title), `title` (str), `part_number` (int), `part_title` (str), `page_start` (int), `page_end` (int, derived from next entry)
-- [ ] Running `python backend/scripts/ingest_pdfs.py --list-chapters` prints all 492 chapters to stdout
-- [ ] Typecheck passes
+- [x] Function `extract_chapters_from_toc(pdf_path) -> list[dict]` opens the full Harrison's PDF and parses all 580 TOC entries
+- [x] Identifies level-1 Part entries to track current `part_number` and `part_title` as chapters are iterated
+- [x] Treats level-2 and level-3 entries whose title starts with a digit as chapters
+- [x] Each returned dict contains: `chapter_number` (int, from leading digits in title), `title` (str), `part_number` (int), `part_title` (str), `page_start` (int), `page_end` (int, derived from next entry)
+- [x] Running `python backend/scripts/ingest_pdfs.py --list-chapters` prints all 492 chapters to stdout
+- [x] Typecheck passes
 
 ### US-003: Text extraction and chapter storage in MongoDB
 **Description:** As a developer, I need to extract cleaned text for each chapter and
