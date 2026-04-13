@@ -1,6 +1,6 @@
 # Progress Log
 
 ## Learnings
-- recharts requires `react-is` as a peer dep; install it explicitly with `npm install react-is --legacy-peer-deps` when using React 19 to avoid Rollup build failures.
+- US-002: When caching AI responses, use `model_dump()` + `json.dumps` to serialize Pydantic v2 models into Redis (not `.dict()`). Cache key is `ai_answer:{sha256(question)}` and cache is bypassed when conversation history is non-empty.
 
 ---
