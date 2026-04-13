@@ -11,8 +11,8 @@ def record_attempt(
     *,
     user_id: str,
     question_id: str,
-    selected_option: str,
-    correct_option: str,
+    selected_option: int,
+    correct_option: int,
 ):
     is_correct = selected_option == correct_option
 

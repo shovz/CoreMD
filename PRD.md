@@ -45,12 +45,12 @@ filters so the frontend can display and filter the question bank.
 and the explanation so the frontend can show the result.
 
 **Acceptance Criteria:**
-- [ ] `POST /questions/{question_id}/attempt` accepts `{"selected_option": 0}` body
-- [ ] Returns `{"correct": true/false, "correct_option": int, "explanation": str}`
-- [ ] Records attempt in MongoDB via existing `question_attempt_service.record_attempt()`
-- [ ] Returns 404 if `question_id` not found
-- [ ] Requires valid JWT
-- [ ] Typecheck passes
+- [x] `POST /questions/{question_id}/attempt` accepts `{"selected_option": 0}` body
+- [x] Returns `{"correct": true/false, "correct_option": int, "explanation": str}`
+- [x] Records attempt in MongoDB via existing `question_attempt_service.record_attempt()`
+- [x] Returns 404 if `question_id` not found
+- [x] Requires valid JWT
+- [x] Typecheck passes
 
 ### US-004: Questions page (list + filter UI)
 **Description:** As a resident, I want to browse questions filtered by specialty or

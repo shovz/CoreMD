@@ -8,8 +8,8 @@ class QuestionAttemptInDB:
         self,
         user_id: ObjectId,
         question_id: str,
-        selected_option: str,
-        correct_option: str,
+        selected_option: int,
+        correct_option: int,
         is_correct: bool,
         created_at: Optional[datetime] = None,
     ):

@@ -5,7 +5,7 @@ from pymongo.database import Database
 
 from app.core.auth import get_current_user
 from app.schemas.question import QuestionOut, QuestionFull, Difficulty
-from app.schemas.question_attempt import QuestionAttemptCreate, QuestionAttemptOut
+from app.schemas.question_attempt import QuestionAttemptCreate, AttemptResult
 from app.services.question_attempt_service import record_attempt
 from app.db.deps import mongo_db, redis_client
 
@@ -69,7 +69,7 @@ def get_question(
     return _doc_to_question_full(doc)
 
 
-@router.post("/{question_id}/attempt", response_model=QuestionAttemptOut)
+@router.post("/{question_id}/attempt", response_model=AttemptResult)
 def attempt_question(
     question_id: str,
     attempt: QuestionAttemptCreate,
@@ -92,9 +92,7 @@ def attempt_question(
     )
 
     return {
-        "id": str(attempt_db.question_id),
-        "question_id": question_id,
-        "selected_option": attempt.selected_option,
-        "is_correct": attempt_db.is_correct,
-        "created_at": attempt_db.created_at,
+        "correct": attempt_db.is_correct,
+        "correct_option": question["correct_option"],
+        "explanation": question["explanation"],
     }
