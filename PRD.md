@@ -64,10 +64,10 @@ conversation history, runs the RAG pipeline, and returns an answer with citation
 so the chat UI can make requests cleanly.
 
 **Acceptance Criteria:**
-- [ ] `frontend/src/api/aiApi.ts` created
-- [ ] TypeScript types: `Message {role: "user"|"assistant", content: string}`, `Citation {chapter_id: string, chapter_title: string, section_title: string}`, `AskResponse {answer: string, citations: Citation[]}`
-- [ ] `askQuestion(question: string, history: Message[]) -> Promise<AskResponse>` calls `POST /ai/ask` via existing `apiClient`
-- [ ] Typecheck passes
+- [x] `frontend/src/api/aiApi.ts` created
+- [x] TypeScript types: `Message {role: "user"|"assistant", content: string}`, `Citation {chapter_id: string, chapter_title: string, section_title: string}`, `AskResponse {answer: string, citations: Citation[]}`
+- [x] `askQuestion(question: string, history: Message[]) -> Promise<AskResponse>` calls `POST /ai/ask` via existing `apiClient`
+- [x] Typecheck passes
 
 ### US-004: Chat UI
 **Description:** As a resident, I want a multi-turn chat interface where I can ask
