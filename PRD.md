@@ -51,17 +51,17 @@ frontend can display them.
 so I can choose what to study.
 
 **Acceptance Criteria:**
-- [ ] `frontend/src/pages/CasesPage.tsx` created
-- [ ] Fetches `GET /cases/` on load, displays list of cases
-- [ ] Each case shown as a card with: title, specialty badge, "View Case" button
-- [ ] Specialty filter dropdown (populated from unique specialties in the fetched list)
-- [ ] Filters cases client-side when specialty selected
-- [ ] Loading and error states handled
-- [ ] Route `/cases` added to `frontend/src/router.tsx`
-- [ ] Link to Cases page added to Home page navigation
-- [ ] `frontend/src/api/casesApi.ts` created with `getCases(specialty?)` and `getCaseById(id)`
-- [ ] Typecheck passes
-- [ ] Verify changes work in browser
+- [x] `frontend/src/pages/CasesPage.tsx` created
+- [x] Fetches `GET /cases/` on load, displays list of cases
+- [x] Each case shown as a card with: title, specialty badge, "View Case" button
+- [x] Specialty filter dropdown (populated from unique specialties in the fetched list)
+- [x] Filters cases client-side when specialty selected
+- [x] Loading and error states handled
+- [x] Route `/cases` added to `frontend/src/router.tsx`
+- [x] Link to Cases page added to Home page navigation
+- [x] `frontend/src/api/casesApi.ts` created with `getCases(specialty?)` and `getCaseById(id)`
+- [x] Typecheck passes
+- [x] Verify changes work in browser
 
 ### US-004: Case detail page
 **Description:** As a resident, I want to read a full clinical case with all structured

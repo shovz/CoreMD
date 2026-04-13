@@ -8,7 +8,10 @@ export default function Home() {
         <button onClick={() => window.location.href = "/login"}>Login</button>
         <button onClick={() => window.location.href = "/register"}>Register</button>
       </div>
-      <Link to="/">Dashboard</Link>
+      <div style={{ display: "flex", gap: 12, justifyContent: "center" }}>
+        <Link to="/">Dashboard</Link>
+        <Link to="/cases">Cases</Link>
+      </div>
     </div>
   );
 }
