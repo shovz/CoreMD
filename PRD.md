@@ -84,7 +84,7 @@ clinical questions and get grounded answers from Harrison.
 - [x] Loading state: assistant bubble shows "..." while waiting
 - [x] Conversation history stored in `useState` (session only, cleared on refresh/navigation)
 - [x] Typecheck passes
-- [ ] Verify changes work in browser
+- [x] Verify changes work in browser
 
 ### US-005: Citations display and session limit
 **Description:** As a resident, I want to see which Harrison chapters the answer came
