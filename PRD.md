@@ -1,110 +1,118 @@
-# PRD: Dashboard
+# PRD: Case Studies
 
 ## Introduction
 
-The user dashboard is the home screen for logged-in residents. The backend stats service
-is fully implemented (three endpoints with Redis caching) but the frontend is a placeholder
-that only says "You are logged in." This PRD wires the existing API to a real dashboard UI
-with overview stat cards, a difficulty breakdown bar chart, and a topic breakdown bar chart
-with weak-area flagging.
+Case studies are a core learning tool for internal medicine residents. Each case presents
+a real-world clinical scenario with history, physical exam, labs, imaging, discussion,
+diagnosis, and management — all structured sections shown at once for educational reading.
+A hidden "Show Hint" button reveals the related Harrison's chapter for residents who want
+a reference without spoiling their own thinking first.
+
+The backend cases route is currently a stub. This PRD seeds 20+ cases into MongoDB,
+builds the listing and detail API, and creates the full frontend viewer.
 
 ## Goals
 
-- Display three overview stats: total questions answered, overall accuracy %, chapters covered
-- Show a bar chart of attempts and accuracy broken down by difficulty (easy / medium / hard)
-- Show a bar chart of attempts and accuracy broken down by topic (specialty)
-- Flag any difficulty or topic where accuracy < 60% as a weak area (red highlight)
-- Replace the placeholder DashboardPage.tsx entirely
-- Add a Dashboard link to the navigation
+- Seed 20–25 clinical case documents into MongoDB across major specialties
+- Expose a listing API (with specialty filter) and a detail API
+- Build a cases browse page with specialty filtering
+- Build a case detail page showing all structured sections
+- Hidden chapter hint: chapter reference shown only when resident clicks "Show Hint"
 
 ## User Stories
 
-### US-001: Stats API client
-**Description:** As a developer, I need a typed API client for the stats endpoints so
-frontend components can fetch real data.
+### US-001: Case schema and seed script
+**Description:** As a developer, I need case documents in MongoDB with realistic clinical
+content so the API and frontend have real data to work with.
 
 **Acceptance Criteria:**
-- [x] `frontend/src/api/statsApi.ts` created
-- [x] `getOverviewStats()` calls `GET /stats/overview`, returns `OverviewStats` type: `{total_questions_answered: number, correct_percentage: number, unique_chapters_covered: number}`
-- [x] `getQuestionStats()` calls `GET /stats/questions`, returns `QuestionStats` type with `by_difficulty: Record<string, {attempted: number, accuracy: number}>` and `by_topic: {topic: string, attempted: number, accuracy: number}[]`
-- [x] Both functions use the existing `apiClient` Axios instance (auth header injected automatically)
-- [x] `recharts` added to `frontend/package.json` dependencies via `npm install recharts`
+- [x] `backend/scripts/seed_cases.py` created with 20–25 cases spanning at least 8 specialties (Cardiology, Pulmonology, Nephrology, Gastroenterology, Endocrinology, Neurology, Infectious Disease, Hematology)
+- [x] Each case document contains: `case_id` (str), `title` (str), `specialty` (str), `presentation` (str), `history` (str), `physical_exam` (str), `labs` (str), `imaging` (str), `discussion` (str), `diagnosis` (str), `management` (str), `chapter_ref` (str, matching a real `chapter_id` in `chapters` collection)
+- [x] `backend/app/schemas/case.py` created with `CaseOut` (all fields) and `CaseListItem` (case_id, title, specialty only — for listing)
+- [x] Script is idempotent: unique index on `case_id`, skips already-inserted docs
+- [x] Running `python backend/scripts/seed_cases.py` prints inserted count
 - [x] Typecheck passes
 
-### US-002: Overview stat cards
-**Description:** As a resident, I want to see my key stats at a glance when I open the
-dashboard so I know how I'm progressing.
+### US-002: Cases listing and detail API
+**Description:** As a developer, I need API endpoints to list and retrieve cases so the
+frontend can display them.
 
 **Acceptance Criteria:**
-- [x] `frontend/src/components/StatCard.tsx` created — accepts `label: string`, `value: string | number`, `sub?: string` props; renders a bordered card with a large value and a label
-- [x] Three cards rendered on the dashboard: "Questions Answered", "Accuracy" (formatted as "X%"), "Chapters Covered"
-- [x] Cards shown in a responsive 3-column grid (single column on mobile)
-- [x] While loading, cards show a skeleton/placeholder state (greyed box or "—")
-- [x] On API error, shows an inline error message instead of crashing
-- [x] Typecheck passes
+- [ ] `GET /cases/` returns list of `CaseListItem` (case_id, title, specialty) — all cases, no pagination needed for MVP
+- [ ] Supports optional query param `specialty` (str) to filter by specialty
+- [ ] `GET /cases/{case_id}` returns full `CaseOut` document including all sections
+- [ ] Returns 404 if `case_id` not found
+- [ ] Both routes require valid JWT
+- [ ] Existing stub in `backend/app/api/v1/routes/cases.py` replaced (not a new file)
+- [ ] Typecheck passes
 
-### US-003: Difficulty and topic bar charts
-**Description:** As a resident, I want to see my performance broken down by difficulty
-and specialty so I can identify where to focus.
-
-**Acceptance Criteria:**
-- [x] `frontend/src/components/AccuracyBarChart.tsx` created — accepts `data: {label: string, attempted: number, accuracy: number}[]` and `title: string` props
-- [x] Renders a recharts BarChart with two bars per entry: one for `attempted` count, one for `accuracy %`
-- [x] Any bar where `accuracy < 60` is rendered in red (#ef4444); otherwise default blue (#3b82f6)
-- [x] Chart has a legend, axis labels, and a tooltip showing exact values on hover
-- [x] Weak-area threshold defined as named constant `WEAK_AREA_THRESHOLD = 60`
-- [x] Typecheck passes
-
-### US-004: Assemble DashboardPage
-**Description:** As a resident, I want a complete dashboard that shows all my stats in
-one place when I log in.
+### US-003: Cases list page
+**Description:** As a resident, I want to browse available cases filtered by specialty
+so I can choose what to study.
 
 **Acceptance Criteria:**
-- [x] `frontend/src/pages/DashboardPage.tsx` fully replaced — fetches from both `getOverviewStats()` and `getQuestionStats()` in parallel via `Promise.all`
-- [x] Page layout: heading "My Dashboard" → StatCards row → DifficultyChart → TopicChart
-- [x] Difficulty chart title: "Performance by Difficulty" — data mapped from `by_difficulty`
-- [x] Topic chart title: "Performance by Specialty" — data mapped from `by_topic`, sorted by `attempted` descending
-- [x] Logout button retained in top-right corner
-- [x] If `total_questions_answered === 0`, show empty state message: "No attempts yet — head to the Question Bank to get started"
-- [x] Nav link to Dashboard added to Home page or shared nav component
-- [x] Typecheck passes
-- [x] Verify changes work in browser: dashboard loads, cards show numbers, charts render
+- [ ] `frontend/src/pages/CasesPage.tsx` created
+- [ ] Fetches `GET /cases/` on load, displays list of cases
+- [ ] Each case shown as a card with: title, specialty badge, "View Case" button
+- [ ] Specialty filter dropdown (populated from unique specialties in the fetched list)
+- [ ] Filters cases client-side when specialty selected
+- [ ] Loading and error states handled
+- [ ] Route `/cases` added to `frontend/src/router.tsx`
+- [ ] Link to Cases page added to Home page navigation
+- [ ] `frontend/src/api/casesApi.ts` created with `getCases(specialty?)` and `getCaseById(id)`
+- [ ] Typecheck passes
+- [ ] Verify changes work in browser
+
+### US-004: Case detail page
+**Description:** As a resident, I want to read a full clinical case with all structured
+sections, and optionally reveal the related Harrison's chapter as a hint.
+
+**Acceptance Criteria:**
+- [ ] `frontend/src/pages/CaseDetailPage.tsx` created
+- [ ] Route `/cases/:id` added to `frontend/src/router.tsx`
+- [ ] Fetches `GET /cases/{case_id}` and displays all sections in order: Presentation, History, Physical Exam, Labs, Imaging, Discussion, Diagnosis, Management
+- [ ] Each section rendered as a labelled block with a bold heading and paragraph text
+- [ ] "Show Hint" button at the bottom of the page — hidden by default
+- [ ] Clicking "Show Hint" reveals: "Reference: [chapter title] — [chapter_ref]" (toggle: clicking again hides it)
+- [ ] "Back to Cases" link at the top
+- [ ] Loading and error states handled
+- [ ] Typecheck passes
+- [ ] Verify changes work in browser
 
 ## Non-Goals
 
-- No chapter-level progress breakdown (separate PRD)
-- No date range filtering or historical trend charts
-- No comparison against other users or averages
-- No recommended next questions feature
-- No print or export functionality
+- No user progress tracking for cases (no "mark as read" or completion state)
+- No case search by keyword
+- No case comments or annotations
+- No AI-generated cases (manual seed only)
+- No pagination (20–25 cases fit comfortably in one list)
+- No case difficulty rating
 
 ## Technical Considerations
 
-- All three stat endpoints require JWT — `apiClient` handles this automatically via the Authorization header interceptor in `frontend/src/api/apiClient.ts`
-- Stats are cached by the backend for 120 seconds (Redis) — no frontend caching needed
-- `by_difficulty` keys from the API are dynamic strings ("easy", "medium", "hard") — map them to `{label, attempted, accuracy}` before passing to `AccuracyBarChart`
-- Use `npm install recharts --legacy-peer-deps` if React 19 peer dep conflict occurs
-- Empty state: if `total_questions_answered === 0`, show message instead of empty charts
+- `case_id` format: `case_{specialty_slug}_{index:03d}` (e.g. `case_cardiology_001`) for stable idempotent re-seeding
+- `chapter_ref` must match a real `chapter_id` from the `chapters` collection (e.g. `p06_c238`) — seed script should use valid IDs from the ingested data
+- The hint button should use a simple `useState(false)` toggle — no URL state needed
+- Reuse existing `apiClient.ts` Axios instance in `casesApi.ts`
+- The cases route file already exists at `backend/app/api/v1/routes/cases.py` — replace the stub in place
+- `main.py` already registers the cases router — no change needed there
 
-### API Response Shapes (already implemented in backend)
+### MongoDB Document Shape
 
-**GET /stats/overview:**
-```json
-{"total_questions_answered": 42, "correct_percentage": 71.4, "unique_chapters_covered": 8}
-```
-
-**GET /stats/questions:**
 ```json
 {
-  "by_difficulty": {
-    "easy":   {"attempted": 15, "accuracy": 86.7},
-    "medium": {"attempted": 20, "accuracy": 65.0},
-    "hard":   {"attempted": 7,  "accuracy": 42.9}
-  },
-  "by_topic": [
-    {"topic": "Cardiology",  "attempted": 12, "accuracy": 75.0},
-    {"topic": "Nephrology",  "attempted": 8,  "accuracy": 50.0}
-  ]
+  "case_id": "case_cardiology_001",
+  "title": "Acute STEMI in a 58-Year-Old Diabetic Man",
+  "specialty": "Cardiology",
+  "presentation": "A 58-year-old man with a history of type 2 diabetes and hypertension presents to the ED with 2 hours of crushing substernal chest pain radiating to his left arm, accompanied by diaphoresis and nausea.",
+  "history": "Past medical history: T2DM (10 years), hypertension, hyperlipidemia. Medications: metformin, lisinopril, atorvastatin. Family history: father died of MI at 62. Social: 20 pack-year smoking history, quit 5 years ago.",
+  "physical_exam": "BP 155/95, HR 102, RR 18, SpO2 96% on room air. Diaphoretic. JVP not elevated. Heart: regular rhythm, no murmurs. Lungs: clear. Extremities: no edema.",
+  "labs": "Troponin I: 4.2 ng/mL (elevated). BMP: glucose 210, Cr 1.1, K 4.2. CBC: WBC 11.2, Hgb 13.8. Coagulation: normal.",
+  "imaging": "ECG: ST elevations in leads II, III, aVF with reciprocal changes in I and aVL — consistent with inferior STEMI. CXR: no pulmonary edema, normal cardiac silhouette.",
+  "discussion": "Inferior STEMI is most commonly caused by occlusion of the right coronary artery (RCA). Diabetic patients may present with atypical symptoms. Rapid reperfusion via primary PCI within 90 minutes of first medical contact is the standard of care.",
+  "diagnosis": "Inferior ST-elevation myocardial infarction (STEMI) due to acute RCA occlusion.",
+  "management": "Aspirin 325 mg + P2Y12 inhibitor (ticagrelor or clopidogrel). Activate cath lab for primary PCI. IV heparin. Beta-blocker if hemodynamically stable. Statin therapy. Post-PCI: dual antiplatelet therapy for 12 months.",
+  "chapter_ref": "p06_c238"
 }
 ```
 
@@ -112,8 +120,10 @@ one place when I log in.
 
 | File | Action |
 |---|---|
-| `frontend/src/api/statsApi.ts` | Create |
-| `frontend/src/components/StatCard.tsx` | Create |
-| `frontend/src/components/AccuracyBarChart.tsx` | Create |
-| `frontend/src/pages/DashboardPage.tsx` | Replace entirely |
-| `frontend/package.json` | Add recharts |
+| `backend/scripts/seed_cases.py` | Create |
+| `backend/app/schemas/case.py` | Create |
+| `backend/app/api/v1/routes/cases.py` | Replace stub |
+| `frontend/src/api/casesApi.ts` | Create |
+| `frontend/src/pages/CasesPage.tsx` | Create |
+| `frontend/src/pages/CaseDetailPage.tsx` | Create |
+| `frontend/src/router.tsx` | Add /cases and /cases/:id routes |
