@@ -38,13 +38,13 @@ content so the API and frontend have real data to work with.
 frontend can display them.
 
 **Acceptance Criteria:**
-- [ ] `GET /cases/` returns list of `CaseListItem` (case_id, title, specialty) — all cases, no pagination needed for MVP
-- [ ] Supports optional query param `specialty` (str) to filter by specialty
-- [ ] `GET /cases/{case_id}` returns full `CaseOut` document including all sections
-- [ ] Returns 404 if `case_id` not found
-- [ ] Both routes require valid JWT
-- [ ] Existing stub in `backend/app/api/v1/routes/cases.py` replaced (not a new file)
-- [ ] Typecheck passes
+- [x] `GET /cases/` returns list of `CaseListItem` (case_id, title, specialty) — all cases, no pagination needed for MVP
+- [x] Supports optional query param `specialty` (str) to filter by specialty
+- [x] `GET /cases/{case_id}` returns full `CaseOut` document including all sections
+- [x] Returns 404 if `case_id` not found
+- [x] Both routes require valid JWT
+- [x] Existing stub in `backend/app/api/v1/routes/cases.py` replaced (not a new file)
+- [x] Typecheck passes
 
 ### US-003: Cases list page
 **Description:** As a resident, I want to browse available cases filtered by specialty
