@@ -1,125 +1,110 @@
-# PRD: Question Bank
+# PRD: Dashboard
 
 ## Introduction
 
-With Harrison's content now in MongoDB, the next core feature is the Question Bank —
-a set of MCQ (multiple-choice question) cards that residents can use to test their knowledge
-chapter by chapter. The backend already records attempts and calculates stats; what's missing
-is the question data itself, the listing/filtering API, and the frontend UI.
+The user dashboard is the home screen for logged-in residents. The backend stats service
+is fully implemented (three endpoints with Redis caching) but the frontend is a placeholder
+that only says "You are logged in." This PRD wires the existing API to a real dashboard UI
+with overview stat cards, a difficulty breakdown bar chart, and a topic breakdown bar chart
+with weak-area flagging.
 
 ## Goals
 
-- Seed a representative set of sample MCQs into MongoDB (one per chapter for ~20 chapters as a starting set)
-- Expose a working questions listing API with filtering by topic, chapter, and difficulty
-- Build a frontend MCQ page where residents can browse, attempt, and review questions
-- Wire attempt recording to the existing `question_attempt_service` (already implemented)
-- Show per-question feedback (correct/incorrect + explanation) after each attempt
+- Display three overview stats: total questions answered, overall accuracy %, chapters covered
+- Show a bar chart of attempts and accuracy broken down by difficulty (easy / medium / hard)
+- Show a bar chart of attempts and accuracy broken down by topic (specialty)
+- Flag any difficulty or topic where accuracy < 60% as a weak area (red highlight)
+- Replace the placeholder DashboardPage.tsx entirely
+- Add a Dashboard link to the navigation
 
 ## User Stories
 
-### US-001: Question schema and MongoDB seeding
-**Description:** As a developer, I need question documents in MongoDB so the API and
-frontend have real data to work with.
+### US-001: Stats API client
+**Description:** As a developer, I need a typed API client for the stats endpoints so
+frontend components can fetch real data.
 
 **Acceptance Criteria:**
-- [x] `backend/scripts/seed_questions.py` created with 20 sample MCQs across at least 5 different specialties
-- [x] Each question document contains: `question_id` (str), `stem` (str), `options` (list of 4 str), `correct_option` (int, 0-indexed), `explanation` (str), `topic` (str), `chapter_ref` (str, matching a `chapter_id` in `chapters`), `difficulty` ("easy" | "medium" | "hard")
-- [x] Script is idempotent: re-running skips already-inserted questions (keyed on `question_id`)
-- [x] Running `python backend/scripts/seed_questions.py` inserts questions and prints count
+- [x] `frontend/src/api/statsApi.ts` created
+- [x] `getOverviewStats()` calls `GET /stats/overview`, returns `OverviewStats` type: `{total_questions_answered: number, correct_percentage: number, unique_chapters_covered: number}`
+- [x] `getQuestionStats()` calls `GET /stats/questions`, returns `QuestionStats` type with `by_difficulty: Record<string, {attempted: number, accuracy: number}>` and `by_topic: {topic: string, attempted: number, accuracy: number}[]`
+- [x] Both functions use the existing `apiClient` Axios instance (auth header injected automatically)
+- [x] `recharts` added to `frontend/package.json` dependencies via `npm install recharts`
 - [x] Typecheck passes
 
-### US-002: Questions listing and filtering API
-**Description:** As a developer, I need API endpoints to list questions with optional
-filters so the frontend can display and filter the question bank.
+### US-002: Overview stat cards
+**Description:** As a resident, I want to see my key stats at a glance when I open the
+dashboard so I know how I'm progressing.
 
 **Acceptance Criteria:**
-- [x] `GET /questions/` returns paginated list of questions (default limit 20, offset 0)
-- [x] Supports query params: `topic` (str), `chapter_id` (str), `difficulty` ("easy"|"medium"|"hard")
-- [x] Response schema: `QuestionOut` with fields `question_id`, `stem`, `options` (list of str), `topic`, `chapter_ref`, `difficulty` — does NOT include `correct_option` or `explanation` (revealed only after attempt)
-- [x] `GET /questions/{question_id}` returns full question including `correct_option` and `explanation`
-- [x] All routes require valid JWT
-- [x] Typecheck passes
+- [ ] `frontend/src/components/StatCard.tsx` created — accepts `label: string`, `value: string | number`, `sub?: string` props; renders a bordered card with a large value and a label
+- [ ] Three cards rendered on the dashboard: "Questions Answered", "Accuracy" (formatted as "X%"), "Chapters Covered"
+- [ ] Cards shown in a responsive 3-column grid (single column on mobile)
+- [ ] While loading, cards show a skeleton/placeholder state (greyed box or "—")
+- [ ] On API error, shows an inline error message instead of crashing
+- [ ] Typecheck passes
 
-### US-003: Question attempt endpoint
-**Description:** As a developer, I need the attempt endpoint to return correctness feedback
-and the explanation so the frontend can show the result.
-
-**Acceptance Criteria:**
-- [x] `POST /questions/{question_id}/attempt` accepts `{"selected_option": 0}` body
-- [x] Returns `{"correct": true/false, "correct_option": int, "explanation": str}`
-- [x] Records attempt in MongoDB via existing `question_attempt_service.record_attempt()`
-- [x] Returns 404 if `question_id` not found
-- [x] Requires valid JWT
-- [x] Typecheck passes
-
-### US-004: Questions page (list + filter UI)
-**Description:** As a resident, I want to browse questions filtered by specialty or
-difficulty so I can focus my study.
+### US-003: Difficulty and topic bar charts
+**Description:** As a resident, I want to see my performance broken down by difficulty
+and specialty so I can identify where to focus.
 
 **Acceptance Criteria:**
-- [x] `frontend/src/pages/QuestionsPage.tsx` created
-- [x] Fetches questions from `GET /questions/` on load
-- [x] Displays question stems in a list (no options visible yet — click to attempt)
-- [x] Filter bar: difficulty dropdown (All / Easy / Medium / Hard) + topic text filter
-- [x] Each question row shows topic badge and difficulty badge
-- [x] Route `/questions` added to `frontend/src/router.tsx`
-- [x] Link to Questions page added to nav/home
-- [x] `frontend/src/api/questionsApi.ts` created with `getQuestions(filters)` and `getQuestionById(id)`
-- [x] Typecheck passes
-- [x] Verify changes work in browser
+- [ ] `frontend/src/components/AccuracyBarChart.tsx` created — accepts `data: {label: string, attempted: number, accuracy: number}[]` and `title: string` props
+- [ ] Renders a recharts BarChart with two bars per entry: one for `attempted` count, one for `accuracy %`
+- [ ] Any bar where `accuracy < 60` is rendered in red (#ef4444); otherwise default blue (#3b82f6)
+- [ ] Chart has a legend, axis labels, and a tooltip showing exact values on hover
+- [ ] Weak-area threshold defined as named constant `WEAK_AREA_THRESHOLD = 60`
+- [ ] Typecheck passes
 
-### US-005: Question attempt UI
-**Description:** As a resident, I want to attempt a question and immediately see whether
-I was right, with an explanation, so I can learn from my mistakes.
+### US-004: Assemble DashboardPage
+**Description:** As a resident, I want a complete dashboard that shows all my stats in
+one place when I log in.
 
 **Acceptance Criteria:**
-- [x] Clicking a question from QuestionsPage navigates to `/questions/:id`
-- [x] `frontend/src/pages/QuestionDetailPage.tsx` created
-- [x] Displays: question stem, 4 answer options as selectable buttons
-- [x] On option click: calls `POST /questions/{id}/attempt`, disables all options
-- [x] Correct option highlighted green, selected wrong option highlighted red
-- [x] Explanation text shown below options after attempt
-- [x] "Back to Questions" link present
-- [x] `questionsApi.ts` includes `submitAttempt(questionId, selectedOption)`
-- [x] Typecheck passes
-- [x] Verify changes work in browser
+- [ ] `frontend/src/pages/DashboardPage.tsx` fully replaced — fetches from both `getOverviewStats()` and `getQuestionStats()` in parallel via `Promise.all`
+- [ ] Page layout: heading "My Dashboard" → StatCards row → DifficultyChart → TopicChart
+- [ ] Difficulty chart title: "Performance by Difficulty" — data mapped from `by_difficulty`
+- [ ] Topic chart title: "Performance by Specialty" — data mapped from `by_topic`, sorted by `attempted` descending
+- [ ] Logout button retained in top-right corner
+- [ ] If `total_questions_answered === 0`, show empty state message: "No attempts yet — head to the Question Bank to get started"
+- [ ] Nav link to Dashboard added to Home page or shared nav component
+- [ ] Typecheck passes
+- [ ] Verify changes work in browser: dashboard loads, cards show numbers, charts render
 
 ## Non-Goals
 
-- No AI-generated questions (manual seed only for this PRD)
-- No question editing or admin CRUD UI
-- No timed quiz mode
-- No bulk import from external question banks
-- No question flagging or reporting
-- No leaderboard or social features
+- No chapter-level progress breakdown (separate PRD)
+- No date range filtering or historical trend charts
+- No comparison against other users or averages
+- No recommended next questions feature
+- No print or export functionality
 
 ## Technical Considerations
 
-- Existing `question_attempt_service.record_attempt()` in `backend/app/services/question_attempt_service.py` already handles recording — reuse it in US-003
-- Existing `POST /questions/{question_id}/attempt` route in `backend/app/api/v1/routes/questions.py` is a stub — replace it (don't add a new route)
-- `question_id` format: `q_{chapter_id}_{index}` (e.g. `q_p06_c238_001`) for stable idempotent re-seeding
-- Questions listing does NOT expose `correct_option` to prevent cheating — reveal only via the attempt endpoint
-- The `chapters` collection now has real data — seed questions should reference real `chapter_id` values (use `p06_c238` style IDs matching what ingestion produced)
-- Frontend filter state can be managed with `useState` (no URL params needed for MVP)
-- Reuse existing `apiClient.ts` Axios instance for `questionsApi.ts`
+- All three stat endpoints require JWT — `apiClient` handles this automatically via the Authorization header interceptor in `frontend/src/api/apiClient.ts`
+- Stats are cached by the backend for 120 seconds (Redis) — no frontend caching needed
+- `by_difficulty` keys from the API are dynamic strings ("easy", "medium", "hard") — map them to `{label, attempted, accuracy}` before passing to `AccuracyBarChart`
+- Use `npm install recharts --legacy-peer-deps` if React 19 peer dep conflict occurs
+- Empty state: if `total_questions_answered === 0`, show message instead of empty charts
 
-### MongoDB Document Shape
+### API Response Shapes (already implemented in backend)
 
+**GET /stats/overview:**
+```json
+{"total_questions_answered": 42, "correct_percentage": 71.4, "unique_chapters_covered": 8}
+```
+
+**GET /stats/questions:**
 ```json
 {
-  "question_id": "q_p06_c238_001",
-  "stem": "A 65-year-old man presents with exertional dyspnea and ankle edema. Which finding on physical exam is most consistent with right heart failure?",
-  "options": [
-    "S3 gallop at apex",
-    "Jugular venous distension",
-    "Bilateral crackles at lung bases",
-    "Displaced apical impulse"
-  ],
-  "correct_option": 1,
-  "explanation": "Jugular venous distension (JVD) reflects elevated right atrial pressure, which is the hallmark of right heart failure. S3 gallop and displaced apical impulse suggest left heart failure; bilateral crackles suggest pulmonary edema from left heart failure.",
-  "topic": "Cardiology",
-  "chapter_ref": "p06_c238",
-  "difficulty": "medium"
+  "by_difficulty": {
+    "easy":   {"attempted": 15, "accuracy": 86.7},
+    "medium": {"attempted": 20, "accuracy": 65.0},
+    "hard":   {"attempted": 7,  "accuracy": 42.9}
+  },
+  "by_topic": [
+    {"topic": "Cardiology",  "attempted": 12, "accuracy": 75.0},
+    {"topic": "Nephrology",  "attempted": 8,  "accuracy": 50.0}
+  ]
 }
 ```
 
@@ -127,10 +112,8 @@ I was right, with an explanation, so I can learn from my mistakes.
 
 | File | Action |
 |---|---|
-| `backend/scripts/seed_questions.py` | Create |
-| `backend/app/schemas/question.py` | Create — Pydantic models for QuestionOut, AttemptRequest, AttemptResponse |
-| `backend/app/api/v1/routes/questions.py` | Replace stub with real implementation |
-| `frontend/src/pages/QuestionsPage.tsx` | Create |
-| `frontend/src/pages/QuestionDetailPage.tsx` | Create |
-| `frontend/src/api/questionsApi.ts` | Create |
-| `frontend/src/router.tsx` | Add /questions and /questions/:id routes |
+| `frontend/src/api/statsApi.ts` | Create |
+| `frontend/src/components/StatCard.tsx` | Create |
+| `frontend/src/components/AccuracyBarChart.tsx` | Create |
+| `frontend/src/pages/DashboardPage.tsx` | Replace entirely |
+| `frontend/package.json` | Add recharts |
