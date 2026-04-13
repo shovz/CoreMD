@@ -11,6 +11,7 @@ import SectionDetailPage from "./pages/SectionDetailPage";
 import QuestionsPage from "./pages/QuestionsPage";
 import QuestionDetailPage from "./pages/QuestionDetailPage";
 import CasesPage from "./pages/CasesPage";
+import CaseDetailPage from "./pages/CaseDetailPage";
 
 function ProtectedRoute({ children }: { children: ReactNode }) {
   const token = localStorage.getItem("access_token");
@@ -85,6 +86,14 @@ export default function AppRouter() {
           element={
             <ProtectedRoute>
               <CasesPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/cases/:id"
+          element={
+            <ProtectedRoute>
+              <CaseDetailPage />
             </ProtectedRoute>
           }
         />

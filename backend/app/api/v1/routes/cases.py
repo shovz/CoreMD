@@ -20,7 +20,7 @@ def _doc_to_case_list_item(doc: dict) -> dict:
     }
 
 
-def _doc_to_case_out(doc: dict) -> dict:
+def _doc_to_case_out(doc: dict, chapter_title: Optional[str] = None) -> dict:
     return {
         "case_id": doc["case_id"],
         "title": doc["title"],
@@ -34,6 +34,7 @@ def _doc_to_case_out(doc: dict) -> dict:
         "diagnosis": doc["diagnosis"],
         "management": doc["management"],
         "chapter_ref": doc["chapter_ref"],
+        "chapter_title": chapter_title,
     }
 
 
@@ -60,4 +61,12 @@ def get_case(
     doc = db["cases"].find_one({"case_id": case_id}, {"_id": 0})
     if not doc:
         raise HTTPException(status_code=404, detail="Case not found")
-    return _doc_to_case_out(doc)
+
+    chapter_title: Optional[str] = None
+    chapter_ref = doc.get("chapter_ref")
+    if chapter_ref:
+        ch = db["chapters"].find_one({"id": chapter_ref}, {"_id": 0, "title": 1})
+        if ch:
+            chapter_title = ch["title"]
+
+    return _doc_to_case_out(doc, chapter_title)

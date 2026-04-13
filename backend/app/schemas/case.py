@@ -1,4 +1,5 @@
 from pydantic import BaseModel
+from typing import Optional
 
 
 class CaseOut(BaseModel):
@@ -14,6 +15,7 @@ class CaseOut(BaseModel):
     diagnosis: str
     management: str
     chapter_ref: str
+    chapter_title: Optional[str] = None
 
     class Config:
         orm_mode = True

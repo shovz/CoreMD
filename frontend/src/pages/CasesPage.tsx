@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from "react";
 import { Link } from "react-router-dom";
-import { getCases, type CaseOut } from "../api/casesApi";
+import { getCases, type CaseListItem } from "../api/casesApi";
 
 const SPECIALTY_COLORS: Record<string, string> = {
   cardiology: "#c62828",
@@ -22,7 +22,7 @@ function getSpecialtyColor(specialty: string): string {
 }
 
 export default function CasesPage() {
-  const [cases, setCases] = useState<CaseOut[]>([]);
+  const [cases, setCases] = useState<CaseListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedSpecialty, setSelectedSpecialty] = useState("");
@@ -109,9 +109,6 @@ export default function CasesPage() {
                   {c.specialty}
                 </span>
               </div>
-              {c.chief_complaint && (
-                <p style={{ margin: 0, color: "#555", fontSize: 14 }}>{c.chief_complaint}</p>
-              )}
               <div>
                 <Link
                   to={`/cases/${c.case_id}`}

@@ -68,16 +68,16 @@ so I can choose what to study.
 sections, and optionally reveal the related Harrison's chapter as a hint.
 
 **Acceptance Criteria:**
-- [ ] `frontend/src/pages/CaseDetailPage.tsx` created
-- [ ] Route `/cases/:id` added to `frontend/src/router.tsx`
-- [ ] Fetches `GET /cases/{case_id}` and displays all sections in order: Presentation, History, Physical Exam, Labs, Imaging, Discussion, Diagnosis, Management
-- [ ] Each section rendered as a labelled block with a bold heading and paragraph text
-- [ ] "Show Hint" button at the bottom of the page — hidden by default
-- [ ] Clicking "Show Hint" reveals: "Reference: [chapter title] — [chapter_ref]" (toggle: clicking again hides it)
-- [ ] "Back to Cases" link at the top
-- [ ] Loading and error states handled
-- [ ] Typecheck passes
-- [ ] Verify changes work in browser
+- [x] `frontend/src/pages/CaseDetailPage.tsx` created
+- [x] Route `/cases/:id` added to `frontend/src/router.tsx`
+- [x] Fetches `GET /cases/{case_id}` and displays all sections in order: Presentation, History, Physical Exam, Labs, Imaging, Discussion, Diagnosis, Management
+- [x] Each section rendered as a labelled block with a bold heading and paragraph text
+- [x] "Show Hint" button at the bottom of the page — hidden by default
+- [x] Clicking "Show Hint" reveals: "Reference: [chapter title] — [chapter_ref]" (toggle: clicking again hides it)
+- [x] "Back to Cases" link at the top
+- [x] Loading and error states handled
+- [x] Typecheck passes
+- [x] Verify changes work in browser
 
 ## Non-Goals
 
