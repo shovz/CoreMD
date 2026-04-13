@@ -33,12 +33,12 @@ frontend have real data to work with.
 filters so the frontend can display and filter the question bank.
 
 **Acceptance Criteria:**
-- [ ] `GET /questions/` returns paginated list of questions (default limit 20, offset 0)
-- [ ] Supports query params: `topic` (str), `chapter_id` (str), `difficulty` ("easy"|"medium"|"hard")
-- [ ] Response schema: `QuestionOut` with fields `question_id`, `stem`, `options` (list of str), `topic`, `chapter_ref`, `difficulty` — does NOT include `correct_option` or `explanation` (revealed only after attempt)
-- [ ] `GET /questions/{question_id}` returns full question including `correct_option` and `explanation`
-- [ ] All routes require valid JWT
-- [ ] Typecheck passes
+- [x] `GET /questions/` returns paginated list of questions (default limit 20, offset 0)
+- [x] Supports query params: `topic` (str), `chapter_id` (str), `difficulty` ("easy"|"medium"|"hard")
+- [x] Response schema: `QuestionOut` with fields `question_id`, `stem`, `options` (list of str), `topic`, `chapter_ref`, `difficulty` — does NOT include `correct_option` or `explanation` (revealed only after attempt)
+- [x] `GET /questions/{question_id}` returns full question including `correct_option` and `explanation`
+- [x] All routes require valid JWT
+- [x] Typecheck passes
 
 ### US-003: Question attempt endpoint
 **Description:** As a developer, I need the attempt endpoint to return correctness feedback
