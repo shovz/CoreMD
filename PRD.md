@@ -48,12 +48,12 @@ dashboard so I know how I'm progressing.
 and specialty so I can identify where to focus.
 
 **Acceptance Criteria:**
-- [ ] `frontend/src/components/AccuracyBarChart.tsx` created — accepts `data: {label: string, attempted: number, accuracy: number}[]` and `title: string` props
-- [ ] Renders a recharts BarChart with two bars per entry: one for `attempted` count, one for `accuracy %`
-- [ ] Any bar where `accuracy < 60` is rendered in red (#ef4444); otherwise default blue (#3b82f6)
-- [ ] Chart has a legend, axis labels, and a tooltip showing exact values on hover
-- [ ] Weak-area threshold defined as named constant `WEAK_AREA_THRESHOLD = 60`
-- [ ] Typecheck passes
+- [x] `frontend/src/components/AccuracyBarChart.tsx` created — accepts `data: {label: string, attempted: number, accuracy: number}[]` and `title: string` props
+- [x] Renders a recharts BarChart with two bars per entry: one for `attempted` count, one for `accuracy %`
+- [x] Any bar where `accuracy < 60` is rendered in red (#ef4444); otherwise default blue (#3b82f6)
+- [x] Chart has a legend, axis labels, and a tooltip showing exact values on hover
+- [x] Weak-area threshold defined as named constant `WEAK_AREA_THRESHOLD = 60`
+- [x] Typecheck passes
 
 ### US-004: Assemble DashboardPage
 **Description:** As a resident, I want a complete dashboard that shows all my stats in
