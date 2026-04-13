@@ -1,129 +1,146 @@
-# PRD: Case Studies
+# PRD: AI Assistant (RAG)
 
 ## Introduction
 
-Case studies are a core learning tool for internal medicine residents. Each case presents
-a real-world clinical scenario with history, physical exam, labs, imaging, discussion,
-diagnosis, and management — all structured sections shown at once for educational reading.
-A hidden "Show Hint" button reveals the related Harrison's chapter for residents who want
-a reference without spoiling their own thinking first.
+The AI Assistant is CoreMD's most powerful learning feature — a chat interface grounded
+entirely in Harrison's Principles of Internal Medicine. Residents can ask clinical questions
+and get answers backed by the exact text chunks from the book, with citations linking to
+the relevant chapters.
 
-The backend cases route is currently a stub. This PRD seeds 20+ cases into MongoDB,
-builds the listing and detail API, and creates the full frontend viewer.
+The 15,673 text chunks with 1536-dimension embeddings are already in MongoDB from the
+ingestion pipeline. This PRD builds the retrieval and generation layer on top of that data
+and the full multi-turn chat UI.
+
+## How It Works (RAG Pipeline)
+
+1. User asks a clinical question
+2. Backend generates an embedding for the question (OpenAI text-embedding-3-small)
+3. Loads all chunk embeddings from MongoDB, computes cosine similarity in Python (numpy)
+4. Selects top 5 most relevant chunks across Harrison chapters
+5. Builds a prompt: system instructions + 5 context chunks + conversation history + question
+6. Calls OpenAI GPT-4o-mini — answer is grounded in the retrieved text only
+7. Returns answer + citations (chapter_id, chapter_title, section_title)
+8. Answer cached in Redis by question hash (1 hour TTL)
 
 ## Goals
 
-- Seed 20–25 clinical case documents into MongoDB across major specialties
-- Expose a listing API (with specialty filter) and a detail API
-- Build a cases browse page with specialty filtering
-- Build a case detail page showing all structured sections
-- Hidden chapter hint: chapter reference shown only when resident clicks "Show Hint"
+- RAG service: cosine similarity retrieval over 15,673 embedded chunks, top 5 results
+- AI endpoint: multi-turn conversation support with grounded answers and citations
+- Chat UI: multi-turn conversation, session-only history, max 10 exchanges then prompt to reset
+- Citations rendered as clickable links to the existing chapter detail page
 
 ## User Stories
 
-### US-001: Case schema and seed script
-**Description:** As a developer, I need case documents in MongoDB with realistic clinical
-content so the API and frontend have real data to work with.
+### US-001: RAG retrieval service
+**Description:** As a developer, I need a service that finds the most relevant Harrison
+chunks for a given query so the LLM has grounded context to answer from.
 
 **Acceptance Criteria:**
-- [x] `backend/scripts/seed_cases.py` created with 20–25 cases spanning at least 8 specialties (Cardiology, Pulmonology, Nephrology, Gastroenterology, Endocrinology, Neurology, Infectious Disease, Hematology)
-- [x] Each case document contains: `case_id` (str), `title` (str), `specialty` (str), `presentation` (str), `history` (str), `physical_exam` (str), `labs` (str), `imaging` (str), `discussion` (str), `diagnosis` (str), `management` (str), `chapter_ref` (str, matching a real `chapter_id` in `chapters` collection)
-- [x] `backend/app/schemas/case.py` created with `CaseOut` (all fields) and `CaseListItem` (case_id, title, specialty only — for listing)
-- [x] Script is idempotent: unique index on `case_id`, skips already-inserted docs
-- [x] Running `python backend/scripts/seed_cases.py` prints inserted count
+- [x] `backend/app/services/rag_service.py` created
+- [x] `get_relevant_chunks(db, question_embedding, top_k=5) -> list[dict]` loads all chunk embeddings from `text_chunks` collection and returns top-k by cosine similarity
+- [x] Cosine similarity computed with `numpy` (dot product of normalised vectors)
+- [x] Each returned dict contains: `chunk_id`, `chapter_id`, `chapter_title` (looked up from `chapters`), `section_title`, `text`
+- [x] `build_context_prompt(chunks) -> str` formats the chunks into a numbered context block for the LLM prompt
+- [x] `numpy` added to `backend/requirements.txt`
 - [x] Typecheck passes
 
-### US-002: Cases listing and detail API
-**Description:** As a developer, I need API endpoints to list and retrieve cases so the
-frontend can display them.
+### US-002: AI ask endpoint
+**Description:** As a developer, I need a POST endpoint that accepts a question and
+conversation history, runs the RAG pipeline, and returns an answer with citations.
 
 **Acceptance Criteria:**
-- [x] `GET /cases/` returns list of `CaseListItem` (case_id, title, specialty) — all cases, no pagination needed for MVP
-- [x] Supports optional query param `specialty` (str) to filter by specialty
-- [x] `GET /cases/{case_id}` returns full `CaseOut` document including all sections
-- [x] Returns 404 if `case_id` not found
-- [x] Both routes require valid JWT
-- [x] Existing stub in `backend/app/api/v1/routes/cases.py` replaced (not a new file)
-- [x] Typecheck passes
+- [ ] `POST /ai/ask` replaces the existing stub in `backend/app/api/v1/routes/ai.py`
+- [ ] Request body: `{"question": str, "history": [{"role": "user" or "assistant", "content": str}]}` — history optional, defaults to empty list
+- [ ] Response body: `{"answer": str, "citations": [{"chapter_id": str, "chapter_title": str, "section_title": str}]}`
+- [ ] Pipeline: generate question embedding, retrieve top 5 chunks, build prompt with system message + context + last 10 history messages + question, call gpt-4o-mini, return answer + deduplicated citations
+- [ ] System prompt instructs LLM to answer only from provided context and say "I do not have enough information" if context is insufficient
+- [ ] Answer cached in Redis with key `ai_answer:{sha256(question)}` TTL 3600s — cache bypassed when history is non-empty
+- [ ] `backend/app/schemas/ai.py` created with `AskRequest`, `Citation`, `AskResponse` Pydantic models
+- [ ] Requires valid JWT
+- [ ] Typecheck passes
 
-### US-003: Cases list page
-**Description:** As a resident, I want to browse available cases filtered by specialty
-so I can choose what to study.
-
-**Acceptance Criteria:**
-- [x] `frontend/src/pages/CasesPage.tsx` created
-- [x] Fetches `GET /cases/` on load, displays list of cases
-- [x] Each case shown as a card with: title, specialty badge, "View Case" button
-- [x] Specialty filter dropdown (populated from unique specialties in the fetched list)
-- [x] Filters cases client-side when specialty selected
-- [x] Loading and error states handled
-- [x] Route `/cases` added to `frontend/src/router.tsx`
-- [x] Link to Cases page added to Home page navigation
-- [x] `frontend/src/api/casesApi.ts` created with `getCases(specialty?)` and `getCaseById(id)`
-- [x] Typecheck passes
-- [x] Verify changes work in browser
-
-### US-004: Case detail page
-**Description:** As a resident, I want to read a full clinical case with all structured
-sections, and optionally reveal the related Harrison's chapter as a hint.
+### US-003: Chat API client and types
+**Description:** As a developer, I need a typed frontend API client for the AI endpoint
+so the chat UI can make requests cleanly.
 
 **Acceptance Criteria:**
-- [x] `frontend/src/pages/CaseDetailPage.tsx` created
-- [x] Route `/cases/:id` added to `frontend/src/router.tsx`
-- [x] Fetches `GET /cases/{case_id}` and displays all sections in order: Presentation, History, Physical Exam, Labs, Imaging, Discussion, Diagnosis, Management
-- [x] Each section rendered as a labelled block with a bold heading and paragraph text
-- [x] "Show Hint" button at the bottom of the page — hidden by default
-- [x] Clicking "Show Hint" reveals: "Reference: [chapter title] — [chapter_ref]" (toggle: clicking again hides it)
-- [x] "Back to Cases" link at the top
-- [x] Loading and error states handled
-- [x] Typecheck passes
-- [x] Verify changes work in browser
+- [ ] `frontend/src/api/aiApi.ts` created
+- [ ] TypeScript types: `Message {role: "user"|"assistant", content: string}`, `Citation {chapter_id: string, chapter_title: string, section_title: string}`, `AskResponse {answer: string, citations: Citation[]}`
+- [ ] `askQuestion(question: string, history: Message[]) -> Promise<AskResponse>` calls `POST /ai/ask` via existing `apiClient`
+- [ ] Typecheck passes
+
+### US-004: Chat UI
+**Description:** As a resident, I want a multi-turn chat interface where I can ask
+clinical questions and get grounded answers from Harrison.
+
+**Acceptance Criteria:**
+- [ ] `frontend/src/pages/ChatPage.tsx` created
+- [ ] Route `/chat` added to `frontend/src/router.tsx`
+- [ ] Chat link added to `Home.tsx` navigation
+- [ ] Message thread displayed as chat bubbles: user messages right-aligned (blue), assistant messages left-aligned (grey)
+- [ ] Each assistant message shows its citations below the answer text
+- [ ] Input bar at bottom: text input + Ask button, disabled while waiting for response
+- [ ] Pressing Enter submits the question
+- [ ] Loading state: assistant bubble shows "..." while waiting
+- [ ] Conversation history stored in `useState` (session only, cleared on refresh/navigation)
+- [ ] Typecheck passes
+- [ ] Verify changes work in browser
+
+### US-005: Citations display and session limit
+**Description:** As a resident, I want to see which Harrison chapters the answer came
+from, and be prompted to start fresh when the conversation gets long.
+
+**Acceptance Criteria:**
+- [ ] Each assistant message shows citation chips below the answer text
+- [ ] Each chip displays chapter title truncated to 40 chars
+- [ ] Each chip is a clickable link to `/chapters/{chapter_id}` (existing chapter detail page)
+- [ ] When conversation reaches 10 exchanges (20 messages), input is disabled and a banner appears: "Conversation limit reached"
+- [ ] "Start new conversation" button clears message history and re-enables input
+- [ ] Typecheck passes
+- [ ] Verify changes work in browser
 
 ## Non-Goals
 
-- No user progress tracking for cases (no "mark as read" or completion state)
-- No case search by keyword
-- No case comments or annotations
-- No AI-generated cases (manual seed only)
-- No pagination (20–25 cases fit comfortably in one list)
-- No case difficulty rating
+- No conversation persistence to database (session only)
+- No streaming responses (full answer returned at once)
+- No image-based queries (text only)
+- No feedback or thumbs up/down on answers
+- No admin view of conversation logs
+- No switching between LLM providers in the UI
 
 ## Technical Considerations
 
-- `case_id` format: `case_{specialty_slug}_{index:03d}` (e.g. `case_cardiology_001`) for stable idempotent re-seeding
-- `chapter_ref` must match a real `chapter_id` from the `chapters` collection (e.g. `p06_c238`) — seed script should use valid IDs from the ingested data
-- The hint button should use a simple `useState(false)` toggle — no URL state needed
-- Reuse existing `apiClient.ts` Axios instance in `casesApi.ts`
-- The cases route file already exists at `backend/app/api/v1/routes/cases.py` — replace the stub in place
-- `main.py` already registers the cases router — no change needed there
+- `get_relevant_chunks` loads ALL embeddings from MongoDB on each query (~96 MB, ~1-2s). MVP approach. See `docs/architecture-options.md` section 4 for Redis/Atlas upgrade paths.
+- Chapter titles for citations: do a single MongoDB `$in` query for all unique chapter_ids in the top-5 results.
+- Deduplication: top-5 chunks may come from the same chapter. `citations` list must be unique by `chapter_id`.
+- GPT-4o-mini context: 128K tokens. Our prompt (~5 chunks x 800 tokens + history + question) is ~6K tokens, well within limits.
+- The existing `ai.py` route is `GET /ai/ask` — must change to `POST` when replacing the stub.
+- Redis cache key: `ai_answer:{hashlib.sha256(question.encode()).hexdigest()}`. Skip cache when history is non-empty.
 
-### MongoDB Document Shape
+### System Prompt Template
 
-```json
-{
-  "case_id": "case_cardiology_001",
-  "title": "Acute STEMI in a 58-Year-Old Diabetic Man",
-  "specialty": "Cardiology",
-  "presentation": "A 58-year-old man with a history of type 2 diabetes and hypertension presents to the ED with 2 hours of crushing substernal chest pain radiating to his left arm, accompanied by diaphoresis and nausea.",
-  "history": "Past medical history: T2DM (10 years), hypertension, hyperlipidemia. Medications: metformin, lisinopril, atorvastatin. Family history: father died of MI at 62. Social: 20 pack-year smoking history, quit 5 years ago.",
-  "physical_exam": "BP 155/95, HR 102, RR 18, SpO2 96% on room air. Diaphoretic. JVP not elevated. Heart: regular rhythm, no murmurs. Lungs: clear. Extremities: no edema.",
-  "labs": "Troponin I: 4.2 ng/mL (elevated). BMP: glucose 210, Cr 1.1, K 4.2. CBC: WBC 11.2, Hgb 13.8. Coagulation: normal.",
-  "imaging": "ECG: ST elevations in leads II, III, aVF with reciprocal changes in I and aVL — consistent with inferior STEMI. CXR: no pulmonary edema, normal cardiac silhouette.",
-  "discussion": "Inferior STEMI is most commonly caused by occlusion of the right coronary artery (RCA). Diabetic patients may present with atypical symptoms. Rapid reperfusion via primary PCI within 90 minutes of first medical contact is the standard of care.",
-  "diagnosis": "Inferior ST-elevation myocardial infarction (STEMI) due to acute RCA occlusion.",
-  "management": "Aspirin 325 mg + P2Y12 inhibitor (ticagrelor or clopidogrel). Activate cath lab for primary PCI. IV heparin. Beta-blocker if hemodynamically stable. Statin therapy. Post-PCI: dual antiplatelet therapy for 12 months.",
-  "chapter_ref": "p06_c238"
-}
+```
+You are a clinical medical assistant for internal medicine residents.
+Answer questions using ONLY the provided Harrison textbook excerpts below.
+If the context does not contain enough information to answer, say so clearly.
+Always reference which chapter or section your answer is based on.
+
+Context from Harrison Principles of Internal Medicine:
+[1] Chapter: {chapter_title} | Section: {section_title}
+{chunk_text}
+
+[2] ...up to 5 chunks...
 ```
 
 ### Files to Create / Modify
 
 | File | Action |
 |---|---|
-| `backend/scripts/seed_cases.py` | Create |
-| `backend/app/schemas/case.py` | Create |
-| `backend/app/api/v1/routes/cases.py` | Replace stub |
-| `frontend/src/api/casesApi.ts` | Create |
-| `frontend/src/pages/CasesPage.tsx` | Create |
-| `frontend/src/pages/CaseDetailPage.tsx` | Create |
-| `frontend/src/router.tsx` | Add /cases and /cases/:id routes |
+| `backend/app/services/rag_service.py` | Create |
+| `backend/app/schemas/ai.py` | Create |
+| `backend/app/api/v1/routes/ai.py` | Replace GET stub with POST |
+| `backend/requirements.txt` | Add numpy |
+| `frontend/src/api/aiApi.ts` | Create |
+| `frontend/src/pages/ChatPage.tsx` | Create |
+| `frontend/src/router.tsx` | Add /chat route |
+| `frontend/src/pages/Home.tsx` | Add Chat link |
