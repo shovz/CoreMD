@@ -12,6 +12,7 @@ import QuestionsPage from "./pages/QuestionsPage";
 import QuestionDetailPage from "./pages/QuestionDetailPage";
 import CasesPage from "./pages/CasesPage";
 import CaseDetailPage from "./pages/CaseDetailPage";
+import ChatPage from "./pages/ChatPage";
 
 function ProtectedRoute({ children }: { children: ReactNode }) {
   const token = localStorage.getItem("access_token");
@@ -94,6 +95,14 @@ export default function AppRouter() {
           element={
             <ProtectedRoute>
               <CaseDetailPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/chat"
+          element={
+            <ProtectedRoute>
+              <ChatPage />
             </ProtectedRoute>
           }
         />

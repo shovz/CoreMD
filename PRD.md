@@ -74,16 +74,16 @@ so the chat UI can make requests cleanly.
 clinical questions and get grounded answers from Harrison.
 
 **Acceptance Criteria:**
-- [ ] `frontend/src/pages/ChatPage.tsx` created
-- [ ] Route `/chat` added to `frontend/src/router.tsx`
-- [ ] Chat link added to `Home.tsx` navigation
-- [ ] Message thread displayed as chat bubbles: user messages right-aligned (blue), assistant messages left-aligned (grey)
-- [ ] Each assistant message shows its citations below the answer text
-- [ ] Input bar at bottom: text input + Ask button, disabled while waiting for response
-- [ ] Pressing Enter submits the question
-- [ ] Loading state: assistant bubble shows "..." while waiting
-- [ ] Conversation history stored in `useState` (session only, cleared on refresh/navigation)
-- [ ] Typecheck passes
+- [x] `frontend/src/pages/ChatPage.tsx` created
+- [x] Route `/chat` added to `frontend/src/router.tsx`
+- [x] Chat link added to `Home.tsx` navigation
+- [x] Message thread displayed as chat bubbles: user messages right-aligned (blue), assistant messages left-aligned (grey)
+- [x] Each assistant message shows its citations below the answer text
+- [x] Input bar at bottom: text input + Ask button, disabled while waiting for response
+- [x] Pressing Enter submits the question
+- [x] Loading state: assistant bubble shows "..." while waiting
+- [x] Conversation history stored in `useState` (session only, cleared on refresh/navigation)
+- [x] Typecheck passes
 - [ ] Verify changes work in browser
 
 ### US-005: Citations display and session limit

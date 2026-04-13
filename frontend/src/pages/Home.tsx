@@ -11,6 +11,7 @@ export default function Home() {
       <div style={{ display: "flex", gap: 12, justifyContent: "center" }}>
         <Link to="/">Dashboard</Link>
         <Link to="/cases">Cases</Link>
+        <Link to="/chat">AI Chat</Link>
       </div>
     </div>
   );
