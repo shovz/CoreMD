@@ -1,16 +1,6 @@
 # Progress Log
 
 ## Learnings
-- Harrison's Part PDFs (`By Chapters/`) have no embedded TOC bookmarks — `get_toc()` returns empty for all of them. Do NOT use Part PDFs as the ingestion source.
-- The full Harrison's book (`Harrison's_Principles_of_Internal_Medicine,_Twenty_First_Edition.pdf`) has a complete TOC: 580 entries covering all 492 chapters across 15,164 pages. This is the correct source for ingestion.
-- Full PDF TOC structure: Level 1 = Parts (e.g. "PART 2 Cardinal Manifestations..."), Level 2 = Chapters OR Sections (Part 2 has "SECTION 1 Pain" at level 2), Level 3 = Chapters inside Part 2 sections. Rule: any level-2 or level-3 entry whose title starts with a digit is a chapter.
-- Chapter number is the leading integer in the TOC title (e.g. "13 Pain: Pathophysiology" → chapter_number=13).
-- `page_end` for each chapter = next TOC entry's `page_start - 1`. Last chapter ends at `doc.page_count - 1`.
-
-- `generate_embeddings` creates a fresh `openai.OpenAI` client per call using the module-level `OPENAI_API_KEY`; exponential backoff uses `2 ** attempt` seconds (1 s, 2 s, 4 s) for up to `MAX_RETRIES=3` retries on `openai.RateLimitError`.
-- `store_chunks` uses `pymongo.operations.UpdateOne` with `upsert=True` via `bulk_write(ordered=False)` for idempotent chunk storage keyed on `chunk_id`.
-- Progress line format: `Part {part_num} | Chapter {ch_within_part}/{part_total} | {num_chunks} chunks stored` — chapters are grouped by `part_number` so the denominator reflects the count within the current part, not the whole book.
-
-- Chapters API routes read from MongoDB by mapping `chapter_id` field → `ChapterOut.id`. The section content endpoint joins `text_chunks` sorted by `chunk_index`, concatenated with `\n\n`.
+- recharts requires `react-is` as a peer dep; install it explicitly with `npm install react-is --legacy-peer-deps` when using React 19 to avoid Rollup build failures.
 
 ---

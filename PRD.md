@@ -60,15 +60,15 @@ and specialty so I can identify where to focus.
 one place when I log in.
 
 **Acceptance Criteria:**
-- [ ] `frontend/src/pages/DashboardPage.tsx` fully replaced — fetches from both `getOverviewStats()` and `getQuestionStats()` in parallel via `Promise.all`
-- [ ] Page layout: heading "My Dashboard" → StatCards row → DifficultyChart → TopicChart
-- [ ] Difficulty chart title: "Performance by Difficulty" — data mapped from `by_difficulty`
-- [ ] Topic chart title: "Performance by Specialty" — data mapped from `by_topic`, sorted by `attempted` descending
-- [ ] Logout button retained in top-right corner
-- [ ] If `total_questions_answered === 0`, show empty state message: "No attempts yet — head to the Question Bank to get started"
-- [ ] Nav link to Dashboard added to Home page or shared nav component
-- [ ] Typecheck passes
-- [ ] Verify changes work in browser: dashboard loads, cards show numbers, charts render
+- [x] `frontend/src/pages/DashboardPage.tsx` fully replaced — fetches from both `getOverviewStats()` and `getQuestionStats()` in parallel via `Promise.all`
+- [x] Page layout: heading "My Dashboard" → StatCards row → DifficultyChart → TopicChart
+- [x] Difficulty chart title: "Performance by Difficulty" — data mapped from `by_difficulty`
+- [x] Topic chart title: "Performance by Specialty" — data mapped from `by_topic`, sorted by `attempted` descending
+- [x] Logout button retained in top-right corner
+- [x] If `total_questions_answered === 0`, show empty state message: "No attempts yet — head to the Question Bank to get started"
+- [x] Nav link to Dashboard added to Home page or shared nav component
+- [x] Typecheck passes
+- [x] Verify changes work in browser: dashboard loads, cards show numbers, charts render
 
 ## Non-Goals
 
