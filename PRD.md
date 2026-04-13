@@ -1,159 +1,125 @@
-# PRD: PDF Ingestion Pipeline
+# PRD: Question Bank
 
 ## Introduction
 
-CoreMD's chapter explorer, question bank, and AI assistant all depend on Harrison's
-Principles of Internal Medicine content being stored in MongoDB. Currently, the chapters
-API returns hardcoded fake data. This pipeline extracts real content from the 20 Part PDFs,
-chunks and embeds it, stores it in MongoDB, and wires the existing API to serve real data.
-
-This is a one-time setup script — Harrison's 21st Edition content does not change.
+With Harrison's content now in MongoDB, the next core feature is the Question Bank —
+a set of MCQ (multiple-choice question) cards that residents can use to test their knowledge
+chapter by chapter. The backend already records attempts and calculates stats; what's missing
+is the question data itself, the listing/filtering API, and the frontend UI.
 
 ## Goals
 
-- Extract chapter and section structure from all 20 Part PDFs using embedded TOC bookmarks
-- Store ~450 chapters as documents in the MongoDB `chapters` collection
-- Produce text chunks (800 tokens max, section-aware) stored in `text_chunks` collection
-- Generate embeddings for every chunk using OpenAI `text-embedding-3-small`
-- Replace hardcoded fake data in chapters API with real MongoDB queries
-- Script is idempotent: re-running skips already-processed chapters
+- Seed a representative set of sample MCQs into MongoDB (one per chapter for ~20 chapters as a starting set)
+- Expose a working questions listing API with filtering by topic, chapter, and difficulty
+- Build a frontend MCQ page where residents can browse, attempt, and review questions
+- Wire attempt recording to the existing `question_attempt_service` (already implemented)
+- Show per-question feedback (correct/incorrect + explanation) after each attempt
 
 ## User Stories
 
-### US-001: Script skeleton + dependencies
-**Description:** As a developer, I need the ingestion script file and its dependencies
-installed so the script can be run.
+### US-001: Question schema and MongoDB seeding
+**Description:** As a developer, I need question documents in MongoDB so the API and
+frontend have real data to work with.
 
 **Acceptance Criteria:**
-- [x] `backend/scripts/ingest_pdfs.py` created with config constants (MONGO_URI, OPENAI_API_KEY, CHUNK_MAX_TOKENS=800, CHUNK_OVERLAP_TOKENS=100)
-- [x] `backend/scripts/__init__.py` created (empty)
-- [x] `pymupdf` and `tiktoken` added to `backend/requirements.txt`
-- [x] Config uses `PDF_FULL_PATH` pointing to `Harrison Book/Harrison's_Principles_of_Internal_Medicine,_Twenty_First_Edition.pdf` (not PDF_DIR for Part PDFs)
-- [x] Script runs without import errors: `python backend/scripts/ingest_pdfs.py --help`
+- [x] `backend/scripts/seed_questions.py` created with 20 sample MCQs across at least 5 different specialties
+- [x] Each question document contains: `question_id` (str), `stem` (str), `options` (list of 4 str), `correct_option` (int, 0-indexed), `explanation` (str), `topic` (str), `chapter_ref` (str, matching a `chapter_id` in `chapters`), `difficulty` ("easy" | "medium" | "hard")
+- [x] Script is idempotent: re-running skips already-inserted questions (keyed on `question_id`)
+- [x] Running `python backend/scripts/seed_questions.py` inserts questions and prints count
 - [x] Typecheck passes
 
-### US-002: TOC extraction and chapter boundary detection
-**Description:** As a developer, I need to extract the table of contents from the full
-Harrison's PDF so I know each chapter's title, part, and page range.
+### US-002: Questions listing and filtering API
+**Description:** As a developer, I need API endpoints to list questions with optional
+filters so the frontend can display and filter the question bank.
 
 **Acceptance Criteria:**
-- [x] Function `extract_chapters_from_toc(pdf_path) -> list[dict]` opens the full Harrison's PDF and parses all 580 TOC entries
-- [x] Identifies level-1 Part entries to track current `part_number` and `part_title` as chapters are iterated
-- [x] Treats level-2 and level-3 entries whose title starts with a digit as chapters
-- [x] Each returned dict contains: `chapter_number` (int, from leading digits in title), `title` (str), `part_number` (int), `part_title` (str), `page_start` (int), `page_end` (int, derived from next entry)
-- [x] Running `python backend/scripts/ingest_pdfs.py --list-chapters` prints all 492 chapters to stdout
-- [x] Typecheck passes
+- [ ] `GET /questions/` returns paginated list of questions (default limit 20, offset 0)
+- [ ] Supports query params: `topic` (str), `chapter_id` (str), `difficulty` ("easy"|"medium"|"hard")
+- [ ] Response schema: `QuestionOut` with fields `question_id`, `stem`, `options` (list of str), `topic`, `chapter_ref`, `difficulty` — does NOT include `correct_option` or `explanation` (revealed only after attempt)
+- [ ] `GET /questions/{question_id}` returns full question including `correct_option` and `explanation`
+- [ ] All routes require valid JWT
+- [ ] Typecheck passes
 
-### US-003: Text extraction and chapter storage in MongoDB
-**Description:** As a developer, I need to extract cleaned text for each chapter and
-store the chapter document in MongoDB.
-
-**Acceptance Criteria:**
-- [x] Function `extract_text(doc, page_start, page_end) -> str` extracts and cleans text (strips page numbers, excessive whitespace, hyphenated line breaks)
-- [x] Function `store_chapter(db, chapter_data) -> str` upserts chapter to `chapters` collection using `chapter_id` as key; returns `chapter_id`
-- [x] `chapter_id` format: `p{part_num:02d}_c{chapter_num:03d}` (e.g. `p02_c015`)
-- [x] `specialty` field derived from part title (e.g. "Disorders of the Cardiovascular System" → "Cardiology")
-- [x] `sections` field populated as empty list at this stage (filled in US-004)
-- [x] Idempotent: if `chapter_id` already exists in MongoDB, skip
-- [x] Typecheck passes
-
-### US-004: Hybrid text chunking with section detection
-**Description:** As a developer, I need to split chapter text into chunks that respect
-section boundaries and stay under 800 tokens.
+### US-003: Question attempt endpoint
+**Description:** As a developer, I need the attempt endpoint to return correctness feedback
+and the explanation so the frontend can show the result.
 
 **Acceptance Criteria:**
-- [x] Function `detect_sections(text) -> list[dict]` identifies section headings using regex (all-caps lines or Title Case lines ≥ 3 words followed by newline)
-- [x] Function `chunk_section(section_text, section_title, section_id) -> list[dict]` splits text at 800-token cap with 100-token overlap using `tiktoken cl100k_base` encoding
-- [x] Each chunk dict contains: `chunk_id`, `chapter_id`, `section_id`, `section_title`, `text`, `token_count`, `chunk_index`
-- [x] Chapter with no detected sections treated as one section titled "Overview"
-- [x] `sections` field on the chapter document updated with `[{"id": section_id, "title": section_title}]` for each unique section
-- [x] Typecheck passes
+- [ ] `POST /questions/{question_id}/attempt` accepts `{"selected_option": 0}` body
+- [ ] Returns `{"correct": true/false, "correct_option": int, "explanation": str}`
+- [ ] Records attempt in MongoDB via existing `question_attempt_service.record_attempt()`
+- [ ] Returns 404 if `question_id` not found
+- [ ] Requires valid JWT
+- [ ] Typecheck passes
 
-### US-005: Embedding generation and text_chunks storage
-**Description:** As a developer, I need to generate OpenAI embeddings for each chunk
-and store them in MongoDB so the AI assistant can do vector search later.
-
-**Acceptance Criteria:**
-- [x] Function `generate_embeddings(texts: list[str]) -> list[list[float]]` calls OpenAI `text-embedding-3-small` in batches of 100
-- [x] Function `store_chunks(db, chunks: list[dict])` bulk-upserts chunks to `text_chunks` collection using `chunk_id` as key
-- [x] Progress printed to stdout: `Part 2 | Chapter 15/47 | 12 chunks stored`
-- [x] Script handles OpenAI rate limit errors with exponential backoff (max 3 retries)
-- [x] On completion prints: total chapters, total chunks, total tokens processed
-- [x] Typecheck passes
-
-### US-006: Wire chapters API to MongoDB
-**Description:** As a developer, I need the existing chapters API routes to read from
-MongoDB instead of returning hardcoded fake data, so the frontend shows real content.
+### US-004: Questions page (list + filter UI)
+**Description:** As a resident, I want to browse questions filtered by specialty or
+difficulty so I can focus my study.
 
 **Acceptance Criteria:**
-- [x] `GET /chapters/` queries `db.chapters` collection, returns all chapters as `List[ChapterOut]`
-- [x] `GET /chapters/{chapter_id}` queries by `chapter_id` field, raises 404 if not found
-- [x] `GET /chapters/{chapter_id}/sections/{section_id}` queries `text_chunks` by `chapter_id` + `section_id`, concatenates chunk texts, returns as `content` field
-- [x] All three routes still require valid JWT (existing auth guard unchanged)
-- [x] `ChapterOut.id` mapped from MongoDB `chapter_id` field
-- [x] Typecheck passes
-- [x] Verify changes work in browser: chapters list shows real Harrison's chapters
+- [ ] `frontend/src/pages/QuestionsPage.tsx` created
+- [ ] Fetches questions from `GET /questions/` on load
+- [ ] Displays question stems in a list (no options visible yet — click to attempt)
+- [ ] Filter bar: difficulty dropdown (All / Easy / Medium / Hard) + topic text filter
+- [ ] Each question row shows topic badge and difficulty badge
+- [ ] Route `/questions` added to `frontend/src/router.tsx`
+- [ ] Link to Questions page added to nav/home
+- [ ] `frontend/src/api/questionsApi.ts` created with `getQuestions(filters)` and `getQuestionById(id)`
+- [ ] Typecheck passes
+- [ ] Verify changes work in browser
+
+### US-005: Question attempt UI
+**Description:** As a resident, I want to attempt a question and immediately see whether
+I was right, with an explanation, so I can learn from my mistakes.
+
+**Acceptance Criteria:**
+- [ ] Clicking a question from QuestionsPage navigates to `/questions/:id`
+- [ ] `frontend/src/pages/QuestionDetailPage.tsx` created
+- [ ] Displays: question stem, 4 answer options as selectable buttons
+- [ ] On option click: calls `POST /questions/{id}/attempt`, disables all options
+- [ ] Correct option highlighted green, selected wrong option highlighted red
+- [ ] Explanation text shown below options after attempt
+- [ ] "Back to Questions" link present
+- [ ] `questionsApi.ts` includes `submitAttempt(questionId, selectedOption)`
+- [ ] Typecheck passes
+- [ ] Verify changes work in browser
 
 ## Non-Goals
 
-- No admin UI for triggering ingestion — script only
-- No image extraction from PDFs (text-only MVP)
-- No re-ingestion or update mechanism (one-time only)
-- No question bank seeding (separate PRD)
-- No AI/RAG endpoint implementation (separate PRD)
-- Part 21 (Index PDF) is excluded from ingestion
-- No progress bar UI in the frontend during ingestion
+- No AI-generated questions (manual seed only for this PRD)
+- No question editing or admin CRUD UI
+- No timed quiz mode
+- No bulk import from external question banks
+- No question flagging or reporting
+- No leaderboard or social features
 
 ## Technical Considerations
 
-- **Use the full Harrison's PDF** (not the Part PDFs): `Harrison Book/Harrison's_Principles_of_Internal_Medicine,_Twenty_First_Edition.pdf`
-- The Part PDFs (`Harrison Book/By Chapters/`) have **no embedded TOC bookmarks** — `get_toc()` returns empty for all of them. The full book has 580 TOC entries covering all 492 chapters.
-- **TOC structure in the full PDF:**
-  - Level 1: Parts (e.g. `"PART 2 Cardinal Manifestations and Presentation of Diseases"`) and front matter
-  - Level 2: Chapters (e.g. `"13 Pain: Pathophysiology and Management"`) **OR** Sections for Part 2 (e.g. `"SECTION 1 Pain"`)
-  - Level 3: Actual chapters inside Part 2 sections (e.g. `"13 Pain: Pathophysiology and Management"`)
-  - **Rule:** Treat all level 2 and level 3 entries that start with a number as chapters. Level 1 entries are Parts — use them to derive `part_title` and `specialty`.
-- Chapters are numbered 1–492. Extract the leading number from the TOC title to get `chapter_number`.
-- `chapter_id` format: `p{part_num:02d}_c{chapter_num:03d}` (e.g. `p02_c015`) — must be stable across re-runs
-- `page_end` = next TOC entry's `page_start - 1` (last chapter ends at `doc.page_count - 1`)
-- `specialty` field derived from Part title (e.g. `"Disorders of the Cardiovascular System"` → `"Cardiology"`)
-- OpenAI embedding dimensions: 1536 (`text-embedding-3-small`)
-- Load `OPENAI_API_KEY` and `MONGO_URI` from `backend/.env` via `python-dotenv`
-- MongoDB `text_chunks` will need a vector search index for RAG (set up in a later PRD)
-- Existing `ChapterOut` schema (`id`, `title`, `specialty`, `sections`) requires no changes
+- Existing `question_attempt_service.record_attempt()` in `backend/app/services/question_attempt_service.py` already handles recording — reuse it in US-003
+- Existing `POST /questions/{question_id}/attempt` route in `backend/app/api/v1/routes/questions.py` is a stub — replace it (don't add a new route)
+- `question_id` format: `q_{chapter_id}_{index}` (e.g. `q_p06_c238_001`) for stable idempotent re-seeding
+- Questions listing does NOT expose `correct_option` to prevent cheating — reveal only via the attempt endpoint
+- The `chapters` collection now has real data — seed questions should reference real `chapter_id` values (use `p06_c238` style IDs matching what ingestion produced)
+- Frontend filter state can be managed with `useState` (no URL params needed for MVP)
+- Reuse existing `apiClient.ts` Axios instance for `questionsApi.ts`
 
-### MongoDB Document Shapes
+### MongoDB Document Shape
 
-**`chapters` collection:**
 ```json
 {
-  "chapter_id": "p02_c015",
-  "part_number": 2,
-  "part_title": "Cardinal Manifestations and Presentation of Diseases",
-  "chapter_number": 15,
-  "title": "Chest Pain",
-  "specialty": "Cardiology",
-  "page_start": 89,
-  "page_end": 95,
-  "source_pdf": "PART 2 Cardinal Manifestations and Presentation of Diseases.pdf",
-  "sections": [
-    {"id": "p02_c015_s00", "title": "Overview"},
-    {"id": "p02_c015_s01", "title": "Pathophysiology"}
-  ]
-}
-```
-
-**`text_chunks` collection:**
-```json
-{
-  "chunk_id": "p02_c015_s01_chunk_0",
-  "chapter_id": "p02_c015",
-  "section_id": "p02_c015_s01",
-  "section_title": "Pathophysiology",
-  "text": "Chest pain arises from...",
-  "embedding": [0.023, "...1536 floats"],
-  "token_count": 412,
-  "chunk_index": 0
+  "question_id": "q_p06_c238_001",
+  "stem": "A 65-year-old man presents with exertional dyspnea and ankle edema. Which finding on physical exam is most consistent with right heart failure?",
+  "options": [
+    "S3 gallop at apex",
+    "Jugular venous distension",
+    "Bilateral crackles at lung bases",
+    "Displaced apical impulse"
+  ],
+  "correct_option": 1,
+  "explanation": "Jugular venous distension (JVD) reflects elevated right atrial pressure, which is the hallmark of right heart failure. S3 gallop and displaced apical impulse suggest left heart failure; bilateral crackles suggest pulmonary edema from left heart failure.",
+  "topic": "Cardiology",
+  "chapter_ref": "p06_c238",
+  "difficulty": "medium"
 }
 ```
 
@@ -161,7 +127,10 @@ MongoDB instead of returning hardcoded fake data, so the frontend shows real con
 
 | File | Action |
 |---|---|
-| `backend/scripts/ingest_pdfs.py` | Create |
-| `backend/scripts/__init__.py` | Create (empty) |
-| `backend/requirements.txt` | Add `pymupdf`, `tiktoken` |
-| `backend/app/api/v1/routes/chapters.py` | Replace fake data with MongoDB queries |
+| `backend/scripts/seed_questions.py` | Create |
+| `backend/app/schemas/question.py` | Create — Pydantic models for QuestionOut, AttemptRequest, AttemptResponse |
+| `backend/app/api/v1/routes/questions.py` | Replace stub with real implementation |
+| `frontend/src/pages/QuestionsPage.tsx` | Create |
+| `frontend/src/pages/QuestionDetailPage.tsx` | Create |
+| `frontend/src/api/questionsApi.ts` | Create |
+| `frontend/src/router.tsx` | Add /questions and /questions/:id routes |
