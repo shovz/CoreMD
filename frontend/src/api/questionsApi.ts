@@ -37,3 +37,15 @@ export const getQuestions = (filters?: QuestionsFilter) => {
 export const getQuestionById = (id: string) => {
   return api.get<QuestionFull>(`/questions/${id}`);
 };
+
+export interface AttemptResult {
+  correct: boolean;
+  correct_option: number;
+  explanation: string;
+}
+
+export const submitAttempt = (questionId: string, selectedOption: number) => {
+  return api.post<AttemptResult>(`/questions/${questionId}/attempt`, {
+    selected_option: selectedOption,
+  });
+};

@@ -73,16 +73,16 @@ difficulty so I can focus my study.
 I was right, with an explanation, so I can learn from my mistakes.
 
 **Acceptance Criteria:**
-- [ ] Clicking a question from QuestionsPage navigates to `/questions/:id`
-- [ ] `frontend/src/pages/QuestionDetailPage.tsx` created
-- [ ] Displays: question stem, 4 answer options as selectable buttons
-- [ ] On option click: calls `POST /questions/{id}/attempt`, disables all options
-- [ ] Correct option highlighted green, selected wrong option highlighted red
-- [ ] Explanation text shown below options after attempt
-- [ ] "Back to Questions" link present
-- [ ] `questionsApi.ts` includes `submitAttempt(questionId, selectedOption)`
-- [ ] Typecheck passes
-- [ ] Verify changes work in browser
+- [x] Clicking a question from QuestionsPage navigates to `/questions/:id`
+- [x] `frontend/src/pages/QuestionDetailPage.tsx` created
+- [x] Displays: question stem, 4 answer options as selectable buttons
+- [x] On option click: calls `POST /questions/{id}/attempt`, disables all options
+- [x] Correct option highlighted green, selected wrong option highlighted red
+- [x] Explanation text shown below options after attempt
+- [x] "Back to Questions" link present
+- [x] `questionsApi.ts` includes `submitAttempt(questionId, selectedOption)`
+- [x] Typecheck passes
+- [x] Verify changes work in browser
 
 ## Non-Goals
 

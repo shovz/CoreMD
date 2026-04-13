@@ -9,9 +9,7 @@ import ChaptersPage from "./pages/ChaptersPage";
 import ChapterDetailPage from "./pages/ChapterDetailPage";
 import SectionDetailPage from "./pages/SectionDetailPage";
 import QuestionsPage from "./pages/QuestionsPage";
-
-
-
+import QuestionDetailPage from "./pages/QuestionDetailPage";
 
 function ProtectedRoute({ children }: { children: ReactNode }) {
   const token = localStorage.getItem("access_token");
@@ -70,6 +68,14 @@ export default function AppRouter() {
           element={
             <ProtectedRoute>
               <QuestionsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/questions/:id"
+          element={
+            <ProtectedRoute>
+              <QuestionDetailPage />
             </ProtectedRoute>
           }
         />
