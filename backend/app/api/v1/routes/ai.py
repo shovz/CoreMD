@@ -77,15 +77,15 @@ def ask_ai(
     )
     answer = completion.choices[0].message.content or ""
 
-    seen = set()
+    seen: set[str] = set()
     citations: list[Citation] = []
     for chunk in chunks:
-        key = (chunk["chapter_id"], chunk["section_title"])
-        if key not in seen:
-            seen.add(key)
+        cid = chunk["chapter_id"]
+        if cid not in seen:
+            seen.add(cid)
             citations.append(
                 Citation(
-                    chapter_id=chunk["chapter_id"],
+                    chapter_id=cid,
                     chapter_title=chunk["chapter_title"],
                     section_title=chunk["section_title"],
                 )

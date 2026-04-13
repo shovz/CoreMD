@@ -91,13 +91,13 @@ clinical questions and get grounded answers from Harrison.
 from, and be prompted to start fresh when the conversation gets long.
 
 **Acceptance Criteria:**
-- [ ] Each assistant message shows citation chips below the answer text
-- [ ] Each chip displays chapter title truncated to 40 chars
-- [ ] Each chip is a clickable link to `/chapters/{chapter_id}` (existing chapter detail page)
-- [ ] When conversation reaches 10 exchanges (20 messages), input is disabled and a banner appears: "Conversation limit reached"
-- [ ] "Start new conversation" button clears message history and re-enables input
-- [ ] Typecheck passes
-- [ ] Verify changes work in browser
+- [x] Each assistant message shows citation chips below the answer text
+- [x] Each chip displays chapter title truncated to 40 chars
+- [x] Each chip is a clickable link to `/chapters/{chapter_id}` (existing chapter detail page)
+- [x] When conversation reaches 10 exchanges (20 messages), input is disabled and a banner appears: "Conversation limit reached"
+- [x] "Start new conversation" button clears message history and re-enables input
+- [x] Typecheck passes
+- [x] Verify changes work in browser
 
 ## Non-Goals
 

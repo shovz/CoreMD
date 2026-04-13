@@ -2,5 +2,6 @@
 
 ## Learnings
 - US-002: When caching AI responses, use `model_dump()` + `json.dumps` to serialize Pydantic v2 models into Redis (not `.dict()`). Cache key is `ai_answer:{sha256(question)}` and cache is bypassed when conversation history is non-empty.
+- US-005: Deduplicate citations by `chapter_id` only (not by `(chapter_id, section_title)`) so that all citations in a response are unique chapters. Use React Router `<Link>` for chip-style citation display to keep navigation in-app without full page reload.
 
 ---

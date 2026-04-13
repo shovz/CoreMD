@@ -1,11 +1,19 @@
 import { useState, useRef, useEffect, type KeyboardEvent } from "react";
+import { Link } from "react-router-dom";
 import { askQuestion, type Message, type Citation } from "../api/aiApi";
+
+const EXCHANGE_LIMIT = 10; // max user/assistant pairs
+const MESSAGE_LIMIT = EXCHANGE_LIMIT * 2; // 20 total messages
 
 interface ChatMessage {
   role: "user" | "assistant";
   content: string;
   citations?: Citation[];
   loading?: boolean;
+}
+
+function truncate(text: string, max: number): string {
+  return text.length > max ? text.slice(0, max - 1) + "…" : text;
 }
 
 export default function ChatPage() {
@@ -18,13 +26,23 @@ export default function ChatPage() {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  const completedMessages = messages.filter((m) => !m.loading);
+  const limitReached = completedMessages.length >= MESSAGE_LIMIT;
+  const inputDisabled = isLoading || limitReached;
+
+  function startNewConversation() {
+    setMessages([]);
+    setInput("");
+  }
+
   async function handleSubmit() {
     const question = input.trim();
-    if (!question || isLoading) return;
+    if (!question || inputDisabled) return;
 
-    const history: Message[] = messages
-      .filter((m) => !m.loading)
-      .map((m) => ({ role: m.role, content: m.content }));
+    const history: Message[] = completedMessages.map((m) => ({
+      role: m.role,
+      content: m.content,
+    }));
 
     setMessages((prev) => [
       ...prev,
@@ -119,19 +137,32 @@ export default function ChatPage() {
                 <div
                   style={{
                     maxWidth: "75%",
-                    marginTop: 4,
-                    fontSize: 12,
-                    color: "#555",
+                    marginTop: 6,
+                    display: "flex",
+                    flexWrap: "wrap",
+                    gap: 6,
                   }}
                 >
-                  <strong>Citations:</strong>
-                  <ul style={{ margin: "4px 0 0", paddingLeft: 18 }}>
-                    {msg.citations.map((c, ci) => (
-                      <li key={ci}>
-                        {c.chapter_title} — {c.section_title}
-                      </li>
-                    ))}
-                  </ul>
+                  {msg.citations.map((c, ci) => (
+                    <Link
+                      key={ci}
+                      to={`/chapters/${c.chapter_id}`}
+                      style={{
+                        display: "inline-block",
+                        padding: "3px 10px",
+                        borderRadius: 9999,
+                        border: "1px solid #93c5fd",
+                        background: "#eff6ff",
+                        color: "#1d4ed8",
+                        fontSize: 12,
+                        textDecoration: "none",
+                        whiteSpace: "nowrap",
+                      }}
+                      title={c.chapter_title}
+                    >
+                      {truncate(c.chapter_title, 40)}
+                    </Link>
+                  ))}
                 </div>
               )}
           </div>
@@ -139,6 +170,42 @@ export default function ChatPage() {
 
         <div ref={bottomRef} />
       </div>
+
+      {/* Session limit banner */}
+      {limitReached && (
+        <div
+          style={{
+            margin: "8px 0",
+            padding: "12px 16px",
+            background: "#fef3c7",
+            border: "1px solid #f59e0b",
+            borderRadius: 8,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 12,
+          }}
+        >
+          <span style={{ fontSize: 14, color: "#92400e" }}>
+            Conversation limit reached
+          </span>
+          <button
+            onClick={startNewConversation}
+            style={{
+              padding: "6px 14px",
+              borderRadius: 6,
+              background: "#2563eb",
+              color: "#fff",
+              border: "none",
+              fontSize: 13,
+              cursor: "pointer",
+              whiteSpace: "nowrap",
+            }}
+          >
+            Start new conversation
+          </button>
+        </div>
+      )}
 
       {/* Input bar */}
       <div
@@ -154,8 +221,12 @@ export default function ChatPage() {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Ask a clinical question…"
-          disabled={isLoading}
+          placeholder={
+            limitReached
+              ? "Start a new conversation to continue"
+              : "Ask a clinical question…"
+          }
+          disabled={inputDisabled}
           style={{
             flex: 1,
             padding: "10px 12px",
@@ -163,11 +234,13 @@ export default function ChatPage() {
             border: "1px solid #d1d5db",
             fontSize: 15,
             outline: "none",
+            background: inputDisabled ? "#f3f4f6" : "#fff",
+            cursor: inputDisabled ? "not-allowed" : "text",
           }}
         />
         <button
           onClick={handleSubmit}
-          disabled={isLoading || !input.trim()}
+          disabled={inputDisabled || !input.trim()}
           style={{
             padding: "10px 20px",
             borderRadius: 8,
@@ -175,8 +248,9 @@ export default function ChatPage() {
             color: "#fff",
             border: "none",
             fontSize: 15,
-            cursor: isLoading || !input.trim() ? "not-allowed" : "pointer",
-            opacity: isLoading || !input.trim() ? 0.6 : 1,
+            cursor:
+              inputDisabled || !input.trim() ? "not-allowed" : "pointer",
+            opacity: inputDisabled || !input.trim() ? 0.6 : 1,
           }}
         >
           Ask
