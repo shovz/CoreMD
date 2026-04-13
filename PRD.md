@@ -57,16 +57,16 @@ and the explanation so the frontend can show the result.
 difficulty so I can focus my study.
 
 **Acceptance Criteria:**
-- [ ] `frontend/src/pages/QuestionsPage.tsx` created
-- [ ] Fetches questions from `GET /questions/` on load
-- [ ] Displays question stems in a list (no options visible yet — click to attempt)
-- [ ] Filter bar: difficulty dropdown (All / Easy / Medium / Hard) + topic text filter
-- [ ] Each question row shows topic badge and difficulty badge
-- [ ] Route `/questions` added to `frontend/src/router.tsx`
-- [ ] Link to Questions page added to nav/home
-- [ ] `frontend/src/api/questionsApi.ts` created with `getQuestions(filters)` and `getQuestionById(id)`
-- [ ] Typecheck passes
-- [ ] Verify changes work in browser
+- [x] `frontend/src/pages/QuestionsPage.tsx` created
+- [x] Fetches questions from `GET /questions/` on load
+- [x] Displays question stems in a list (no options visible yet — click to attempt)
+- [x] Filter bar: difficulty dropdown (All / Easy / Medium / Hard) + topic text filter
+- [x] Each question row shows topic badge and difficulty badge
+- [x] Route `/questions` added to `frontend/src/router.tsx`
+- [x] Link to Questions page added to nav/home
+- [x] `frontend/src/api/questionsApi.ts` created with `getQuestions(filters)` and `getQuestionById(id)`
+- [x] Typecheck passes
+- [x] Verify changes work in browser
 
 ### US-005: Question attempt UI
 **Description:** As a resident, I want to attempt a question and immediately see whether

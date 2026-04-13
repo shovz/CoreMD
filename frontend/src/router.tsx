@@ -8,6 +8,7 @@ import DashboardPage from "./pages/DashboardPage";
 import ChaptersPage from "./pages/ChaptersPage";
 import ChapterDetailPage from "./pages/ChapterDetailPage";
 import SectionDetailPage from "./pages/SectionDetailPage";
+import QuestionsPage from "./pages/QuestionsPage";
 
 
 
@@ -61,6 +62,14 @@ export default function AppRouter() {
           element={
             <ProtectedRoute>
               <SectionDetailPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/questions"
+          element={
+            <ProtectedRoute>
+              <QuestionsPage />
             </ProtectedRoute>
           }
         />
