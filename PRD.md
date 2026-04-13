@@ -49,15 +49,15 @@ chunks for a given query so the LLM has grounded context to answer from.
 conversation history, runs the RAG pipeline, and returns an answer with citations.
 
 **Acceptance Criteria:**
-- [ ] `POST /ai/ask` replaces the existing stub in `backend/app/api/v1/routes/ai.py`
-- [ ] Request body: `{"question": str, "history": [{"role": "user" or "assistant", "content": str}]}` — history optional, defaults to empty list
-- [ ] Response body: `{"answer": str, "citations": [{"chapter_id": str, "chapter_title": str, "section_title": str}]}`
-- [ ] Pipeline: generate question embedding, retrieve top 5 chunks, build prompt with system message + context + last 10 history messages + question, call gpt-4o-mini, return answer + deduplicated citations
-- [ ] System prompt instructs LLM to answer only from provided context and say "I do not have enough information" if context is insufficient
-- [ ] Answer cached in Redis with key `ai_answer:{sha256(question)}` TTL 3600s — cache bypassed when history is non-empty
-- [ ] `backend/app/schemas/ai.py` created with `AskRequest`, `Citation`, `AskResponse` Pydantic models
-- [ ] Requires valid JWT
-- [ ] Typecheck passes
+- [x] `POST /ai/ask` replaces the existing stub in `backend/app/api/v1/routes/ai.py`
+- [x] Request body: `{"question": str, "history": [{"role": "user" or "assistant", "content": str}]}` — history optional, defaults to empty list
+- [x] Response body: `{"answer": str, "citations": [{"chapter_id": str, "chapter_title": str, "section_title": str}]}`
+- [x] Pipeline: generate question embedding, retrieve top 5 chunks, build prompt with system message + context + last 10 history messages + question, call gpt-4o-mini, return answer + deduplicated citations
+- [x] System prompt instructs LLM to answer only from provided context and say "I do not have enough information" if context is insufficient
+- [x] Answer cached in Redis with key `ai_answer:{sha256(question)}` TTL 3600s — cache bypassed when history is non-empty
+- [x] `backend/app/schemas/ai.py` created with `AskRequest`, `Citation`, `AskResponse` Pydantic models
+- [x] Requires valid JWT
+- [x] Typecheck passes
 
 ### US-003: Chat API client and types
 **Description:** As a developer, I need a typed frontend API client for the AI endpoint
