@@ -36,12 +36,12 @@ frontend components can fetch real data.
 dashboard so I know how I'm progressing.
 
 **Acceptance Criteria:**
-- [ ] `frontend/src/components/StatCard.tsx` created — accepts `label: string`, `value: string | number`, `sub?: string` props; renders a bordered card with a large value and a label
-- [ ] Three cards rendered on the dashboard: "Questions Answered", "Accuracy" (formatted as "X%"), "Chapters Covered"
-- [ ] Cards shown in a responsive 3-column grid (single column on mobile)
-- [ ] While loading, cards show a skeleton/placeholder state (greyed box or "—")
-- [ ] On API error, shows an inline error message instead of crashing
-- [ ] Typecheck passes
+- [x] `frontend/src/components/StatCard.tsx` created — accepts `label: string`, `value: string | number`, `sub?: string` props; renders a bordered card with a large value and a label
+- [x] Three cards rendered on the dashboard: "Questions Answered", "Accuracy" (formatted as "X%"), "Chapters Covered"
+- [x] Cards shown in a responsive 3-column grid (single column on mobile)
+- [x] While loading, cards show a skeleton/placeholder state (greyed box or "—")
+- [x] On API error, shows an inline error message instead of crashing
+- [x] Typecheck passes
 
 ### US-003: Difficulty and topic bar charts
 **Description:** As a resident, I want to see my performance broken down by difficulty
