@@ -57,18 +57,18 @@ regressions are caught immediately.
 anti-cheat filter and attempt recording are verified.
 
 **Acceptance Criteria:**
-- [ ] `backend/tests/test_questions.py` created
-- [ ] Fixture inserts 2 test questions directly into `test_db`
-- [ ] `GET /api/v1/questions/` — returns list; `correct_option` and `explanation`
+- [x] `backend/tests/test_questions.py` created
+- [x] Fixture inserts 2 test questions directly into `test_db`
+- [x] `GET /api/v1/questions/` — returns list; `correct_option` and `explanation`
   NOT present in list response (anti-cheat)
-- [ ] `GET /api/v1/questions/{id}` — returns single question WITH `correct_option`
+- [x] `GET /api/v1/questions/{id}` — returns single question WITH `correct_option`
   and `explanation`
-- [ ] `GET /api/v1/questions/` — requires auth, returns 401 without token
-- [ ] `POST /api/v1/questions/{id}/attempt` — correct answer returns
+- [x] `GET /api/v1/questions/` — requires auth, returns 401 without token
+- [x] `POST /api/v1/questions/{id}/attempt` — correct answer returns
   `{"is_correct": true}`, wrong answer returns `{"is_correct": false}`
-- [ ] `POST /api/v1/questions/{id}/attempt` — attempt is recorded in
+- [x] `POST /api/v1/questions/{id}/attempt` — attempt is recorded in
   `question_attempts` collection
-- [ ] All tests pass: `pytest tests/test_questions.py`
+- [x] All tests pass: `pytest tests/test_questions.py`
 
 ### US-004: Stats endpoint tests
 **Description:** As a developer, I need tests for the stats aggregation so the
