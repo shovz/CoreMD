@@ -53,14 +53,14 @@ extracts structured HTML for a given page range.
 `section_html` collection for all chapters.
 
 **Acceptance Criteria:**
-- [ ] `backend/scripts/extract_html_content.py` created
-- [ ] Reads all chapters from MongoDB, sorts by `part_number`, `chapter_number`
-- [ ] For each chapter: calls `extract_page_html()` with `page_start`/`page_end` and PDF path (use `settings.PDF_PATH` or hardcoded constant matching ingest script)
-- [ ] Splits chapter HTML into sections using section titles from `chapter["sections"]` as heading markers
-- [ ] Upserts `{section_id, chapter_id, html_content, updated_at}` into `section_html` collection using `section_id` as key
-- [ ] Progress printed: `Part 2 | Chapter 15 | 4 sections stored`
-- [ ] Idempotent: safe to re-run
-- [ ] Typecheck passes
+- [x] `backend/scripts/extract_html_content.py` created
+- [x] Reads all chapters from MongoDB, sorts by `part_number`, `chapter_number`
+- [x] For each chapter: calls `extract_page_html()` with `page_start`/`page_end` and PDF path (use `settings.PDF_PATH` or hardcoded constant matching ingest script)
+- [x] Splits chapter HTML into sections using section titles from `chapter["sections"]` as heading markers
+- [x] Upserts `{section_id, chapter_id, html_content, updated_at}` into `section_html` collection using `section_id` as key
+- [x] Progress printed: `Part 2 | Chapter 15 | 4 sections stored`
+- [x] Idempotent: safe to re-run
+- [x] Typecheck passes
 
 ### US-003: Update section API endpoint
 **Description:** As a developer, I need the section endpoint to return HTML content
