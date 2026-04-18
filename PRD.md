@@ -77,14 +77,14 @@ when available so the frontend can render it.
 bold text, and paragraph structure matching the original Harrison textbook.
 
 **Acceptance Criteria:**
-- [ ] `dompurify` and `@types/dompurify` added to `frontend/package.json`
-- [ ] `SectionDetailPage.tsx` checks `section.html_content`:
+- [x] `dompurify` and `@types/dompurify` added to `frontend/package.json`
+- [x] `SectionDetailPage.tsx` checks `section.html_content`:
   - If present: renders via `<div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(section.html_content) }} />`
   - If null: falls back to current paragraph-split plain text rendering
-- [ ] CSS added to scope HTML content styles (headings, bold, line-height) within a `.section-content` wrapper
-- [ ] `frontend/src/api/sectionApi.ts` adds `html_content: string | null` to `SectionResponse`
-- [ ] Typecheck passes
-- [ ] Verify in browser: a section page shows formatted headings and bold text
+- [x] CSS added to scope HTML content styles (headings, bold, line-height) within a `.section-content` wrapper
+- [x] `frontend/src/api/sectionApi.ts` adds `html_content: string | null` to `SectionResponse`
+- [x] Typecheck passes
+- [x] Verify in browser: a section page shows formatted headings and bold text
 
 ## Non-Goals
 

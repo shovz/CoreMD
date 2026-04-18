@@ -6,6 +6,7 @@ export interface SectionResponse {
   section_id: string;
   section_title: string;
   content: string;
+  html_content: string | null;
 }
 
 export const getSectionById = (chapterId: string, sectionId: string) => {

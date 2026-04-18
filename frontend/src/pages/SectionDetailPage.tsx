@@ -1,5 +1,6 @@
 import { useParams, Link } from "react-router-dom";
 import { useEffect, useState } from "react";
+import DOMPurify from "dompurify";
 import { getSectionById, type SectionResponse } from "../api/sectionApi";
 import { getChapterById, type Chapter } from "../api/chaptersApi";
 
@@ -58,12 +59,19 @@ export default function SectionDetailPage() {
         </div>
       )}
 
-      {/* Content — split into paragraphs */}
-      <div style={{ lineHeight: 1.75, color: "#222", fontSize: 15 }}>
-        {section.content.split("\n\n").map((para, i) => (
-          <p key={i} style={{ marginBottom: 16, marginTop: 0 }}>{para.trim()}</p>
-        ))}
-      </div>
+      {/* Content */}
+      {section.html_content ? (
+        <div
+          className="section-content"
+          dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(section.html_content) }}
+        />
+      ) : (
+        <div style={{ lineHeight: 1.75, color: "#222", fontSize: 15 }}>
+          {section.content.split("\n\n").map((para, i) => (
+            <p key={i} style={{ marginBottom: 16, marginTop: 0 }}>{para.trim()}</p>
+          ))}
+        </div>
+      )}
 
       {/* Prev / Next navigation */}
       {(prevSection || nextSection) && (

@@ -10,5 +10,6 @@
 - CORS: always add common dev ports (5173, 5174, 5175) to allow_origins — Vite increments port when 5173 is already taken.
 - For section HTML extraction: PyMuPDF `get_text("dict")` returns blocks→lines→spans with `size` and `flags` (bold=16, italic=2). Use font size thresholds to detect headings. All-caps short lines are reliable heading indicators in Harrison.
 - US-003 (section API html_content): Query `section_html` collection by `chapter_id` + `section_id` and attach `html_content` field; return `null` when no document exists. Use a typed `SectionContentOut` Pydantic schema on the route so FastAPI validates the response shape.
+- US-004 (frontend HTML rendering): Install dompurify as a runtime dep and @types/dompurify as a devDep. Scope `.section-content` CSS in `index.css` rather than a component CSS module — keeps all global text styles in one file. The `html_content` field is `string | null` in the TypeScript interface to match the backend Optional[str]; check truthiness (`if section.html_content`) before rendering to handle both null and empty string.
 
 ---
