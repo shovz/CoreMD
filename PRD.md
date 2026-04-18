@@ -75,15 +75,15 @@ anti-cheat filter and attempt recording are verified.
 $facet list→dict transformation that previously caused a 500 is regression-protected.
 
 **Acceptance Criteria:**
-- [ ] `backend/tests/test_stats.py` created
-- [ ] Fixture inserts test question + records 3 attempts (2 correct easy, 1 wrong medium)
-- [ ] `GET /api/v1/stats/overview` — returns correct `total_questions_answered`,
+- [x] `backend/tests/test_stats.py` created
+- [x] Fixture inserts test question + records 3 attempts (2 correct easy, 1 wrong medium)
+- [x] `GET /api/v1/stats/overview` — returns correct `total_questions_answered`,
   `correct_percentage`, `unique_chapters_covered`
-- [ ] `GET /api/v1/stats/questions` — returns `by_difficulty` as a **dict** (not list),
+- [x] `GET /api/v1/stats/questions` — returns `by_difficulty` as a **dict** (not list),
   keys are difficulty strings, values have `attempted` and `accuracy`
-- [ ] `GET /api/v1/stats/questions` — returns `by_topic` as a list
-- [ ] Empty state (no attempts): all endpoints return zeroed values, not 500
-- [ ] All tests pass: `pytest tests/test_stats.py`
+- [x] `GET /api/v1/stats/questions` — returns `by_topic` as a list
+- [x] Empty state (no attempts): all endpoints return zeroed values, not 500
+- [x] All tests pass: `pytest tests/test_stats.py`
 
 ### US-005: Cases and chapters smoke tests
 **Description:** As a developer, I need smoke tests for cases and chapters so

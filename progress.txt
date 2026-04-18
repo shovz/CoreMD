@@ -16,4 +16,6 @@
 
 - US-002 (auth tests): When `test_db` teardown drops the `users` collection, the unique email index is lost. Fix: add an `autouse` fixture in the test module that calls `test_db.users.create_index("email", unique=True)` before each test so the index is reliably present. Also: `GET /api/v1/auth/me` had a bug — `UserOut.role` is required but the route didn't pass it; fix by adding `role=current_user.get("role", "user")`.
 
+- US-004 (stats tests): Questions stored in the test DB need a `chapter_id` field (in addition to `chapter_ref`) for the stats aggregation `$question.chapter_id` lookup to work correctly. Insert question fixtures directly to DB with both fields rather than using the API, which only stores `chapter_ref`.
+
 ---
