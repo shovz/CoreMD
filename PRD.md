@@ -44,15 +44,15 @@ practise without seeing the same questions repeatedly.
 reasoning across all major specialties.
 
 **Acceptance Criteria:**
-- [ ] `backend/scripts/seed_cases.py` updated to seed 40 total cases
-- [ ] Cases span at least 10 subspecialties matching the question bank topics
-- [ ] Each case has all 8 required fields: presentation, history, physical_exam,
+- [x] `backend/scripts/seed_cases.py` updated to seed 40 total cases
+- [x] Cases span at least 10 subspecialties matching the question bank topics
+- [x] Each case has all 8 required fields: presentation, history, physical_exam,
   labs, imaging, discussion, diagnosis, management
-- [ ] Each case has a chapter_ref pointing to a real chapter_id in MongoDB
-- [ ] Realistic clinical detail: vital signs, specific lab values, imaging findings
-- [ ] Script is idempotent: running twice does not duplicate cases
-- [ ] After running, db.cases.countDocuments() returns 40
-- [ ] Typecheck passes
+- [x] Each case has a chapter_ref pointing to a real chapter_id in MongoDB
+- [x] Realistic clinical detail: vital signs, specific lab values, imaging findings
+- [x] Script is idempotent: running twice does not duplicate cases
+- [x] After running, db.cases.countDocuments() returns 40
+- [x] Typecheck passes
 
 ## Non-Goals
 
