@@ -17,7 +17,8 @@ export default function RegisterPage() {
       // after successful registration, go to login
       window.location.href = "/login";
     } catch (err: any) {
-      setError("Registration failed (email may already exist)");
+      const detail = err?.response?.data?.detail;
+      setError(typeof detail === "string" ? detail : `Error ${err?.response?.status ?? "unknown"}: registration failed`);
     } finally {
       setLoading(false);
     }

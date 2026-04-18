@@ -1,0 +1,6 @@
+# Progress Log
+
+## Learnings
+- recharts requires `react-is` as a peer dep; install it explicitly with `npm install react-is --legacy-peer-deps` when using React 19 to avoid Rollup build failures.
+
+---

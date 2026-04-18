@@ -154,7 +154,19 @@ def get_question_stats(db: Database, user_id: str) -> Dict:
     ]
 
     result = list(db.question_attempts.aggregate(pipeline))
-    return result[0] if result else {"by_difficulty": [], "by_topic": []}
+    raw = result[0] if result else {"by_difficulty": [], "by_topic": []}
+
+    # $facet returns by_difficulty as a list; schema expects Dict[str, DifficultyStats]
+    by_difficulty_dict = {
+        item["difficulty"]: {"attempted": item["attempted"], "accuracy": item["accuracy"]}
+        for item in raw.get("by_difficulty", [])
+        if item.get("difficulty")
+    }
+
+    return {
+        "by_difficulty": by_difficulty_dict,
+        "by_topic": raw.get("by_topic", []),
+    }
 
 
 def get_chapter_stats(db: Database, user_id: str) -> List[Dict]:

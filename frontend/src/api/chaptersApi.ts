@@ -10,6 +10,9 @@ export interface Chapter {
   title: string;
   order?: number;
   specialty?: string;
+  part_number?: number;
+  part_title?: string;
+  chapter_number?: number;
   sections: Section[];
 }
 

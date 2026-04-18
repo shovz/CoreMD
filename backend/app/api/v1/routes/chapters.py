@@ -19,6 +19,9 @@ def _doc_to_chapter_out(doc: dict) -> dict:
         "id": doc["chapter_id"],
         "title": doc.get("title", ""),
         "specialty": doc.get("specialty", ""),
+        "part_number": doc.get("part_number"),
+        "part_title": doc.get("part_title"),
+        "chapter_number": doc.get("chapter_number"),
         "sections": sections,
     }
 

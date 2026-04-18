@@ -1,0 +1,7 @@
+# Progress Log
+
+## Learnings
+- Seed scripts: load `.env` via `dotenv.load_dotenv(Path(__file__).parent.parent / ".env")` and fall back gracefully if dotenv is unavailable; derive the database name from `MongoClient.get_default_database()` so the script works with any URI.
+- Idempotency pattern for MongoDB seeds: create a unique index on the natural key (`question_id`) and use `find_one` before `insert_one`; the unique index also prevents duplicate inserts from concurrent runs.
+
+---

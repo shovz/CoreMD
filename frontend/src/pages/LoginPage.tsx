@@ -20,7 +20,8 @@ export default function LoginPage() {
       // temporary redirect (we'll improve later)
       window.location.href = "/";
     } catch (err: any) {
-      setError("Invalid email or password");
+      const detail = err?.response?.data?.detail;
+      setError(typeof detail === "string" ? detail : `Error ${err?.response?.status ?? "unknown"}: login failed`);
     } finally {
       setLoading(false);
     }

@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import List
+from typing import List, Optional
 
 
 class ChapterBase(BaseModel):
@@ -14,6 +14,9 @@ class SectionOut(BaseModel):
 
 class ChapterOut(ChapterBase):
     id: str
+    part_number: Optional[int] = None
+    part_title: Optional[str] = None
+    chapter_number: Optional[int] = None
     sections: List[SectionOut] = Field(default_factory=list)
 
     class Config:

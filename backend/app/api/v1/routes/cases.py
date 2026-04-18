@@ -65,7 +65,7 @@ def get_case(
     chapter_title: Optional[str] = None
     chapter_ref = doc.get("chapter_ref")
     if chapter_ref:
-        ch = db["chapters"].find_one({"id": chapter_ref}, {"_id": 0, "title": 1})
+        ch = db["chapters"].find_one({"chapter_id": chapter_ref}, {"_id": 0, "title": 1})
         if ch:
             chapter_title = ch["title"]
 
