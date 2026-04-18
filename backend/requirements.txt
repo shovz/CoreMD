@@ -12,3 +12,6 @@ pymupdf
 tiktoken
 openai
 numpy
+pytest
+httpx
+pytest-asyncio

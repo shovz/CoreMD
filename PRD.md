@@ -1,119 +1,120 @@
-# PRD: Docker Setup
+# PRD: Backend Test Suite
 
 ## Introduction
 
-CoreMD has no Dockerfiles. The `docker-compose.yml` references `build: ../backend`
-and `build: ../frontend` but both directories lack a Dockerfile, so
-`docker-compose up` fails immediately. This PRD adds everything needed to run the
-full stack (backend, frontend, MongoDB, Redis) with a single command.
-
-This is also the foundation for AWS deployment — ECS just runs the same images.
+CoreMD has no automated tests. The 7 API routes and 4 services have been manually
+verified but are unprotected against regressions. Before AWS deployment, the critical
+paths — auth, questions, cases, stats, and the AI endpoint — need a pytest suite that
+runs against a real (test) MongoDB instance so schema mismatches and aggregation bugs
+are caught early.
 
 ## Goals
 
-- `docker-compose up` from `infra/` starts all 4 services successfully
-- Backend reachable at `http://localhost:8000`
-- Frontend reachable at `http://localhost:5173` (nginx serving built React app)
-- Frontend API URL configurable via `VITE_API_URL` env var (defaults to localhost:8000)
-- No secrets committed — env file excluded from git
-
-## How It Works
-
-1. `backend/Dockerfile` — python:3.11-slim, installs requirements, runs uvicorn
-2. `frontend/Dockerfile` — two-stage: Node 20 builds the React app, nginx serves dist/
-3. `frontend/nginx.conf` — SPA fallback: all paths → index.html (required for React Router)
-4. `infra/env/.env.development` — MongoDB/Redis URIs using Docker service names (mongo, redis)
-5. `docker-compose.yml` updated — correct ports, build args, healthchecks
-6. `apiClient.ts` reads `VITE_API_URL` env var so it works in both local and production
+- pytest integration test suite covering all critical API routes
+- Tests run against a real MongoDB test database (not mocks) — same pattern that caught
+  the $facet/schema mismatch in stats
+- Each test is self-contained: creates its own data, cleans up after itself
+- Full suite runs in under 60 seconds
+- `pytest` and `httpx` added to requirements
 
 ## User Stories
 
-### US-001: Backend Dockerfile
-**Description:** As a developer, I need a Dockerfile for the FastAPI backend so it
-can be built and run as a container.
+### US-001: Test infrastructure
+**Description:** As a developer, I need the test scaffolding (conftest, fixtures,
+test DB) so individual test files can focus on business logic.
 
 **Acceptance Criteria:**
-- [x] `backend/Dockerfile` created using `python:3.11-slim` base image
-- [x] Copies `requirements.txt`, runs `pip install --no-cache-dir -r requirements.txt`
-- [x] Copies `app/` and `scripts/` directories
-- [x] CMD: `uvicorn app.main:app --host 0.0.0.0 --port 8000`
-- [x] `backend/.dockerignore` created (excludes `.env`, `__pycache__`, `*.pyc`, `.venv`)
-- [x] Image builds without error: `docker build -t coremd-backend ./backend`
+- [x] `pytest`, `httpx`, `pytest-asyncio` added to `backend/requirements.txt`
+- [x] `backend/tests/__init__.py` created (empty)
+- [x] `backend/tests/conftest.py` created with:
+  - `client` fixture: `TestClient` wrapping the FastAPI app
+  - `test_db` fixture: connects to `CoreMD_test` database, yields db, drops all
+    test collections after each test
+  - `auth_headers` fixture: registers + logs in a fresh test user, returns
+    `{"Authorization": "Bearer <token>"}` dict
+- [x] `backend/pytest.ini` (or `pyproject.toml` `[tool.pytest]` section) sets
+  `testpaths = tests` and `MONGO_URI=mongodb://localhost:27017/CoreMD_test`
+  so tests never touch the real `CoreMD` database
+- [x] `pytest tests/` runs with 0 errors (no test files yet, just scaffolding)
 - [x] Typecheck passes
 
-### US-002: Frontend Dockerfile and nginx config
-**Description:** As a developer, I need a multi-stage Dockerfile for the React
-frontend so it builds the app and serves it via nginx.
+### US-002: Auth route tests
+**Description:** As a developer, I need tests for register and login so auth
+regressions are caught immediately.
 
 **Acceptance Criteria:**
-- [x] `frontend/Dockerfile` created with two stages:
-  - Stage 1 (`build`): `node:20-alpine`, copies package files, runs `npm ci`, copies src, runs `npm run build`
-  - Stage 2 (`serve`): `nginx:alpine`, copies `dist/` from build stage, copies nginx config
-- [x] `frontend/nginx.conf` created — listens on port 80, `try_files $uri $uri/ /index.html` for SPA routing
-- [x] `frontend/.dockerignore` created (excludes `node_modules`, `dist`, `.env*`)
-- [x] Image builds without error: `docker build -t coremd-frontend ./frontend`
+- [ ] `backend/tests/test_auth.py` created
+- [ ] `POST /api/v1/auth/register` — happy path returns 201 with `id`, `email`, `role`
+- [ ] `POST /api/v1/auth/register` — duplicate email returns 400
+- [ ] `POST /api/v1/auth/register` — password shorter than 8 chars returns 422
+- [ ] `POST /api/v1/auth/login` — valid credentials returns 200 with `access_token`
+- [ ] `POST /api/v1/auth/login` — wrong password returns 401
+- [ ] `GET /api/v1/auth/me` — valid token returns current user; missing token returns 401
+- [ ] All tests pass: `pytest tests/test_auth.py`
 
-### US-003: Environment config and docker-compose update
-**Description:** As a developer, I need environment files and an updated
-docker-compose so all services connect correctly inside Docker networking.
-
-**Acceptance Criteria:**
-- [x] `infra/env/` directory created
-- [x] `infra/env/.env.development` created with:
-  - `MONGO_URI=mongodb://mongo:27017/CoreMD` (Docker service name, not localhost)
-  - `REDIS_URL=redis://redis:6379`
-  - `JWT_SECRET=dev-secret-change-in-production`
-  - `JWT_ALGORITHM=HS256`
-  - `OPENAI_API_KEY=` (empty placeholder — user fills in)
-- [x] `infra/env/.env.development.example` created as a copy without secret values (committed to git)
-- [x] `infra/.gitignore` created to exclude `env/.env.development` (not the example)
-- [x] `infra/docker-compose.yml` updated:
-  - frontend: `ports: ["5173:80"]` (nginx on 80 inside, 5173 on host)
-  - frontend: remove `stdin_open` and `tty`
-  - frontend: add `build.args: VITE_API_URL=http://localhost:8000/api/v1`
-  - backend: add `healthcheck` (curl localhost:8000/health every 30s)
-  - mongo: add `healthcheck`
-
-### US-004: Configurable API URL in frontend
-**Description:** As a developer, I need the frontend API base URL to be configurable
-via environment variable so the same Docker image works locally and in production.
+### US-003: Questions and attempt tests
+**Description:** As a developer, I need tests for the question bank so the
+anti-cheat filter and attempt recording are verified.
 
 **Acceptance Criteria:**
-- [ ] `frontend/src/api/apiClient.ts` baseURL changed to:
-  `import.meta.env.VITE_API_URL ?? "http://localhost:8000/api/v1"`
-- [ ] `backend/app/main.py` CORS `allow_origins` adds `http://localhost:5173` already present,
-  also add `http://localhost:80` and `http://localhost` for nginx-served frontend
-- [ ] `npm run build` passes with the change
-- [ ] Typecheck passes
+- [ ] `backend/tests/test_questions.py` created
+- [ ] Fixture inserts 2 test questions directly into `test_db`
+- [ ] `GET /api/v1/questions/` — returns list; `correct_option` and `explanation`
+  NOT present in list response (anti-cheat)
+- [ ] `GET /api/v1/questions/{id}` — returns single question WITH `correct_option`
+  and `explanation`
+- [ ] `GET /api/v1/questions/` — requires auth, returns 401 without token
+- [ ] `POST /api/v1/questions/{id}/attempt` — correct answer returns
+  `{"is_correct": true}`, wrong answer returns `{"is_correct": false}`
+- [ ] `POST /api/v1/questions/{id}/attempt` — attempt is recorded in
+  `question_attempts` collection
+- [ ] All tests pass: `pytest tests/test_questions.py`
+
+### US-004: Stats endpoint tests
+**Description:** As a developer, I need tests for the stats aggregation so the
+$facet list→dict transformation that previously caused a 500 is regression-protected.
+
+**Acceptance Criteria:**
+- [ ] `backend/tests/test_stats.py` created
+- [ ] Fixture inserts test question + records 3 attempts (2 correct easy, 1 wrong medium)
+- [ ] `GET /api/v1/stats/overview` — returns correct `total_questions_answered`,
+  `correct_percentage`, `unique_chapters_covered`
+- [ ] `GET /api/v1/stats/questions` — returns `by_difficulty` as a **dict** (not list),
+  keys are difficulty strings, values have `attempted` and `accuracy`
+- [ ] `GET /api/v1/stats/questions` — returns `by_topic` as a list
+- [ ] Empty state (no attempts): all endpoints return zeroed values, not 500
+- [ ] All tests pass: `pytest tests/test_stats.py`
+
+### US-005: Cases and chapters smoke tests
+**Description:** As a developer, I need smoke tests for cases and chapters so
+basic list/detail routes are verified.
+
+**Acceptance Criteria:**
+- [ ] `backend/tests/test_cases.py` created
+- [ ] Fixture inserts 1 test case into `test_db`
+- [ ] `GET /api/v1/cases/` — returns list with the test case; requires auth
+- [ ] `GET /api/v1/cases/{id}` — returns full case detail including all 8 fields
+- [ ] `GET /api/v1/cases/{id}` — nonexistent id returns 404
+- [ ] `backend/tests/test_chapters.py` created
+- [ ] Fixture inserts 1 test chapter with 2 sections into `test_db`
+- [ ] `GET /api/v1/chapters/` — returns list; requires auth
+- [ ] `GET /api/v1/chapters/{id}` — returns chapter with `part_number`, `part_title`,
+  `chapter_number` fields present
+- [ ] `GET /api/v1/chapters/{id}` — nonexistent id returns 404
+- [ ] All tests pass: `pytest tests/test_cases.py tests/test_chapters.py`
 
 ## Non-Goals
 
-- No production Docker Compose (separate from dev)
-- No CI/CD pipeline (separate PRD)
-- No AWS-specific config (separate PRD)
-- No hot-reload inside containers (dev uses local servers)
-- Harrison PDF not mounted in container (ingestion script run locally only)
+- No AI/RAG endpoint tests (requires OpenAI API key — tested manually)
+- No frontend tests (Playwright tests already exist for dashboard and auth)
+- No load/performance tests
+- No test coverage reporting (add later)
 
 ## Technical Considerations
 
-- Inside Docker, services reach each other by service name: `mongo`, `redis`, `backend`
-- The browser (on host) still calls `localhost:8000` for API — this works because Docker maps the port to the host
-- `VITE_API_URL` is baked into the frontend at build time (`import.meta.env` is static)
-- nginx needs `try_files $uri $uri/ /index.html` — without it, refreshing `/dashboard` returns 404
-- `infra/env/.env.development` must NOT be committed (contains JWT secret + OpenAI key)
-
-## Files to Create / Modify
-
-| File | Action |
-|---|---|
-| `backend/Dockerfile` | Create |
-| `backend/.dockerignore` | Create |
-| `frontend/Dockerfile` | Create |
-| `frontend/nginx.conf` | Create |
-| `frontend/.dockerignore` | Create |
-| `infra/env/.env.development` | Create (git-ignored) |
-| `infra/env/.env.development.example` | Create (committed) |
-| `infra/.gitignore` | Create |
-| `infra/docker-compose.yml` | Update |
-| `frontend/src/api/apiClient.ts` | Update baseURL |
-| `backend/app/main.py` | Add localhost:80 to CORS |
+- Use `mongomock` or real MongoDB — use **real MongoDB** (`CoreMD_test` db) to match
+  production behavior, especially for aggregation pipelines
+- `TestClient` from `starlette.testclient` (included with FastAPI) handles sync tests
+- Override `MONGO_URI` in `pytest.ini` via env var so tests hit `CoreMD_test`, not `CoreMD`
+- Each test that writes data should clean up via `test_db` fixture teardown
+- The `auth_headers` fixture must use `test_db` — register against the test database
