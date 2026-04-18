@@ -58,16 +58,16 @@ frontend so it builds the app and serves it via nginx.
 docker-compose so all services connect correctly inside Docker networking.
 
 **Acceptance Criteria:**
-- [ ] `infra/env/` directory created
-- [ ] `infra/env/.env.development` created with:
+- [x] `infra/env/` directory created
+- [x] `infra/env/.env.development` created with:
   - `MONGO_URI=mongodb://mongo:27017/CoreMD` (Docker service name, not localhost)
   - `REDIS_URL=redis://redis:6379`
   - `JWT_SECRET=dev-secret-change-in-production`
   - `JWT_ALGORITHM=HS256`
   - `OPENAI_API_KEY=` (empty placeholder — user fills in)
-- [ ] `infra/env/.env.development.example` created as a copy without secret values (committed to git)
-- [ ] `infra/.gitignore` created to exclude `env/.env.development` (not the example)
-- [ ] `infra/docker-compose.yml` updated:
+- [x] `infra/env/.env.development.example` created as a copy without secret values (committed to git)
+- [x] `infra/.gitignore` created to exclude `env/.env.development` (not the example)
+- [x] `infra/docker-compose.yml` updated:
   - frontend: `ports: ["5173:80"]` (nginx on 80 inside, 5173 on host)
   - frontend: remove `stdin_open` and `tty`
   - frontend: add `build.args: VITE_API_URL=http://localhost:8000/api/v1`

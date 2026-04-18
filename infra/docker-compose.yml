@@ -11,15 +11,20 @@ services:
     depends_on:
       - mongo
       - redis
-
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   frontend:
-    build: ../frontend
+    build:
+      context: ../frontend
+      args:
+        VITE_API_URL: http://localhost:8000/api/v1
     container_name: coreMD-frontend
     ports:
-      - "5173:5173"
-    stdin_open: true
-    tty: true
+      - "5173:80"
 
   mongo:
     image: mongo:6
@@ -28,6 +33,11 @@ services:
       - "27017:27017"
     volumes:
       - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   redis:
     image: redis:7
