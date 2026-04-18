@@ -18,4 +18,6 @@
 
 - US-004 (stats tests): Questions stored in the test DB need a `chapter_id` field (in addition to `chapter_ref`) for the stats aggregation `$question.chapter_id` lookup to work correctly. Insert question fixtures directly to DB with both fields rather than using the API, which only stores `chapter_ref`.
 
+- US-005 (cases/chapters tests): `autouse` fixture scoped to the test module (not conftest) works cleanly for seeding per-module data without polluting other test suites. Each test file seeds its own collection; `test_db` teardown drops everything, so no cross-test leakage.
+
 ---

@@ -90,18 +90,18 @@ $facet list→dict transformation that previously caused a 500 is regression-pro
 basic list/detail routes are verified.
 
 **Acceptance Criteria:**
-- [ ] `backend/tests/test_cases.py` created
-- [ ] Fixture inserts 1 test case into `test_db`
-- [ ] `GET /api/v1/cases/` — returns list with the test case; requires auth
-- [ ] `GET /api/v1/cases/{id}` — returns full case detail including all 8 fields
-- [ ] `GET /api/v1/cases/{id}` — nonexistent id returns 404
-- [ ] `backend/tests/test_chapters.py` created
-- [ ] Fixture inserts 1 test chapter with 2 sections into `test_db`
-- [ ] `GET /api/v1/chapters/` — returns list; requires auth
-- [ ] `GET /api/v1/chapters/{id}` — returns chapter with `part_number`, `part_title`,
+- [x] `backend/tests/test_cases.py` created
+- [x] Fixture inserts 1 test case into `test_db`
+- [x] `GET /api/v1/cases/` — returns list with the test case; requires auth
+- [x] `GET /api/v1/cases/{id}` — returns full case detail including all 8 fields
+- [x] `GET /api/v1/cases/{id}` — nonexistent id returns 404
+- [x] `backend/tests/test_chapters.py` created
+- [x] Fixture inserts 1 test chapter with 2 sections into `test_db`
+- [x] `GET /api/v1/chapters/` — returns list; requires auth
+- [x] `GET /api/v1/chapters/{id}` — returns chapter with `part_number`, `part_title`,
   `chapter_number` fields present
-- [ ] `GET /api/v1/chapters/{id}` — nonexistent id returns 404
-- [ ] All tests pass: `pytest tests/test_cases.py tests/test_chapters.py`
+- [x] `GET /api/v1/chapters/{id}` — nonexistent id returns 404
+- [x] All tests pass: `pytest tests/test_cases.py tests/test_chapters.py`
 
 ## Non-Goals
 
