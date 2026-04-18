@@ -203,7 +203,7 @@ def main() -> None:
 
             # extract_page_html uses 0-based PyMuPDF page indices;
             # MongoDB stores 1-based page numbers from get_toc().
-            imgs_before = len(list(IMAGES_DIR.glob(f"{chapter_id}_*.webp")))
+            imgs_before = len(list(IMAGES_DIR.glob(f"{chapter_id}_*.jpg")))
             html_content = extract_page_html(
                 args.pdf_path,
                 page_start - 1,
@@ -211,7 +211,7 @@ def main() -> None:
                 chapter_id=chapter_id,
                 images_dir=IMAGES_DIR,
             )
-            imgs_after = len(list(IMAGES_DIR.glob(f"{chapter_id}_*.webp")))
+            imgs_after = len(list(IMAGES_DIR.glob(f"{chapter_id}_*.jpg")))
             img_count = imgs_after - imgs_before
 
             section_html_map = split_html_into_sections(html_content, sections)
