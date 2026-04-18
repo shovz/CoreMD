@@ -46,12 +46,12 @@ can be built and run as a container.
 frontend so it builds the app and serves it via nginx.
 
 **Acceptance Criteria:**
-- [ ] `frontend/Dockerfile` created with two stages:
+- [x] `frontend/Dockerfile` created with two stages:
   - Stage 1 (`build`): `node:20-alpine`, copies package files, runs `npm ci`, copies src, runs `npm run build`
   - Stage 2 (`serve`): `nginx:alpine`, copies `dist/` from build stage, copies nginx config
-- [ ] `frontend/nginx.conf` created — listens on port 80, `try_files $uri $uri/ /index.html` for SPA routing
-- [ ] `frontend/.dockerignore` created (excludes `node_modules`, `dist`, `.env*`)
-- [ ] Image builds without error: `docker build -t coremd-frontend ./frontend`
+- [x] `frontend/nginx.conf` created — listens on port 80, `try_files $uri $uri/ /index.html` for SPA routing
+- [x] `frontend/.dockerignore` created (excludes `node_modules`, `dist`, `.env*`)
+- [x] Image builds without error: `docker build -t coremd-frontend ./frontend`
 
 ### US-003: Environment config and docker-compose update
 **Description:** As a developer, I need environment files and an updated
