@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from contextlib import asynccontextmanager
 from app.core.config import settings
@@ -32,6 +33,9 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="CoreMD Backend", lifespan=lifespan)
+
+# Serve extracted Harrison images at /static/images/
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # Add CORS middleware
 app.add_middleware(

@@ -54,15 +54,15 @@ inline at the exact position image blocks appear in the PDF reading order.
 and pass it to `extract_page_html()` so images are saved and counted during the run.
 
 **Acceptance Criteria:**
-- [ ] `IMAGES_DIR` constant defined: `Path(__file__).parent.parent / "static" / "images"`
-- [ ] Near the top of `main()`: `IMAGES_DIR.mkdir(parents=True, exist_ok=True)`
-- [ ] `extract_page_html()` call updated to pass `chapter_id=chapter_id, images_dir=IMAGES_DIR`
-- [ ] Count images saved per chapter: before and after the `extract_page_html()` call,
+- [x] `IMAGES_DIR` constant defined: `Path(__file__).parent.parent / "static" / "images"`
+- [x] Near the top of `main()`: `IMAGES_DIR.mkdir(parents=True, exist_ok=True)`
+- [x] `extract_page_html()` call updated to pass `chapter_id=chapter_id, images_dir=IMAGES_DIR`
+- [x] Count images saved per chapter: before and after the `extract_page_html()` call,
   count files in `IMAGES_DIR` matching `f"{chapter_id}_*.webp"` using `len(list(IMAGES_DIR.glob(...)))`
-- [ ] Progress line updated to: `Part {part_num} | Chapter {chapter_id} | {stored} sections, {img_count} images`
-- [ ] `backend/static/images/.gitkeep` created (empty file, keeps directory in repo)
-- [ ] `python backend/scripts/extract_html_content.py --dry-run` runs without errors
-- [ ] Typecheck passes
+- [x] Progress line updated to: `Part {part_num} | Chapter {chapter_id} | {stored} sections, {img_count} images`
+- [x] `backend/static/images/.gitkeep` created (empty file, keeps directory in repo)
+- [x] `python backend/scripts/extract_html_content.py --dry-run` runs without errors
+- [x] Typecheck passes
 
 ### US-003: Mount /static in FastAPI
 
@@ -70,14 +70,14 @@ and pass it to `extract_page_html()` so images are saved and counted during the 
 so the browser can load them from HTML content.
 
 **Acceptance Criteria:**
-- [ ] `backend/app/main.py`: `from fastapi.staticfiles import StaticFiles` added
-- [ ] `app.mount("/static", StaticFiles(directory="static"), name="static")` added
+- [x] `backend/app/main.py`: `from fastapi.staticfiles import StaticFiles` added
+- [x] `app.mount("/static", StaticFiles(directory="static"), name="static")` added
   directly after the `app = FastAPI(...)` line, before route registrations
-- [ ] `python -c "import app.main"` passes (server starts without error; static dir
+- [x] `python -c "import app.main"` passes (server starts without error; static dir
   may not exist yet — `StaticFiles` raises on mount only if directory is missing,
   so `.gitkeep` from US-002 ensures the directory exists)
-- [ ] `pytest tests/` passes — existing 30 tests unaffected
-- [ ] Typecheck passes
+- [x] `pytest tests/` passes — existing 30 tests unaffected
+- [x] Typecheck passes
 
 ## Non-Goals
 

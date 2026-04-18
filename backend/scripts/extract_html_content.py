@@ -50,6 +50,7 @@ PDF_FULL_PATH: str = os.getenv(
     ),
 )
 MONGO_URI: str = os.getenv("MONGO_URI", "mongodb://localhost:27017/CoreMD")
+IMAGES_DIR: Path = Path(__file__).parent.parent / "static" / "images"
 
 # ---------------------------------------------------------------------------
 # HTML section splitting
@@ -150,9 +151,12 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    print(f"PDF path  : {args.pdf_path}")
-    print(f"Mongo URI : {MONGO_URI}")
-    print(f"Dry run   : {args.dry_run}")
+    IMAGES_DIR.mkdir(parents=True, exist_ok=True)
+
+    print(f"PDF path   : {args.pdf_path}")
+    print(f"Mongo URI  : {MONGO_URI}")
+    print(f"Images dir : {IMAGES_DIR}")
+    print(f"Dry run    : {args.dry_run}")
     print()
 
     mongo_client: MongoClient[dict[str, Any]] = MongoClient(MONGO_URI)
@@ -199,11 +203,16 @@ def main() -> None:
 
             # extract_page_html uses 0-based PyMuPDF page indices;
             # MongoDB stores 1-based page numbers from get_toc().
+            imgs_before = len(list(IMAGES_DIR.glob(f"{chapter_id}_*.webp")))
             html_content = extract_page_html(
                 args.pdf_path,
                 page_start - 1,
                 page_end - 1,
+                chapter_id=chapter_id,
+                images_dir=IMAGES_DIR,
             )
+            imgs_after = len(list(IMAGES_DIR.glob(f"{chapter_id}_*.webp")))
+            img_count = imgs_after - imgs_before
 
             section_html_map = split_html_into_sections(html_content, sections)
 
@@ -227,7 +236,7 @@ def main() -> None:
                     collection.bulk_write(ops, ordered=False)
 
             stored = len(sections)
-            print(f"Part {part_num} | Chapter {chapter_id} | {stored} sections stored")
+            print(f"Part {part_num} | Chapter {chapter_id} | {stored} sections, {img_count} images")
 
     finally:
         mongo_client.close()
