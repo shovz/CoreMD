@@ -67,10 +67,10 @@ extracts structured HTML for a given page range.
 when available so the frontend can render it.
 
 **Acceptance Criteria:**
-- [ ] `GET /chapters/{chapter_id}/sections/{section_id}` response adds `html_content: Optional[str]` field — populated from `section_html` collection if present, `null` otherwise
-- [ ] `backend/app/schemas/chapter.py` adds `SectionContentOut` schema with `chapter_id`, `chapter_title`, `section_id`, `section_title`, `content`, `html_content: Optional[str]`
-- [ ] Existing `content` (plain text) field kept for backwards compatibility and RAG
-- [ ] Typecheck passes
+- [x] `GET /chapters/{chapter_id}/sections/{section_id}` response adds `html_content: Optional[str]` field — populated from `section_html` collection if present, `null` otherwise
+- [x] `backend/app/schemas/chapter.py` adds `SectionContentOut` schema with `chapter_id`, `chapter_title`, `section_id`, `section_title`, `content`, `html_content: Optional[str]`
+- [x] Existing `content` (plain text) field kept for backwards compatibility and RAG
+- [x] Typecheck passes
 
 ### US-004: Frontend HTML rendering
 **Description:** As a resident, I want section content to display with proper headings,

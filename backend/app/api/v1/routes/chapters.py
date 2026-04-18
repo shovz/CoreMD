@@ -3,7 +3,7 @@ from typing import List
 from pymongo.database import Database
 
 from app.db.deps import mongo_db
-from app.schemas.chapter import ChapterOut, ChapterCreate, SectionOut
+from app.schemas.chapter import ChapterOut, ChapterCreate, SectionOut, SectionContentOut
 from app.core.auth import get_current_user
 
 router = APIRouter(prefix="/chapters", tags=["chapters"])
@@ -46,7 +46,7 @@ def get_chapter_by_id(
     return _doc_to_chapter_out(doc)
 
 
-@router.get("/{chapter_id}/sections/{section_id}")
+@router.get("/{chapter_id}/sections/{section_id}", response_model=SectionContentOut)
 def get_section_by_id(
     chapter_id: str,
     section_id: str,
@@ -72,13 +72,20 @@ def get_section_by_id(
     )
     content = "\n\n".join(c["text"] for c in chunks)
 
-    return {
-        "chapter_id": chapter_id,
-        "chapter_title": chapter_doc.get("title", ""),
-        "section_id": section_id,
-        "section_title": section_meta["title"],
-        "content": content,
-    }
+    html_doc = db["section_html"].find_one(
+        {"chapter_id": chapter_id, "section_id": section_id},
+        {"_id": 0, "html_content": 1},
+    )
+    html_content = html_doc["html_content"] if html_doc else None
+
+    return SectionContentOut(
+        chapter_id=chapter_id,
+        chapter_title=chapter_doc.get("title", ""),
+        section_id=section_id,
+        section_title=section_meta["title"],
+        content=content,
+        html_content=html_content,
+    )
 
 
 @router.post("/", response_model=ChapterOut)

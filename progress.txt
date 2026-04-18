@@ -1,7 +1,14 @@
 # Progress Log
 
 ## Learnings
-- US-002: When caching AI responses, use `model_dump()` + `json.dumps` to serialize Pydantic v2 models into Redis (not `.dict()`). Cache key is `ai_answer:{sha256(question)}` and cache is bypassed when conversation history is non-empty.
-- US-005: Deduplicate citations by `chapter_id` only (not by `(chapter_id, section_title)`) so that all citations in a response are unique chapters. Use React Router `<Link>` for chip-style citation display to keep navigation in-app without full page reload.
+- US-002 (PDF ingestion): When caching AI responses, use `model_dump()` + `json.dumps` to serialize Pydantic v2 models into Redis (not `.dict()`). Cache key is `ai_answer:{sha256(question)}` and cache is bypassed when conversation history is non-empty.
+- US-005 (AI RAG): Deduplicate citations by `chapter_id` only (not by `(chapter_id, section_title)`) so that all citations in a response are unique chapters. Use React Router `<Link>` for chip-style citation display to keep navigation in-app without full page reload.
+- Part PDFs have no TOC: switched to full Harrison PDF (`Harrison's_Principles_of_Internal_Medicine,_Twenty_First_Edition.pdf`) which has 580 TOC entries. Level 1 = Parts, level 2/3 starting with digit = chapters.
+- MongoDB `$facet` aggregation returns grouped results as lists, not dicts. Always transform list → dict after facet if schema expects Dict[str, Model].
+- MongoDB chapter documents use `chapter_id` as the field name (not `id`). Lookups must use `{"chapter_id": value}`.
+- Pydantic v2 requires `pydantic[email]` (not bare `pydantic`) when any schema uses `EmailStr`.
+- CORS: always add common dev ports (5173, 5174, 5175) to allow_origins — Vite increments port when 5173 is already taken.
+- For section HTML extraction: PyMuPDF `get_text("dict")` returns blocks→lines→spans with `size` and `flags` (bold=16, italic=2). Use font size thresholds to detect headings. All-caps short lines are reliable heading indicators in Harrison.
+- US-003 (section API html_content): Query `section_html` collection by `chapter_id` + `section_id` and attach `html_content` field; return `null` when no document exists. Use a typed `SectionContentOut` Pydantic schema on the route so FastAPI validates the response shape.
 
 ---

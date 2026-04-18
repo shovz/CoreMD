@@ -26,3 +26,12 @@ class ChapterOut(ChapterBase):
 class ChapterCreate(BaseModel):
     title: str = Field(..., min_length=3)
     specialty: str = Field(..., min_length=3)
+
+
+class SectionContentOut(BaseModel):
+    chapter_id: str
+    chapter_title: str
+    section_id: str
+    section_title: str
+    content: str
+    html_content: Optional[str] = None
