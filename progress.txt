@@ -12,4 +12,8 @@
 - US-003 (section API html_content): Query `section_html` collection by `chapter_id` + `section_id` and attach `html_content` field; return `null` when no document exists. Use a typed `SectionContentOut` Pydantic schema on the route so FastAPI validates the response shape.
 - US-004 (frontend HTML rendering): Install dompurify as a runtime dep and @types/dompurify as a devDep. Scope `.section-content` CSS in `index.css` rather than a component CSS module — keeps all global text styles in one file. The `html_content` field is `string | null` in the TypeScript interface to match the backend Optional[str]; check truthiness (`if section.html_content`) before rendering to handle both null and empty string.
 
+- US-003 (docker env config): On Windows (case-insensitive FS), `ENV/` in root `.gitignore` matches `infra/env/` — add `!infra/env/` + `!infra/env/**` negation patterns after the virtual-env rules to un-ignore the config directory. Then `infra/.gitignore` can selectively re-ignore `env/.env.development` while leaving `.env.development.example` committable.
+
+- US-002 (auth tests): When `test_db` teardown drops the `users` collection, the unique email index is lost. Fix: add an `autouse` fixture in the test module that calls `test_db.users.create_index("email", unique=True)` before each test so the index is reliably present. Also: `GET /api/v1/auth/me` had a bug — `UserOut.role` is required but the route didn't pass it; fix by adding `role=current_user.get("role", "user")`.
+
 ---

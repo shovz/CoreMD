@@ -52,4 +52,5 @@ def read_me(current_user=Depends(get_current_user)):
     return UserOut(
         id=str(current_user["_id"]),
         email=current_user["email"],
+        role=current_user.get("role", "user"),
     )

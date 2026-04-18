@@ -43,14 +43,14 @@ test DB) so individual test files can focus on business logic.
 regressions are caught immediately.
 
 **Acceptance Criteria:**
-- [ ] `backend/tests/test_auth.py` created
-- [ ] `POST /api/v1/auth/register` — happy path returns 201 with `id`, `email`, `role`
-- [ ] `POST /api/v1/auth/register` — duplicate email returns 400
-- [ ] `POST /api/v1/auth/register` — password shorter than 8 chars returns 422
-- [ ] `POST /api/v1/auth/login` — valid credentials returns 200 with `access_token`
-- [ ] `POST /api/v1/auth/login` — wrong password returns 401
-- [ ] `GET /api/v1/auth/me` — valid token returns current user; missing token returns 401
-- [ ] All tests pass: `pytest tests/test_auth.py`
+- [x] `backend/tests/test_auth.py` created
+- [x] `POST /api/v1/auth/register` — happy path returns 201 with `id`, `email`, `role`
+- [x] `POST /api/v1/auth/register` — duplicate email returns 400
+- [x] `POST /api/v1/auth/register` — password shorter than 8 chars returns 422
+- [x] `POST /api/v1/auth/login` — valid credentials returns 200 with `access_token`
+- [x] `POST /api/v1/auth/login` — wrong password returns 401
+- [x] `GET /api/v1/auth/me` — valid token returns current user; missing token returns 401
+- [x] All tests pass: `pytest tests/test_auth.py`
 
 ### US-003: Questions and attempt tests
 **Description:** As a developer, I need tests for the question bank so the
