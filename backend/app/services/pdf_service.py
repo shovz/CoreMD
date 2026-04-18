@@ -23,17 +23,20 @@ def extract_page_html(
             if block.get("type") == 1:  # image block
                 if images_dir is None or not chapter_id:
                     continue
-                xref = block.get("xref", 0)
                 w = block.get("width", 0)
                 h = block.get("height", 0)
-                if xref <= 0 or w < 100 or h < 100:
+                if w < 100 or h < 100:
+                    continue
+                img_bytes = block.get("image", b"")
+                if not img_bytes:
                     continue
                 try:
-                    pix = fitz.Pixmap(doc, xref)
-                    if pix.n - pix.alpha > 3:
+                    pix = fitz.Pixmap(img_bytes)
+                    if pix.n - pix.alpha > 3:  # CMYK → RGB
                         pix = fitz.Pixmap(fitz.csRGB, pix)
-                    filename = f"{chapter_id}_p{page_num}_{xref}.webp"
-                    (images_dir / filename).write_bytes(pix.tobytes("webp"))
+                    bbox = block.get("bbox", (0, 0, 0, 0))
+                    filename = f"{chapter_id}_p{page_num}_{int(bbox[0])}_{int(bbox[1])}.jpg"
+                    (images_dir / filename).write_bytes(pix.tobytes("jpeg"))
                     blocks_html.append(
                         f'<img src="/static/images/{filename}" style="max-width:100%;margin:16px 0;" alt="" />'
                     )
