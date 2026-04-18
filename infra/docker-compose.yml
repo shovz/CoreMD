@@ -8,6 +8,8 @@ services:
       - "8000:8000"
     env_file:
       - env/.env.development
+    volumes:
+      - ../backend/static:/app/static
     depends_on:
       - mongo
       - redis
