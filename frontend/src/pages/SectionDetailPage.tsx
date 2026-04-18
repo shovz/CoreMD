@@ -63,7 +63,12 @@ export default function SectionDetailPage() {
       {section.html_content ? (
         <div
           className="section-content"
-          dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(section.html_content) }}
+          dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(
+            section.html_content.replace(
+              /src="\/static\//g,
+              `src="${(import.meta.env.VITE_API_URL ?? 'http://localhost:8000/api/v1').replace('/api/v1', '')}/static/`
+            )
+          ) }}
         />
       ) : (
         <div style={{ lineHeight: 1.75, color: "#222", fontSize: 15 }}>

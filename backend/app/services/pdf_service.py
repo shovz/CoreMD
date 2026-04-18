@@ -60,33 +60,21 @@ def extract_page_html(
 
                 parts: List[str] = []
                 dominant_size = 0.0
-                dominant_flags = 0
                 for span in spans:
                     text = span.get("text", "").strip()
                     if not text:
                         continue
                     size = span.get("size", 10.0)
-                    flags = span.get("flags", 0)
-                    is_bold = bool(flags & 16)
-                    is_italic = bool(flags & 2)
 
-                    # Track dominant (largest) span style for the line
+                    # Track dominant (largest) span size for heading detection
                     if size > dominant_size:
                         dominant_size = size
-                        dominant_flags = flags
 
-                    escaped = html.escape(text)
-                    if is_bold and is_italic:
-                        escaped = f"<strong><em>{escaped}</em></strong>"
-                    elif is_bold:
-                        escaped = f"<strong>{escaped}</strong>"
-                    elif is_italic:
-                        escaped = f"<em>{escaped}</em>"
-                    parts.append(escaped)
+                    parts.append(html.escape(text))
 
                 if parts:
                     line_text = " ".join(parts)
-                    line_items.append((line_text, dominant_size, dominant_flags))
+                    line_items.append((line_text, dominant_size, 0))
 
             if not line_items:
                 continue
