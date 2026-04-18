@@ -1,120 +1,102 @@
-# PRD: Backend Test Suite
+# PRD: Inline Image Extraction
 
 ## Introduction
 
-CoreMD has no automated tests. The 7 API routes and 4 services have been manually
-verified but are unprotected against regressions. Before AWS deployment, the critical
-paths — auth, questions, cases, stats, and the AI endpoint — need a pytest suite that
-runs against a real (test) MongoDB instance so schema mismatches and aggregation bugs
-are caught early.
+Harrison's section viewer displays text with formatting but no images. Clinical photos,
+ECGs, X-rays, and diagrams are locked inside the PDFs. The `extract_html_content.py`
+script already extracts text as HTML using PyMuPDF — it explicitly skips image blocks
+at `backend/app/services/pdf_service.py:16` with `if block.get("type") != 0: continue`.
+
+This PRD removes that skip and adds inline image support: images are extracted at their
+exact document position (PyMuPDF returns blocks in reading order — text and image blocks
+interleaved), saved as WebP files, and embedded in the section HTML as `<img>` tags.
+
+No frontend changes are needed — `SectionDetailPage` already renders `html_content`
+via `dangerouslySetInnerHTML` with DOMPurify, which allows `<img>` tags by default.
 
 ## Goals
 
-- pytest integration test suite covering all critical API routes
-- Tests run against a real MongoDB test database (not mocks) — same pattern that caught
-  the $facet/schema mismatch in stats
-- Each test is self-contained: creates its own data, cleans up after itself
-- Full suite runs in under 60 seconds
-- `pytest` and `httpx` added to requirements
+- Images appear inline between paragraphs, exactly where they occur in the original PDF
+- Images smaller than 100×100 px (decorative rules, page borders, icons) are skipped
+- Re-running the script replaces existing `section_html` documents (already idempotent)
+- FastAPI serves extracted images at `/static/images/`
+- Full suite `pytest tests/` still passes after changes
 
 ## User Stories
 
-### US-001: Test infrastructure
-**Description:** As a developer, I need the test scaffolding (conftest, fixtures,
-test DB) so individual test files can focus on business logic.
+### US-001: Update pdf_service to extract images inline
+
+**Description:** As a developer, I need the HTML extraction function to emit `<img>` tags
+inline at the exact position image blocks appear in the PDF reading order.
 
 **Acceptance Criteria:**
-- [x] `pytest`, `httpx`, `pytest-asyncio` added to `backend/requirements.txt`
-- [x] `backend/tests/__init__.py` created (empty)
-- [x] `backend/tests/conftest.py` created with:
-  - `client` fixture: `TestClient` wrapping the FastAPI app
-  - `test_db` fixture: connects to `CoreMD_test` database, yields db, drops all
-    test collections after each test
-  - `auth_headers` fixture: registers + logs in a fresh test user, returns
-    `{"Authorization": "Bearer <token>"}` dict
-- [x] `backend/pytest.ini` (or `pyproject.toml` `[tool.pytest]` section) sets
-  `testpaths = tests` and `MONGO_URI=mongodb://localhost:27017/CoreMD_test`
-  so tests never touch the real `CoreMD` database
-- [x] `pytest tests/` runs with 0 errors (no test files yet, just scaffolding)
+- [x] `backend/app/services/pdf_service.py`: `extract_page_html()` updated to accept
+  two new optional keyword args: `chapter_id: str = ""` and
+  `images_dir: Optional[Path] = None` (import `Path` from `pathlib` and `Optional` from `typing`)
+- [x] The existing `if block.get("type") != 0: continue` line is REMOVED
+- [x] In the block loop, when `block.get("type") == 1` (image block):
+  - Skip if `images_dir` is None or `chapter_id` is empty
+  - Read `xref = block.get("xref", 0)`, `w = block.get("width", 0)`, `h = block.get("height", 0)`
+  - Skip if `xref <= 0` or `w < 100` or `h < 100`
+  - Extract: `pix = fitz.Pixmap(doc, xref)`
+  - Convert CMYK: `if pix.n - pix.alpha > 3: pix = fitz.Pixmap(fitz.csRGB, pix)`
+  - Filename: `f"{chapter_id}_p{page_num}_{xref}.webp"`
+  - Save: `(images_dir / filename).write_bytes(pix.tobytes("webp"))`
+  - Append to output: `f'<img src="/static/images/{filename}" style="max-width:100%;margin:16px 0;" alt="" />'`
+  - Wrap in try/except Exception — skip image silently on any error
+- [x] When `images_dir` is None, behaviour is identical to before (no images in output)
+- [x] `python -c "from app.services.pdf_service import extract_page_html"` passes
 - [x] Typecheck passes
 
-### US-002: Auth route tests
-**Description:** As a developer, I need tests for register and login so auth
-regressions are caught immediately.
+### US-002: Update extract_html_content.py to pass images_dir
+
+**Description:** As a developer, I need the extraction script to create the images directory
+and pass it to `extract_page_html()` so images are saved and counted during the run.
 
 **Acceptance Criteria:**
-- [x] `backend/tests/test_auth.py` created
-- [x] `POST /api/v1/auth/register` — happy path returns 201 with `id`, `email`, `role`
-- [x] `POST /api/v1/auth/register` — duplicate email returns 400
-- [x] `POST /api/v1/auth/register` — password shorter than 8 chars returns 422
-- [x] `POST /api/v1/auth/login` — valid credentials returns 200 with `access_token`
-- [x] `POST /api/v1/auth/login` — wrong password returns 401
-- [x] `GET /api/v1/auth/me` — valid token returns current user; missing token returns 401
-- [x] All tests pass: `pytest tests/test_auth.py`
+- [ ] `IMAGES_DIR` constant defined: `Path(__file__).parent.parent / "static" / "images"`
+- [ ] Near the top of `main()`: `IMAGES_DIR.mkdir(parents=True, exist_ok=True)`
+- [ ] `extract_page_html()` call updated to pass `chapter_id=chapter_id, images_dir=IMAGES_DIR`
+- [ ] Count images saved per chapter: before and after the `extract_page_html()` call,
+  count files in `IMAGES_DIR` matching `f"{chapter_id}_*.webp"` using `len(list(IMAGES_DIR.glob(...)))`
+- [ ] Progress line updated to: `Part {part_num} | Chapter {chapter_id} | {stored} sections, {img_count} images`
+- [ ] `backend/static/images/.gitkeep` created (empty file, keeps directory in repo)
+- [ ] `python backend/scripts/extract_html_content.py --dry-run` runs without errors
+- [ ] Typecheck passes
 
-### US-003: Questions and attempt tests
-**Description:** As a developer, I need tests for the question bank so the
-anti-cheat filter and attempt recording are verified.
+### US-003: Mount /static in FastAPI
 
-**Acceptance Criteria:**
-- [x] `backend/tests/test_questions.py` created
-- [x] Fixture inserts 2 test questions directly into `test_db`
-- [x] `GET /api/v1/questions/` — returns list; `correct_option` and `explanation`
-  NOT present in list response (anti-cheat)
-- [x] `GET /api/v1/questions/{id}` — returns single question WITH `correct_option`
-  and `explanation`
-- [x] `GET /api/v1/questions/` — requires auth, returns 401 without token
-- [x] `POST /api/v1/questions/{id}/attempt` — correct answer returns
-  `{"is_correct": true}`, wrong answer returns `{"is_correct": false}`
-- [x] `POST /api/v1/questions/{id}/attempt` — attempt is recorded in
-  `question_attempts` collection
-- [x] All tests pass: `pytest tests/test_questions.py`
-
-### US-004: Stats endpoint tests
-**Description:** As a developer, I need tests for the stats aggregation so the
-$facet list→dict transformation that previously caused a 500 is regression-protected.
+**Description:** As a developer, I need FastAPI to serve extracted images at `/static/images/`
+so the browser can load them from HTML content.
 
 **Acceptance Criteria:**
-- [x] `backend/tests/test_stats.py` created
-- [x] Fixture inserts test question + records 3 attempts (2 correct easy, 1 wrong medium)
-- [x] `GET /api/v1/stats/overview` — returns correct `total_questions_answered`,
-  `correct_percentage`, `unique_chapters_covered`
-- [x] `GET /api/v1/stats/questions` — returns `by_difficulty` as a **dict** (not list),
-  keys are difficulty strings, values have `attempted` and `accuracy`
-- [x] `GET /api/v1/stats/questions` — returns `by_topic` as a list
-- [x] Empty state (no attempts): all endpoints return zeroed values, not 500
-- [x] All tests pass: `pytest tests/test_stats.py`
-
-### US-005: Cases and chapters smoke tests
-**Description:** As a developer, I need smoke tests for cases and chapters so
-basic list/detail routes are verified.
-
-**Acceptance Criteria:**
-- [x] `backend/tests/test_cases.py` created
-- [x] Fixture inserts 1 test case into `test_db`
-- [x] `GET /api/v1/cases/` — returns list with the test case; requires auth
-- [x] `GET /api/v1/cases/{id}` — returns full case detail including all 8 fields
-- [x] `GET /api/v1/cases/{id}` — nonexistent id returns 404
-- [x] `backend/tests/test_chapters.py` created
-- [x] Fixture inserts 1 test chapter with 2 sections into `test_db`
-- [x] `GET /api/v1/chapters/` — returns list; requires auth
-- [x] `GET /api/v1/chapters/{id}` — returns chapter with `part_number`, `part_title`,
-  `chapter_number` fields present
-- [x] `GET /api/v1/chapters/{id}` — nonexistent id returns 404
-- [x] All tests pass: `pytest tests/test_cases.py tests/test_chapters.py`
+- [ ] `backend/app/main.py`: `from fastapi.staticfiles import StaticFiles` added
+- [ ] `app.mount("/static", StaticFiles(directory="static"), name="static")` added
+  directly after the `app = FastAPI(...)` line, before route registrations
+- [ ] `python -c "import app.main"` passes (server starts without error; static dir
+  may not exist yet — `StaticFiles` raises on mount only if directory is missing,
+  so `.gitkeep` from US-002 ensures the directory exists)
+- [ ] `pytest tests/` passes — existing 30 tests unaffected
+- [ ] Typecheck passes
 
 ## Non-Goals
 
-- No AI/RAG endpoint tests (requires OpenAI API key — tested manually)
-- No frontend tests (Playwright tests already exist for dashboard and auth)
-- No load/performance tests
-- No test coverage reporting (add later)
+- No schema changes (`ChapterOut` does not need an `images` field)
+- No frontend code changes (`SectionDetailPage` already handles inline `<img>`)
+- No image resizing beyond WebP conversion
+- No captions or figure labels extracted
 
 ## Technical Considerations
 
-- Use `mongomock` or real MongoDB — use **real MongoDB** (`CoreMD_test` db) to match
-  production behavior, especially for aggregation pipelines
-- `TestClient` from `starlette.testclient` (included with FastAPI) handles sync tests
-- Override `MONGO_URI` in `pytest.ini` via env var so tests hit `CoreMD_test`, not `CoreMD`
-- Each test that writes data should clean up via `test_db` fixture teardown
-- The `auth_headers` fixture must use `test_db` — register against the test database
+- `fitz.Pixmap(doc, xref)` is the correct PyMuPDF API for extracting by cross-reference
+  number; `xref` is available as `block["xref"]` in type-1 blocks from `get_text("dict")`
+- CMYK detection: `pix.n - pix.alpha > 3` (CMYK has 4 channels; RGB has 3)
+- `xref` is unique per image in the PDF, so `<chapter_id>_p<page>_<xref>.webp` filenames
+  are stable across re-runs — re-extracting the same page overwrites the same file
+- `StaticFiles(directory="static")` resolves relative to CWD, which is `backend/`
+  when running `python -m uvicorn app.main:app` from `backend/`
+- The `--dry-run` flag in extract_html_content.py skips MongoDB writes but still
+  creates image files on disk — this is intentional so image extraction can be tested
+  without touching the database
+- After implementing, run: `python backend/scripts/extract_html_content.py`
+  This regenerates all 12,046 section HTML documents with inline images

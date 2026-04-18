@@ -1,9 +1,16 @@
 import html
-from typing import List
+from pathlib import Path
+from typing import List, Optional
 import fitz  # PyMuPDF
 
 
-def extract_page_html(pdf_path: str, page_start: int, page_end: int) -> str:
+def extract_page_html(
+    pdf_path: str,
+    page_start: int,
+    page_end: int,
+    chapter_id: str = "",
+    images_dir: Optional[Path] = None,
+) -> str:
     """Extract structured HTML from a page range in a PDF."""
     doc = fitz.open(pdf_path)
     blocks_html: List[str] = []
@@ -13,7 +20,28 @@ def extract_page_html(pdf_path: str, page_start: int, page_end: int) -> str:
         page_dict = page.get_text("dict")
 
         for block in page_dict.get("blocks", []):
-            if block.get("type") != 0:  # skip image blocks
+            if block.get("type") == 1:  # image block
+                if images_dir is None or not chapter_id:
+                    continue
+                xref = block.get("xref", 0)
+                w = block.get("width", 0)
+                h = block.get("height", 0)
+                if xref <= 0 or w < 100 or h < 100:
+                    continue
+                try:
+                    pix = fitz.Pixmap(doc, xref)
+                    if pix.n - pix.alpha > 3:
+                        pix = fitz.Pixmap(fitz.csRGB, pix)
+                    filename = f"{chapter_id}_p{page_num}_{xref}.webp"
+                    (images_dir / filename).write_bytes(pix.tobytes("webp"))
+                    blocks_html.append(
+                        f'<img src="/static/images/{filename}" style="max-width:100%;margin:16px 0;" alt="" />'
+                    )
+                except Exception:
+                    pass
+                continue
+
+            if block.get("type") != 0:
                 continue
 
             lines = block.get("lines", [])
