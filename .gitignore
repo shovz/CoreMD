@@ -129,6 +129,9 @@ backend/app.rar
 
 Harrison Book/
 
+# Extracted PDF images (generated — re-run extract_html_content.py to rebuild)
+backend/static/images/*.jpg
+
 # Allow infra env config directory (not a Python venv)
 !infra/env/
 !infra/env/**
