@@ -518,12 +518,13 @@ def generate_embeddings(texts: list[str]) -> list[list[float]]:
                 all_embeddings.extend(item.embedding for item in response.data)
                 last_exc = None
                 break
-            except openai.RateLimitError as exc:
+            except (openai.RateLimitError, openai.APIConnectionError) as exc:
                 last_exc = exc
                 if attempt < MAX_RETRIES:
-                    wait_secs = 2 ** attempt  # 1 s, 2 s, 4 s
+                    wait_secs = 2 ** (attempt + 1)  # 2 s, 4 s, 8 s
                     logger.warning(
-                        "OpenAI rate limit (attempt %d/%d) — retrying in %ds",
+                        "OpenAI error %s (attempt %d/%d) — retrying in %ds",
+                        type(exc).__name__,
                         attempt + 1,
                         MAX_RETRIES + 1,
                         wait_secs,
@@ -532,7 +533,7 @@ def generate_embeddings(texts: list[str]) -> list[list[float]]:
 
         if last_exc is not None:
             raise RuntimeError(
-                f"OpenAI rate limit exceeded after {MAX_RETRIES} retries"
+                f"OpenAI request failed after {MAX_RETRIES} retries: {last_exc}"
             ) from last_exc
 
     return all_embeddings

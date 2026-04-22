@@ -135,3 +135,5 @@ backend/static/images/*.jpg
 # Allow infra env config directory (not a Python venv)
 !infra/env/
 !infra/env/**
+
+.claude/settings.local.json
