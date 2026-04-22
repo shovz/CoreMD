@@ -1,0 +1,25 @@
+version: "3.9"
+
+services:
+  backend:
+    build: ../backend
+    container_name: coremd-backend
+    ports:
+      - "8000:8000"
+    env_file:
+      - env/.env.production
+    volumes:
+      - ../backend/static:/app/static
+    depends_on:
+      - redis
+    restart: always
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  redis:
+    image: redis:7-alpine
+    container_name: coremd-redis
+    restart: always

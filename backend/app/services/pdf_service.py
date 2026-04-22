@@ -1,7 +1,23 @@
 import html
+from collections import Counter
 from pathlib import Path
 from typing import List, Optional
 import fitz  # PyMuPDF
+
+
+def _dominant_body_size(doc: fitz.Document, page_start: int, page_end: int) -> float:
+    """Return the most common (body text) font size across the given page range."""
+    sizes: Counter = Counter()
+    for page_num in range(page_start, min(page_end + 1, len(doc))):
+        for block in doc[page_num].get_text("dict").get("blocks", []):
+            if block.get("type") != 0:
+                continue
+            for line in block.get("lines", []):
+                for span in line.get("spans", []):
+                    sz = round(span.get("size", 0), 1)
+                    if sz > 5:
+                        sizes[sz] += 1
+    return sizes.most_common(1)[0][0] if sizes else 11.0
 
 
 def extract_page_html(
@@ -13,6 +29,11 @@ def extract_page_html(
 ) -> str:
     """Extract structured HTML from a page range in a PDF."""
     doc = fitz.open(pdf_path)
+
+    body_size = _dominant_body_size(doc, page_start, page_end)
+    h2_threshold = body_size * 1.25  # ≥25% larger than body = major heading
+    h3_threshold = body_size * 1.10  # ≥10% larger than body = subheading
+
     blocks_html: List[str] = []
 
     for page_num in range(page_start, min(page_end + 1, len(doc))):
@@ -65,11 +86,8 @@ def extract_page_html(
                     if not text:
                         continue
                     size = span.get("size", 10.0)
-
-                    # Track dominant (largest) span size for heading detection
                     if size > dominant_size:
                         dominant_size = size
-
                     parts.append(html.escape(text))
 
                 if parts:
@@ -79,26 +97,26 @@ def extract_page_html(
             if not line_items:
                 continue
 
-            # Determine block-level tag from first/dominant line style
-            # Use the max size seen in the block
             max_size = max(size for _, size, _ in line_items)
-            first_text_plain = "".join(
-                span.get("text", "") for line in lines for span in line.get("spans", [])
-            ).strip()
+
+            # All-caps short first line = heading even at body size
+            first_line_spans = lines[0].get("spans", []) if lines else []
+            first_line_text = "".join(s.get("text", "") for s in first_line_spans).strip()
             is_all_caps_short = (
-                first_text_plain == first_text_plain.upper()
-                and len(first_text_plain) <= 80
-                and len(first_text_plain) > 0
+                len(lines) <= 2
+                and bool(first_line_text)
+                and any(c.isalpha() for c in first_line_text)
+                and first_line_text == first_line_text.upper()
+                and len(first_line_text) <= 60
             )
 
-            # Join all lines in the block into a single content string
             content = " ".join(text for text, _, _ in line_items).strip()
             if not content:
                 continue
 
-            if max_size >= 14 or is_all_caps_short:
+            if max_size >= h2_threshold or is_all_caps_short:
                 blocks_html.append(f"<h2>{content}</h2>")
-            elif max_size >= 12:
+            elif max_size >= h3_threshold:
                 blocks_html.append(f"<h3>{content}</h3>")
             else:
                 blocks_html.append(f"<p>{content}</p>")
