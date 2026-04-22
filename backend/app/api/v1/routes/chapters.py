@@ -26,7 +26,7 @@ def _doc_to_chapter_out(doc: dict) -> dict:
     }
 
 
-@router.get("/", response_model=List[ChapterOut])
+@router.get("", response_model=List[ChapterOut])
 def get_chapters(
     current_user: str = Depends(get_current_user), db: Database = Depends(mongo_db)
 ):
@@ -88,7 +88,7 @@ def get_section_by_id(
     )
 
 
-@router.post("/", response_model=ChapterOut)
+@router.post("", response_model=ChapterOut)
 def create_chapter(
     chapter: ChapterCreate,
     current_user: str = Depends(get_current_user),
