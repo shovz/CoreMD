@@ -32,25 +32,32 @@ export default function DashboardPage() {
 
   const difficultyData = questionStats
     ? Object.entries(questionStats.by_difficulty).map(([key, val]) => ({
-        label: key.charAt(0).toUpperCase() + key.slice(1),
-        attempted: val.attempted,
-        accuracy: val.accuracy,
-      }))
+      label: key.charAt(0).toUpperCase() + key.slice(1),
+      attempted: val.attempted,
+      accuracy: val.accuracy,
+    }))
     : [];
 
   const topicData = questionStats
     ? [...questionStats.by_topic]
-        .sort((a, b) => b.attempted - a.attempted)
-        .map((t) => ({ label: t.topic, attempted: t.attempted, accuracy: t.accuracy }))
+      .sort((a, b) => b.attempted - a.attempted)
+      .map((t) => ({ label: t.topic, attempted: t.attempted, accuracy: t.accuracy }))
     : [];
 
   const isEmpty = !loading && overview?.total_questions_answered === 0;
 
   return (
     <div style={{ padding: 24 }}>
+      <nav style={{ display: "flex", marginTop: 24, justifyContent: "space-between", alignItems: "center" }}>
+        <div style={{ display: "flex", gap: 16}}>
+          <Link to="/">Dashboard</Link>
+          <Link to="/chapters">Chapters</Link>
+          <Link to="/questions">Question Bank</Link>
+        </div>
+        <button onClick={handleLogout}>Logout</button>
+      </nav>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
         <h1 style={{ margin: 0 }}>My Dashboard</h1>
-        <button onClick={handleLogout}>Logout</button>
       </div>
 
       {error ? (
@@ -75,8 +82,8 @@ export default function DashboardPage() {
                 loading
                   ? "—"
                   : overview != null
-                  ? `${overview.correct_percentage.toFixed(1)}%`
-                  : "—"
+                    ? `${overview.correct_percentage.toFixed(1)}%`
+                    : "—"
               }
             />
             <StatCard
@@ -105,11 +112,6 @@ export default function DashboardPage() {
         </>
       )}
 
-      <nav style={{ display: "flex", gap: 16, marginTop: 24 }}>
-        <Link to="/">Dashboard</Link>
-        <Link to="/chapters">Chapters</Link>
-        <Link to="/questions">Question Bank</Link>
-      </nav>
     </div>
   );
 }

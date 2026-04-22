@@ -32,7 +32,7 @@ async def lifespan(app: FastAPI):
     close_redis_connection()
 
 
-app = FastAPI(title="CoreMD Backend", lifespan=lifespan)
+app = FastAPI(title="CoreMD Backend", lifespan=lifespan, redirect_slashes=False)
 
 # Serve extracted Harrison images at /static/images/
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -48,6 +48,7 @@ app.add_middleware(
         "http://127.0.0.1:5174",
         "http://localhost:80",
         "http://localhost",
+        "https://d12imcl5n6x2vi.cloudfront.net",
     ],
     allow_credentials=True,
     allow_methods=["*"],
