@@ -8,6 +8,26 @@ Parameters:
 
 Resources:
 
+  SPARoutingFunction:
+    Type: AWS::CloudFront::Function
+    Properties:
+      Name: !Sub "${AWS::StackName}-spa-routing"
+      AutoPublish: true
+      FunctionConfig:
+        Comment: Rewrite SPA routes to index.html (scoped to S3 default behavior only)
+        Runtime: cloudfront-js-2.0
+      FunctionCode: |
+        function handler(event) {
+            var request = event.request;
+            var uri = request.uri;
+            var filename = uri.split('/').pop();
+            if (filename && filename.indexOf('.') !== -1) {
+                return request;
+            }
+            request.uri = '/index.html';
+            return request;
+        }
+
   FrontendBucket:
     Type: AWS::S3::Bucket
     Properties:
@@ -51,6 +71,9 @@ Resources:
           ViewerProtocolPolicy: redirect-to-https
           CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6
           AllowedMethods: [GET, HEAD]
+          FunctionAssociations:
+            - EventType: viewer-request
+              FunctionARN: !GetAtt SPARoutingFunction.FunctionMetadata.FunctionARN
         CacheBehaviors:
           - PathPattern: /api/v1/*
             TargetOriginId: EC2Origin
@@ -63,13 +86,6 @@ Resources:
             ViewerProtocolPolicy: https-only
             CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6
             AllowedMethods: [GET, HEAD]
-        CustomErrorResponses:
-          - ErrorCode: 403
-            ResponseCode: 200
-            ResponsePagePath: /index.html
-          - ErrorCode: 404
-            ResponseCode: 200
-            ResponsePagePath: /index.html
 
   BucketPolicy:
     Type: AWS::S3::BucketPolicy

@@ -38,7 +38,7 @@ def _doc_to_case_out(doc: dict, chapter_title: Optional[str] = None) -> dict:
     }
 
 
-@router.get("/", response_model=List[CaseListItem])
+@router.get("", response_model=List[CaseListItem])
 def get_cases(
     specialty: Optional[str] = Query(None),
     current_user: dict = Depends(get_current_user),

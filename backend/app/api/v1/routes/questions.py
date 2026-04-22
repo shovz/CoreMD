@@ -35,7 +35,7 @@ def _doc_to_question_full(doc: dict) -> dict:
     }
 
 
-@router.get("/", response_model=List[QuestionOut])
+@router.get("", response_model=List[QuestionOut])
 def get_questions(
     topic: Optional[str] = Query(None),
     chapter_id: Optional[str] = Query(None),
