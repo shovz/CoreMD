@@ -1,18 +1,18 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import {
-  getQuestionTopics,
   getQuestions,
-  submitAttempt,
-  type AttemptResult,
+  getQuestionTopics,
   type Difficulty,
   type QuestionOut,
 } from "../api/questionsApi";
+import { getQuestionStats } from "../api/statsApi";
 
-type Mode = "topic" | "random";
-
-const PAGE_LIMIT = 100;
-const LEFT_ARROW = "<";
-const RIGHT_ARROW = ">";
+interface TopicStat {
+  name: string;
+  total: number;
+  accuracy: number | null;
+}
 
 const DIFFICULTY_COLORS: Record<Difficulty, string> = {
   easy: "bg-emerald-100 text-emerald-700",
@@ -20,43 +20,61 @@ const DIFFICULTY_COLORS: Record<Difficulty, string> = {
   hard: "bg-rose-100 text-rose-700",
 };
 
-function shuffle<T>(arr: T[]): T[] {
-  const copy = [...arr];
-  for (let i = copy.length - 1; i > 0; i -= 1) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [copy[i], copy[j]] = [copy[j], copy[i]];
-  }
-  return copy;
+function topicCardBorder(accuracy: number | null): string {
+  if (accuracy === null) return "border-slate-200 bg-white";
+  if (accuracy >= 70) return "border-emerald-400 bg-emerald-50";
+  if (accuracy >= 40) return "border-amber-400 bg-amber-50";
+  return "border-rose-400 bg-rose-50";
 }
 
 export default function QuestionsPage() {
-  const [mode, setMode] = useState<Mode>("topic");
-  const [topics, setTopics] = useState<string[]>([]);
-  const [selectedTopic, setSelectedTopic] = useState<string | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const [topicStats, setTopicStats] = useState<TopicStat[]>([]);
+  const [selectedTopic, setSelectedTopic] = useState<string | null>(
+    searchParams.get("topic"),
+  );
   const [difficulty, setDifficulty] = useState<Difficulty | "">("");
   const [searchInput, setSearchInput] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
 
-  const [questionPool, setQuestionPool] = useState<QuestionOut[]>([]);
-  const [playerIndex, setPlayerIndex] = useState(0);
-  const [selectedOption, setSelectedOption] = useState<number | null>(null);
-  const [attemptResult, setAttemptResult] = useState<AttemptResult | null>(null);
-  const [submittingAttempt, setSubmittingAttempt] = useState(false);
-
-  const [loadingTopics, setLoadingTopics] = useState(true);
-  const [loadingPool, setLoadingPool] = useState(false);
+  const [questions, setQuestions] = useState<QuestionOut[]>([]);
+  const [loadingData, setLoadingData] = useState(true);
+  const [loadingQuestions, setLoadingQuestions] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    getQuestionTopics()
-      .then((res) => {
-        setTopics(res.data);
+    Promise.all([
+      getQuestionTopics(),
+      getQuestionStats(),
+      getQuestions({ limit: 500 }),
+    ])
+      .then(([topicsRes, statsRes, allQRes]) => {
+        const names = topicsRes.data;
+        const statsMap = new Map(
+          statsRes.data.by_topic.map((t) => [t.topic, t]),
+        );
+        const countMap = new Map<string, number>();
+        allQRes.data.forEach((q) => {
+          countMap.set(q.topic, (countMap.get(q.topic) ?? 0) + 1);
+        });
+
+        setTopicStats(
+          names.map((name) => {
+            const s = statsMap.get(name);
+            return {
+              name,
+              total: countMap.get(name) ?? 0,
+              accuracy: s && s.attempted > 0 ? s.accuracy : null,
+            };
+          }),
+        );
         setError(null);
       })
-      .catch(() => setError("Failed to load question topics"))
-      .finally(() => setLoadingTopics(false));
+      .catch(() => setError("Failed to load topics"))
+      .finally(() => setLoadingData(false));
 
     return () => {
       if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
@@ -64,169 +82,80 @@ export default function QuestionsPage() {
   }, []);
 
   useEffect(() => {
-    if (mode === "topic" && !selectedTopic) {
-      return;
-    }
-
     let cancelled = false;
+    setLoadingQuestions(true);
 
-    const loadPool = async () => {
+    const load = async () => {
       try {
         const collected: QuestionOut[] = [];
         let offset = 0;
+        const LIMIT = 100;
 
         while (true) {
-          const response = await getQuestions({
-            topic: mode === "topic" ? selectedTopic ?? undefined : undefined,
+          const res = await getQuestions({
+            topic: selectedTopic ?? undefined,
             difficulty: difficulty || undefined,
             search: debouncedSearch || undefined,
-            limit: PAGE_LIMIT,
+            limit: LIMIT,
             offset,
           });
-
-          const page = response.data;
-          collected.push(...page);
-
-          if (page.length < PAGE_LIMIT) break;
-          offset += PAGE_LIMIT;
+          collected.push(...res.data);
+          if (res.data.length < LIMIT) break;
+          offset += LIMIT;
         }
 
-        const pool = mode === "random" ? shuffle(collected) : collected;
         if (!cancelled) {
-          setQuestionPool(pool);
-          setPlayerIndex(0);
+          setQuestions(collected);
           setError(null);
         }
       } catch {
         if (!cancelled) {
-          setQuestionPool([]);
-          setPlayerIndex(0);
+          setQuestions([]);
           setError("Failed to load questions");
         }
       } finally {
-        if (!cancelled) setLoadingPool(false);
+        if (!cancelled) setLoadingQuestions(false);
       }
     };
 
-    loadPool();
-
+    load();
     return () => {
       cancelled = true;
     };
-  }, [mode, selectedTopic, difficulty, debouncedSearch]);
+  }, [selectedTopic, difficulty, debouncedSearch]);
 
-  const currentQuestion = questionPool[playerIndex] ?? null;
-
-  useEffect(() => {
-    setSelectedOption(null);
-    setAttemptResult(null);
-    setSubmittingAttempt(false);
-  }, [currentQuestion?.question_id]);
-
-  const playerLabel = useMemo(() => {
-    if (mode === "random") return "Random Pool";
-    return selectedTopic ? `${selectedTopic} Pool` : "Choose a topic";
-  }, [mode, selectedTopic]);
-
-  const hasPlayer = mode === "random" || (mode === "topic" && Boolean(selectedTopic));
-
-  const handleModeChange = (nextMode: Mode) => {
-    setMode(nextMode);
-    setError(null);
-    setLoadingPool(nextMode === "random");
-    setPlayerIndex(0);
-    setQuestionPool([]);
-    if (nextMode === "random") {
-      setSelectedTopic(null);
+  const handleTopicClick = (topic: string) => {
+    const next = selectedTopic === topic ? null : topic;
+    setSelectedTopic(next);
+    if (next) {
+      setSearchParams({ topic: next });
+    } else {
+      setSearchParams({});
     }
-  };
-
-  const handleTopicPick = (topic: string) => {
-    setSelectedTopic(topic);
-    setLoadingPool(true);
-    setPlayerIndex(0);
-    setQuestionPool([]);
-    setError(null);
-  };
-
-  const handleDifficultyChange = (value: Difficulty | "") => {
-    setDifficulty(value);
-    if (hasPlayer) setLoadingPool(true);
   };
 
   const handleSearchChange = (value: string) => {
     setSearchInput(value);
     if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
-
     searchTimerRef.current = setTimeout(() => {
       setDebouncedSearch(value.trim());
-      if (hasPlayer) setLoadingPool(true);
     }, 300);
-  };
-
-  const handleOptionClick = async (optionIdx: number) => {
-    if (!currentQuestion || submittingAttempt || attemptResult) return;
-    setSelectedOption(optionIdx);
-    setSubmittingAttempt(true);
-    try {
-      const res = await submitAttempt(currentQuestion.question_id, optionIdx);
-      setAttemptResult(res.data);
-      setError(null);
-    } catch {
-      setError("Failed to submit attempt");
-    } finally {
-      setSubmittingAttempt(false);
-    }
-  };
-
-  const getOptionClassName = (optionIdx: number) => {
-    const base =
-      "rounded-lg border px-3 py-2 text-left text-sm transition disabled:cursor-not-allowed";
-
-    if (!attemptResult) {
-      return `${base} border-slate-200 bg-slate-50 text-slate-700 hover:border-blue-300 hover:bg-blue-50`;
-    }
-
-    if (optionIdx === attemptResult.correct_option) {
-      return `${base} border-emerald-500 bg-emerald-50 text-emerald-900`;
-    }
-
-    if (optionIdx === selectedOption && !attemptResult.correct) {
-      return `${base} border-rose-500 bg-rose-50 text-rose-900`;
-    }
-
-    return `${base} border-slate-200 bg-slate-50 text-slate-500`;
   };
 
   return (
     <div className="mx-auto max-w-5xl space-y-6">
       <div>
         <h1 className="m-0 text-3xl font-bold text-slate-900">Question Bank</h1>
-        <p className="mt-1 text-sm text-slate-600">Study by specialty or run a random question stream.</p>
+        <p className="mt-1 text-sm text-slate-600">
+          Select a topic to filter questions. Green = strong, yellow = improving, red = needs work.
+        </p>
       </div>
 
       <div className="sticky top-20 z-20 rounded-2xl border border-slate-200 bg-white/95 p-4 shadow backdrop-blur">
         <div className="flex flex-wrap items-center gap-2">
-          <button
-            onClick={() => handleModeChange("topic")}
-            className={`rounded-lg px-4 py-2 text-sm font-semibold ${
-              mode === "topic" ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-700 hover:bg-slate-200"
-            }`}
-          >
-            By Topic
-          </button>
-          <button
-            onClick={() => handleModeChange("random")}
-            className={`rounded-lg px-4 py-2 text-sm font-semibold ${
-              mode === "random" ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-700 hover:bg-slate-200"
-            }`}
-          >
-            Random
-          </button>
-
           <select
             value={difficulty}
-            onChange={(e) => handleDifficultyChange(e.target.value as Difficulty | "")}
+            onChange={(e) => setDifficulty(e.target.value as Difficulty | "")}
             className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
           >
             <option value="">All Difficulties</option>
@@ -241,142 +170,105 @@ export default function QuestionsPage() {
             placeholder="Search stem/topic..."
             className="min-w-64 flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
           />
+
+          {selectedTopic && (
+            <button
+              onClick={() => handleTopicClick(selectedTopic)}
+              className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 hover:bg-slate-100"
+            >
+              Clear: {selectedTopic} ×
+            </button>
+          )}
         </div>
       </div>
 
       {error && <p className="text-sm text-red-600">{error}</p>}
 
-      {mode === "topic" && !selectedTopic && (
-        <section className="space-y-3">
-          <h2 className="text-lg font-semibold text-slate-900">Choose a topic</h2>
-          {loadingTopics ? (
-            <p className="text-slate-600">Loading topics...</p>
-          ) : topics.length === 0 ? (
-            <p className="text-slate-600">No topics available.</p>
-          ) : (
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {topics.map((topic) => (
-                <button
-                  key={topic}
-                  onClick={() => handleTopicPick(topic)}
-                  className="rounded-xl border border-slate-200 bg-white p-4 text-left shadow-sm hover:border-blue-300 hover:bg-blue-50"
-                >
-                  <p className="text-sm font-semibold text-slate-900">{topic}</p>
-                  <p className="mt-1 text-xs text-slate-500">Open question stream</p>
-                </button>
-              ))}
-            </div>
-          )}
-        </section>
-      )}
-
-      {hasPlayer && (
-        <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-3">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{playerLabel}</p>
-              <p className="text-sm text-slate-600">
-                {loadingPool ? "Loading..." : `${questionPool.length} questions in current pool`}
-              </p>
-            </div>
-
-            {mode === "topic" && selectedTopic && (
+      <section className="space-y-3">
+        <h2 className="text-lg font-semibold text-slate-900">Topics</h2>
+        {loadingData ? (
+          <p className="text-slate-600">Loading topics...</p>
+        ) : topicStats.length === 0 ? (
+          <p className="text-slate-600">No topics available.</p>
+        ) : (
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {topicStats.map((t) => (
               <button
-                onClick={() => {
-                  setSelectedTopic(null);
-                  setQuestionPool([]);
-                  setPlayerIndex(0);
-                }}
-                className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 hover:bg-slate-100"
+                key={t.name}
+                onClick={() => handleTopicClick(t.name)}
+                className={`rounded-xl border-2 p-4 text-left shadow-sm transition hover:shadow-md ${topicCardBorder(t.accuracy)} ${
+                  selectedTopic === t.name
+                    ? "ring-2 ring-blue-500 ring-offset-1"
+                    : ""
+                }`}
               >
-                Change Topic
-              </button>
-            )}
-          </div>
-
-          {loadingPool ? (
-            <p className="text-slate-600">Loading questions...</p>
-          ) : !currentQuestion ? (
-            <p className="text-slate-600">No questions match current filters.</p>
-          ) : (
-            <div className="space-y-4">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="rounded-full bg-blue-100 px-2.5 py-1 text-xs font-semibold text-blue-700">
-                  {currentQuestion.topic}
-                </span>
-                <span
-                  className={`rounded-full px-2.5 py-1 text-xs font-semibold ${DIFFICULTY_COLORS[currentQuestion.difficulty]}`}
-                >
-                  {currentQuestion.difficulty}
-                </span>
-                <span className="text-xs text-slate-500">
-                  Question {playerIndex + 1} of {questionPool.length}
-                </span>
-              </div>
-
-              <p className="text-lg font-medium leading-7 text-slate-900">{currentQuestion.stem}</p>
-
-              <div className="grid gap-2 sm:grid-cols-2">
-                {currentQuestion.options.map((opt, idx) => (
-                  <button
-                    key={`${currentQuestion.question_id}-${idx}`}
-                    type="button"
-                    onClick={() => handleOptionClick(idx)}
-                    disabled={submittingAttempt || Boolean(attemptResult)}
-                    className={getOptionClassName(idx)}
+                <p className="text-sm font-semibold leading-snug text-slate-900">
+                  {t.name}
+                </p>
+                <div className="mt-2 flex items-center gap-3 text-xs text-slate-500">
+                  <span>{t.total} questions</span>
+                  <span
+                    className={`font-semibold ${
+                      t.accuracy === null
+                        ? "text-slate-400"
+                        : t.accuracy >= 70
+                          ? "text-emerald-600"
+                          : t.accuracy >= 40
+                            ? "text-amber-600"
+                            : "text-rose-600"
+                    }`}
                   >
-                    <span className="mr-2 font-semibold text-slate-500">{String.fromCharCode(65 + idx)}.</span>
-                    {opt}
-                  </button>
-                ))}
-              </div>
-
-              {attemptResult && (
-                <div
-                  className={`rounded-lg border-l-4 px-4 py-3 ${
-                    attemptResult.correct
-                      ? "border-emerald-600 bg-emerald-50 text-emerald-900"
-                      : "border-rose-600 bg-rose-50 text-rose-900"
-                  }`}
-                >
-                  <p className="mb-1 text-sm font-semibold">
-                    {attemptResult.correct ? "Correct" : "Incorrect"}
-                  </p>
-                  <p className="text-sm leading-6">{attemptResult.explanation}</p>
+                    {t.accuracy === null ? "—" : `${Math.round(t.accuracy)}%`}
+                  </span>
                 </div>
-              )}
+              </button>
+            ))}
+          </div>
+        )}
+      </section>
 
-              <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 pt-4">
-                <button
-                  onClick={() => setPlayerIndex((prev) => Math.max(0, prev - 1))}
-                  disabled={playerIndex === 0}
-                  className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {LEFT_ARROW} Previous
-                </button>
-
-                <span className="text-xs text-slate-500">
-                  {attemptResult
-                    ? "Review feedback, then continue"
-                    : submittingAttempt
-                      ? "Submitting answer..."
-                      : "Choose an answer to reveal feedback"}
-                </span>
-
-                <button
-                  onClick={() =>
-                    setPlayerIndex((prev) => Math.min(questionPool.length - 1, prev + 1))
-                  }
-                  disabled={playerIndex >= questionPool.length - 1}
-                  className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  Next {RIGHT_ARROW}
-                </button>
-              </div>
-            </div>
+      <section className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold text-slate-900">
+            {selectedTopic ? `${selectedTopic} — Questions` : "All Questions"}
+          </h2>
+          {!loadingQuestions && (
+            <span className="text-sm text-slate-500">
+              {questions.length} question{questions.length !== 1 ? "s" : ""}
+            </span>
           )}
-        </section>
-      )}
+        </div>
+
+        {loadingQuestions ? (
+          <p className="text-slate-600">Loading questions...</p>
+        ) : questions.length === 0 ? (
+          <p className="text-slate-600">No questions match current filters.</p>
+        ) : (
+          <div className="space-y-2">
+            {questions.map((q) => (
+              <Link
+                key={q.question_id}
+                to={`/questions/${q.question_id}`}
+                className="block rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition hover:border-blue-300 hover:shadow-md"
+              >
+                <p className="text-sm text-slate-800">
+                  {q.stem.length > 100 ? `${q.stem.slice(0, 100)}…` : q.stem}
+                </p>
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <span className="rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-semibold text-blue-700">
+                    {q.topic}
+                  </span>
+                  <span
+                    className={`rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize ${DIFFICULTY_COLORS[q.difficulty]}`}
+                  >
+                    {q.difficulty}
+                  </span>
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
+      </section>
     </div>
   );
 }
