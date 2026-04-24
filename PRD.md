@@ -61,15 +61,15 @@ Complete redesign of CoreMD across five surfaces: Dashboard (Study Deck), Chapte
 **Description:** As a developer, I need a `case_questions` MongoDB collection with REST endpoints so the case detail page can serve multi-step clinical reasoning questions.
 
 **Acceptance Criteria:**
-- [ ] Pydantic schemas in `backend/app/schemas/case_question.py`:
+- [x] Pydantic schemas in `backend/app/schemas/case_question.py`:
   - `CaseQuestionOut`: `case_question_id`, `case_id`, `step` (int ≥ 1), `stem`, `options` (list[str]), `correct_option` (int), `explanation`
   - `CaseAttemptCreate`: `selected_option` (int)
   - `CaseAttemptResult`: `correct` (bool), `correct_option` (int), `explanation` (str)
-- [ ] `GET /api/v1/cases/{case_id}/questions` → `List[CaseQuestionOut]` ordered by `step` asc; returns `[]` if none (no 404)
-- [ ] `POST /api/v1/cases/{case_id}/questions/{question_id}/attempt` → `CaseAttemptResult`
-- [ ] Both endpoints protected by JWT
-- [ ] Routes added to `backend/app/api/v1/routes/cases.py`
-- [ ] Typecheck passes
+- [x] `GET /api/v1/cases/{case_id}/questions` → `List[CaseQuestionOut]` ordered by `step` asc; returns `[]` if none (no 404)
+- [x] `POST /api/v1/cases/{case_id}/questions/{question_id}/attempt` → `CaseAttemptResult`
+- [x] Both endpoints protected by JWT
+- [x] Routes added to `backend/app/api/v1/routes/cases.py`
+- [x] Typecheck passes
 
 ---
 
