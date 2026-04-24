@@ -123,13 +123,13 @@ Complete redesign of CoreMD across five surfaces: Dashboard (Study Deck), Chapte
 **Description:** As a user reading a section, I want a two-pane open-book layout where the left pane shows the chapter's full section list and the right pane shows the current section's content.
 
 **Acceptance Criteria:**
-- [ ] Two-column layout: left pane (260px, sticky) = full section TOC for the current chapter; right pane = section content (already rendered HTML)
-- [ ] TOC items are links (`/chapters/{chapterId}/sections/{sectionId}`); current section is highlighted with accent color and bold
-- [ ] Right pane: heading shows `chapter_title > section_title`; renders `html_content` if available, falls back to plain text
-- [ ] Navigating to a different section via TOC updates the right pane without a full page reload (React Router link)
-- [ ] On mobile (< 768px): left TOC collapses into a sticky "Sections ▾" dropdown at top of right pane
-- [ ] Typecheck passes
-- [ ] Verify changes work in browser
+- [x] Two-column layout: left pane (260px, sticky) = full section TOC for the current chapter; right pane = section content (already rendered HTML)
+- [x] TOC items are links (`/chapters/{chapterId}/sections/{sectionId}`); current section is highlighted with accent color and bold
+- [x] Right pane: heading shows `chapter_title > section_title`; renders `html_content` if available, falls back to plain text
+- [x] Navigating to a different section via TOC updates the right pane without a full page reload (React Router link)
+- [x] On mobile (< 768px): left TOC collapses into a sticky "Sections ▾" dropdown at top of right pane
+- [x] Typecheck passes
+- [x] Verify changes work in browser
 
 ---
 
