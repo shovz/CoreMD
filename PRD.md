@@ -77,13 +77,13 @@ Complete redesign of CoreMD across five surfaces: Dashboard (Study Deck), Chapte
 **Description:** As a developer, I need clinically relevant multi-step questions for the first 5 cases in the database so the UI can be built and tested with real data.
 
 **Acceptance Criteria:**
-- [ ] Script at `backend/scripts/seed_case_questions.py` reads the first 5 `case_id` values from the `cases` collection
-- [ ] Inserts 2 step-questions per case (step 1 and step 2) with realistic clinical content drawn from each case's `diagnosis`, `specialty`, and `presentation` fields
-- [ ] Q1 should ask about initial diagnosis / most likely finding; Q2 should ask about management / next step
-- [ ] Each question has 4 options, `correct_option` (0-indexed), and an explanation paragraph
-- [ ] Script is idempotent: checks for existing entries and skips duplicates
-- [ ] After running: `GET /api/v1/cases/{any of 5 case_ids}/questions` returns 2 items
-- [ ] Script instructions added as a comment at the top of the file
+- [x] Script at `backend/scripts/seed_case_questions.py` reads the first 5 `case_id` values from the `cases` collection
+- [x] Inserts 2 step-questions per case (step 1 and step 2) with realistic clinical content drawn from each case's `diagnosis`, `specialty`, and `presentation` fields
+- [x] Q1 should ask about initial diagnosis / most likely finding; Q2 should ask about management / next step
+- [x] Each question has 4 options, `correct_option` (0-indexed), and an explanation paragraph
+- [x] Script is idempotent: checks for existing entries and skips duplicates
+- [x] After running: `GET /api/v1/cases/{any of 5 case_ids}/questions` returns 2 items
+- [x] Script instructions added as a comment at the top of the file
 
 ---
 
