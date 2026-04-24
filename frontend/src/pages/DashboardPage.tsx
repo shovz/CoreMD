@@ -1,105 +1,138 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
-import StatCard from "../components/StatCard";
-import AccuracyBarChart from "../components/AccuracyBarChart";
-import {
-  getOverviewStats,
-  getQuestionStats,
-  type OverviewStats,
-  type QuestionStats,
-} from "../api/statsApi";
+import { Link, useNavigate } from "react-router-dom";
+import { getDashboardStats, type DashboardStats } from "../api/statsApi";
 
-const EM_DASH = "\u2014";
+function SkeletonBlock({ className = "" }: { className?: string }) {
+  return <div className={`animate-pulse rounded-xl bg-slate-200 ${className}`} />;
+}
 
 export default function DashboardPage() {
-  const [overview, setOverview] = useState<OverviewStats | null>(null);
-  const [questionStats, setQuestionStats] = useState<QuestionStats | null>(null);
+  const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
-    Promise.all([getOverviewStats(), getQuestionStats()])
-      .then(([overviewRes, questionRes]) => {
-        setOverview(overviewRes.data);
-        setQuestionStats(questionRes.data);
-      })
-      .catch(() => setError("Failed to load stats."))
+    getDashboardStats()
+      .then((res) => setStats(res.data))
+      .catch(() => setError("Failed to load dashboard."))
       .finally(() => setLoading(false));
   }, []);
 
-  const difficultyData = questionStats
-    ? Object.entries(questionStats.by_difficulty).map(([key, val]) => ({
-      label: key.charAt(0).toUpperCase() + key.slice(1),
-      attempted: val.attempted,
-      accuracy: val.accuracy,
-    }))
-    : [];
-
-  const topicData = questionStats
-    ? [...questionStats.by_topic]
-      .sort((a, b) => b.attempted - a.attempted)
-      .map((t) => ({ label: t.topic, attempted: t.attempted, accuracy: t.accuracy }))
-    : [];
-
-  const isEmpty = !loading && overview?.total_questions_answered === 0;
+  const isEmpty = !loading && !error && (stats?.questions_answered ?? 0) === 0;
+  const hasLastActivity = stats?.last_chapter != null || stats?.last_question != null;
+  const hasFocusTopics = (stats?.weak_topics?.length ?? 0) > 0;
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="m-0 text-3xl font-bold text-slate-900">My Dashboard</h1>
-      </div>
+      <h1 className="text-3xl font-bold text-slate-900">Study Deck</h1>
 
-      {error ? (
-        <p className="text-red-600">{error}</p>
-      ) : (
-        <>
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-              gap: 16,
-              marginBottom: 24,
-            }}
-          >
-            <StatCard
-              label="Questions Answered"
-              value={loading ? EM_DASH : overview?.total_questions_answered ?? EM_DASH}
-            />
-            <StatCard
-              label="Accuracy"
-              value={
-                loading
-                  ? EM_DASH
-                  : overview != null
-                    ? `${overview.correct_percentage.toFixed(1)}%`
-                    : EM_DASH
-              }
-            />
-            <StatCard
-              label="Chapters Covered"
-              value={loading ? EM_DASH : overview?.unique_chapters_covered ?? EM_DASH}
-            />
+      {error && <p className="text-red-600">{error}</p>}
+
+      {!error && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Left column: stats bar + continue card */}
+          <div className="space-y-4">
+            {/* Stats bar */}
+            {loading ? (
+              <SkeletonBlock className="h-16" />
+            ) : (
+              <div className="flex flex-row flex-wrap gap-3">
+                <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-5 py-3">
+                  <span className="text-2xl font-bold text-slate-900">
+                    🔥 {stats?.streak_days ?? 0}
+                  </span>
+                  <span className="text-sm text-slate-500">days</span>
+                </div>
+                <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-5 py-3">
+                  <span className="text-2xl font-bold text-slate-900">
+                    {stats?.questions_answered ?? 0}
+                  </span>
+                  <span className="text-sm text-slate-500">questions</span>
+                </div>
+                <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-5 py-3">
+                  <span className="text-2xl font-bold text-slate-900">
+                    {stats?.accuracy_pct ?? 0}%
+                  </span>
+                  <span className="text-sm text-slate-500">accuracy</span>
+                </div>
+              </div>
+            )}
+
+            {/* Empty state */}
+            {isEmpty && (
+              <p className="italic text-slate-500">
+                Start by reading a chapter or trying a question — your progress will appear here.
+              </p>
+            )}
+
+            {/* Continue card */}
+            {loading ? (
+              <SkeletonBlock className="h-28" />
+            ) : (
+              hasLastActivity && (
+                <div className="rounded-xl border border-slate-200 bg-white p-5 space-y-4">
+                  <h2 className="text-lg font-semibold text-slate-800">Continue</h2>
+                  {stats?.last_chapter && (
+                    <div>
+                      <p className="text-xs uppercase tracking-wide text-slate-400 mb-1">
+                        Last chapter
+                      </p>
+                      <Link
+                        to={`/chapters/${stats.last_chapter.id}`}
+                        className="font-medium text-blue-600 hover:underline"
+                      >
+                        {stats.last_chapter.title}
+                      </Link>
+                    </div>
+                  )}
+                  {stats?.last_question && (
+                    <div>
+                      <p className="text-xs uppercase tracking-wide text-slate-400 mb-1">
+                        Last question
+                      </p>
+                      <Link
+                        to={`/questions/${stats.last_question.id}`}
+                        className="font-medium text-blue-600 hover:underline"
+                      >
+                        {stats.last_question.topic}
+                      </Link>
+                    </div>
+                  )}
+                </div>
+              )
+            )}
           </div>
 
-          {isEmpty ? (
-            <p className="italic text-slate-500">
-              No attempts yet {EM_DASH} head to the <Link to="/questions">Question Bank</Link> to get started
-            </p>
-          ) : (
-            <>
-              <AccuracyBarChart
-                title="Performance by Difficulty"
-                data={difficultyData}
-              />
-              <AccuracyBarChart
-                title="Performance by Specialty"
-                data={topicData}
-              />
-            </>
-          )}
-        </>
+          {/* Right column: focus topics */}
+          <div>
+            {loading ? (
+              <SkeletonBlock className="h-28" />
+            ) : (
+              hasFocusTopics && (
+                <div className="rounded-xl border border-slate-200 bg-white p-5">
+                  <h2 className="text-lg font-semibold text-slate-800 mb-3">
+                    Focus Topics
+                  </h2>
+                  <div className="flex flex-wrap gap-2">
+                    {stats?.weak_topics.map((topic) => (
+                      <button
+                        key={topic}
+                        onClick={() =>
+                          navigate(`/questions?topic=${encodeURIComponent(topic)}`)
+                        }
+                        className="rounded-full border border-blue-200 bg-blue-50 px-4 py-1.5 text-sm font-medium text-blue-700 hover:bg-blue-100 transition-colors"
+                      >
+                        {topic}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )
+            )}
+          </div>
+        </div>
       )}
-
     </div>
   );
 }
