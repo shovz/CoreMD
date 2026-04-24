@@ -91,15 +91,15 @@ Complete redesign of CoreMD across five surfaces: Dashboard (Study Deck), Chapte
 **Description:** As a user, I want a Study Deck dashboard that shows my activity, accuracy, streak, and weak topic recommendations so I can orient my study session in seconds.
 
 **Acceptance Criteria:**
-- [ ] Page fetches `GET /api/v1/stats/dashboard` on mount
-- [ ] Stats bar (horizontal on desktop): **Streak** (🔥 N days), **Questions answered** (N), **Accuracy** (N%)
-- [ ] "Continue" card: shows last visited chapter (title, link to `/chapters/{id}`) and last attempted question (topic, link to `/questions/{id}`); hidden if both are null
-- [ ] "Focus topics" section: up to 3 topic chips, each clickable → navigates to `/questions?topic=<topic>`; hidden if `weak_topics` is empty
-- [ ] Loading skeleton shown while request is in-flight
-- [ ] Empty state when no history: "Start by reading a chapter or trying a question — your progress will appear here."
-- [ ] Layout is 2-column on desktop (stats+continue left, focus right), 1-column on mobile
-- [ ] Typecheck passes
-- [ ] Verify changes work in browser
+- [x] Page fetches `GET /api/v1/stats/dashboard` on mount
+- [x] Stats bar (horizontal on desktop): **Streak** (🔥 N days), **Questions answered** (N), **Accuracy** (N%)
+- [x] "Continue" card: shows last visited chapter (title, link to `/chapters/{id}`) and last attempted question (topic, link to `/questions/{id}`); hidden if both are null
+- [x] "Focus topics" section: up to 3 topic chips, each clickable → navigates to `/questions?topic=<topic>`; hidden if `weak_topics` is empty
+- [x] Loading skeleton shown while request is in-flight
+- [x] Empty state when no history: "Start by reading a chapter or trying a question — your progress will appear here."
+- [x] Layout is 2-column on desktop (stats+continue left, focus right), 1-column on mobile
+- [x] Typecheck passes
+- [x] Verify changes work in browser
 
 ---
 

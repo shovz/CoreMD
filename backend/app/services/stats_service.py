@@ -1,6 +1,46 @@
+from datetime import datetime, timezone, timedelta, date as date_type
+
 from bson import ObjectId
 from pymongo.database import Database
 from typing import Dict, List
+
+
+def _compute_streak(db: Database, user_id: str) -> int:
+    oid = ObjectId(user_id)
+    pipeline = [
+        {"$match": {"user_id": oid}},
+        {"$group": {
+            "_id": {
+                "year": {"$year": "$created_at"},
+                "month": {"$month": "$created_at"},
+                "day": {"$dayOfMonth": "$created_at"},
+            }
+        }},
+    ]
+    docs = list(db.question_attempts.aggregate(pipeline))
+    if not docs:
+        return 0
+
+    activity_dates = sorted(
+        {date_type(d["_id"]["year"], d["_id"]["month"], d["_id"]["day"]) for d in docs},
+        reverse=True,
+    )
+
+    today = datetime.now(timezone.utc).date()
+    # Streak is broken if most recent activity was before yesterday
+    if activity_dates[0] < today - timedelta(days=1):
+        return 0
+
+    streak = 0
+    expected = activity_dates[0]
+    for d in activity_dates:
+        if d == expected:
+            streak += 1
+            expected = expected - timedelta(days=1)
+        else:
+            break
+
+    return streak
 
 
 def get_overview_stats(db: Database, user_id: str) -> Dict:
