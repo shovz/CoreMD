@@ -1,6 +1,34 @@
+from datetime import datetime, timedelta
+
 from bson import ObjectId
 from pymongo.database import Database
 from typing import Dict, List
+
+
+def _compute_streak(db: Database, user_id: str) -> int:
+    """Count consecutive calendar days (UTC) ending today with ≥1 question attempt."""
+    pipeline = [
+        {"$match": {"user_id": ObjectId(user_id)}},
+        {"$project": {"date": {"$dateToString": {"format": "%Y-%m-%d", "date": "$created_at"}}}},
+        {"$group": {"_id": "$date"}},
+        {"$sort": {"_id": -1}},
+    ]
+    dates = [doc["_id"] for doc in db.question_attempts.aggregate(pipeline)]
+    if not dates:
+        return 0
+    today_str = datetime.utcnow().strftime("%Y-%m-%d")
+    if dates[0] != today_str:
+        return 0
+    streak = 0
+    expected = datetime.utcnow().date()
+    for date_str in dates:
+        d = datetime.strptime(date_str, "%Y-%m-%d").date()
+        if d == expected:
+            streak += 1
+            expected -= timedelta(days=1)
+        else:
+            break
+    return streak
 
 
 def get_overview_stats(db: Database, user_id: str) -> Dict:
@@ -66,11 +94,13 @@ def get_overview_stats(db: Database, user_id: str) -> Dict:
     ]
 
     result = list(db.question_attempts.aggregate(pipeline))
-    return result[0] if result else {
+    data = result[0] if result else {
         "total_questions_answered": 0,
         "correct_percentage": 0,
-        "unique_chapters_covered": 0
+        "unique_chapters_covered": 0,
     }
+    data["current_streak"] = _compute_streak(db, user_id)
+    return data
 
 
 def get_question_stats(db: Database, user_id: str) -> Dict:
