@@ -2,6 +2,9 @@ import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { getCaseById, type CaseFull } from "../api/casesApi";
 
+const LEFT_ARROW = "<";
+const EM_DASH = "\u2014";
+
 const SECTIONS: { key: keyof CaseFull; label: string }[] = [
   { key: "presentation", label: "Presentation" },
   { key: "history", label: "History" },
@@ -22,11 +25,11 @@ export default function CaseDetailPage() {
 
   useEffect(() => {
     if (!id) return;
-    setLoading(true);
-    setError(null);
+
     getCaseById(id)
       .then((res) => {
         setCaseData(res.data);
+        setError(null);
         setLoading(false);
       })
       .catch(() => {
@@ -39,7 +42,7 @@ export default function CaseDetailPage() {
     <div style={{ padding: 24, maxWidth: 800, margin: "0 auto" }}>
       <div style={{ marginBottom: 20 }}>
         <Link to="/cases" style={{ color: "#1565c0", textDecoration: "none" }}>
-          ← Back to Cases
+          {LEFT_ARROW} Back to Cases
         </Link>
       </div>
 
@@ -117,7 +120,7 @@ export default function CaseDetailPage() {
               >
                 <strong>Reference:</strong>{" "}
                 {caseData.chapter_title
-                  ? `${caseData.chapter_title} — ${caseData.chapter_ref}`
+                  ? `${caseData.chapter_title} ${EM_DASH} ${caseData.chapter_ref}`
                   : caseData.chapter_ref}
               </div>
             )}

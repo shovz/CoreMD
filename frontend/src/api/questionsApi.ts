@@ -20,6 +20,7 @@ export interface QuestionsFilter {
   topic?: string;
   chapter_id?: string;
   difficulty?: Difficulty;
+  search?: string;
   limit?: number;
   offset?: number;
 }
@@ -29,9 +30,14 @@ export const getQuestions = (filters?: QuestionsFilter) => {
   if (filters?.topic) params.topic = filters.topic;
   if (filters?.chapter_id) params.chapter_id = filters.chapter_id;
   if (filters?.difficulty) params.difficulty = filters.difficulty;
+  if (filters?.search) params.search = filters.search;
   if (filters?.limit !== undefined) params.limit = filters.limit;
   if (filters?.offset !== undefined) params.offset = filters.offset;
-  return api.get<QuestionOut[]>("/questions/", { params });
+  return api.get<QuestionOut[]>("/questions", { params });
+};
+
+export const getQuestionTopics = () => {
+  return api.get<string[]>("/questions/topics");
 };
 
 export const getQuestionById = (id: string) => {

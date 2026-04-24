@@ -16,11 +16,25 @@ export interface Chapter {
   sections: Section[];
 }
 
+export interface ChapterSearchResult {
+  chapter_id: string;
+  chapter_title: string;
+  chapter_number?: number;
+  part_number?: number;
+  part_title?: string;
+  occurrence_count: number;
+}
+
 export const getChapters = () => {
   return api.get<Chapter[]>("/chapters");
 };
 
-
 export const getChapterById = (chapterId: string) => {
   return api.get<Chapter>(`/chapters/${chapterId}`);
+};
+
+export const searchChapters = (query: string) => {
+  return api.get<ChapterSearchResult[]>("/chapters/search", {
+    params: { q: query },
+  });
 };
