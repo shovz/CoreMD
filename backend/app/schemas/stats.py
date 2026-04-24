@@ -8,6 +8,7 @@ class OverviewStatsOut(BaseModel):
     total_questions_answered: int = 0
     correct_percentage: float = 0.0
     unique_chapters_covered: int = 0
+    current_streak: int = 0
 
 
 class DifficultyStats(BaseModel):
