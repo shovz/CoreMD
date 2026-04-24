@@ -137,15 +137,15 @@ Complete redesign of CoreMD across five surfaces: Dashboard (Study Deck), Chapte
 **Description:** As a user, I want to see my question-bank topics as stat cards showing my success rate and question count so I immediately see where I need practice.
 
 **Acceptance Criteria:**
-- [ ] Page layout: topic card grid at top, filterable question list below
-- [ ] Topic card shows: topic name, total question count, user accuracy % (computed from attempt history or "—" if unattempted)
-- [ ] Card accent color by accuracy: green border/bg ≥ 70%, yellow 40–69%, red < 40%, neutral grey = unattempted
-- [ ] Clicking a topic card selects it (highlighted) and filters the question list below to that topic; clicking again deselects (shows all)
-- [ ] Question list items: stem (truncated to ~100 chars), difficulty badge (Easy/Medium/Hard colored chip), topic chip
-- [ ] Existing difficulty dropdown and search input still functional alongside topic card selection
-- [ ] URL reflects selected topic as `?topic=<topic>` so links from Dashboard Focus section work
-- [ ] Typecheck passes
-- [ ] Verify changes work in browser
+- [x] Page layout: topic card grid at top, filterable question list below
+- [x] Topic card shows: topic name, total question count, user accuracy % (computed from attempt history or "—" if unattempted)
+- [x] Card accent color by accuracy: green border/bg ≥ 70%, yellow 40–69%, red < 40%, neutral grey = unattempted
+- [x] Clicking a topic card selects it (highlighted) and filters the question list below to that topic; clicking again deselects (shows all)
+- [x] Question list items: stem (truncated to ~100 chars), difficulty badge (Easy/Medium/Hard colored chip), topic chip
+- [x] Existing difficulty dropdown and search input still functional alongside topic card selection
+- [x] URL reflects selected topic as `?topic=<topic>` so links from Dashboard Focus section work
+- [x] Typecheck passes
+- [x] Verify changes work in browser
 
 ---
 
