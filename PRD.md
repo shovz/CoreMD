@@ -1,485 +1,245 @@
-# PRD: CoreMD UI Overhaul
+# PRD: CoreMD UI Overhaul — 5 Surfaces
 
 ## Introduction
 
-Complete redesign of the CoreMD frontend based on low-fi wireframes. Five surfaces are
-being reshaped: Dashboard (Study Deck), Chapters (Specialty Spine + Open Book), Question
-Bank (enriched topic cards), Case Studies (card library + vignette detail with multi-step
-clinical questions), and AI Assistant (inline highlight → ask, no dedicated chat page).
-
-The backend receives two additions: streak tracking in the stats service, and a case-steps
-schema + API for multi-step clinical questions embedded in each case.
+Complete redesign of CoreMD across five surfaces: Dashboard (Study Deck), Chapters (Specialty Spine + Open Book), Question Bank (topic cards with stats + richer UX), Case Studies (Case Library + Vignette/Discussion + multi-step questions), and AI Assistant (ambient floating launcher + inline highlight-to-ask; standalone chat page removed). Based on approved low-fi wireframes. Existing color scheme (slate/blue Tailwind palette) and fonts are preserved throughout.
 
 ---
 
 ## Goals
 
-- Replace all "prototype-looking" page layouts with the wireframe designs
-- Add study-streak + weak-topic signals to the Dashboard without reading-progress tracking
-- Restructure Chapters into a three-panel specialty-spine layout (parts → chapters → content)
-- Enrich the Question Bank with per-topic accuracy stats visible before drilling
-- Rename "Clinical Cases" to "Case Studies"; display as a card library
-- Show case details as a vignette + sequential multi-step clinical question player
-- Allow users to highlight text in a section and instantly ask the AI about it
-- Retire the standalone /chat route; AI is only the floating bottom-right launcher
+- Dashboard surfaces study streak, question accuracy, last activity, and weak-topic recommendations — no reading-progress tracking (users browse chapters freely)
+- Chapters use a two-pane specialty-spine layout: left sidebar of Parts (with search) + accordion chapter list; section view is an open-book two-page spread
+- Question bank groups questions by topic with per-topic success stats and richer attempt UX
+- Case Studies become a clinical-reasoning experience: card library → vignette + discussion + multi-step case questions (step-gated, same page)
+- AI is ambient: floating launcher everywhere + text-selection trigger in section pages; no standalone `/chat` route
 
 ---
 
 ## User Stories
 
----
-
-### US-001: Commit all existing uncommitted local changes
-
-**Description:** As a developer, I need to commit the existing in-progress frontend and
-backend changes (AppShell, TopNavbar, AiChatLauncher, page rewrites, route fixes) so the
-repository reflects the current working state before the overhaul begins.
+### US-001: Commit all existing local changes
+**Description:** As a developer, I need all uncommitted changes (AppShell, TopNavbar, AiChatLauncher, AssistantChat, all page rewrites, route/schema/test fixes, CSS, vite.config) committed to git so every subsequent story has a stable base.
 
 **Acceptance Criteria:**
-- [ ] Run `git add` on all modified/untracked files listed in `git status`
-- [ ] Create a single commit: `chore: commit in-progress UI foundation and route fixes`
+- [ ] `git add` all changed and untracked frontend + backend files
+- [ ] Commit with message: `feat: add AppShell layout, navigation components, and page scaffolding`
 - [ ] `git status` shows a clean working tree after the commit
-- [ ] Do NOT push or deploy
+- [ ] No deploy (local only)
 
 ---
 
-### US-002: Backend — add `current_streak` to overview stats
-
-**Description:** As a user, I want to see how many consecutive days I have answered at
-least one question so I can stay motivated.
-
-**Files:** `backend/app/services/stats_service.py`, `backend/app/schemas/stats.py`
+### US-002: Dashboard stats API endpoint
+**Description:** As a developer, I need a `GET /api/v1/stats/dashboard` endpoint that returns everything the Study Deck widget needs.
 
 **Acceptance Criteria:**
-- [ ] `OverviewStatsOut` adds `current_streak: int` field (default 0)
-- [ ] `get_overview_stats()` computes streak: count consecutive calendar days (UTC)
-  ending on today where `question_attempts` has ≥ 1 document for that user
-- [ ] If the user has no attempts today the streak is 0
-- [ ] Redis cache key `stats:overview:{user_id}` still used (TTL 120 s)
-- [ ] `GET /api/v1/stats/overview` returns the new field
+- [ ] Response schema (add to `backend/app/schemas/stats.py`):
+  ```json
+  {
+    "streak_days": 3,
+    "questions_answered": 42,
+    "accuracy_pct": 71.4,
+    "last_chapter": { "id": "ch_001", "title": "The Practice of Medicine" },
+    "last_question": { "id": "q_112", "topic": "Cardiology" },
+    "weak_topics": ["Nephrology", "Endocrinology"]
+  }
+  ```
+- [ ] `streak_days`: count of consecutive calendar days with at least one attempt in `question_attempts`
+- [ ] `questions_answered`: total attempts by current user
+- [ ] `accuracy_pct`: (correct attempts / total attempts) × 100, rounded to 1 decimal
+- [ ] `last_chapter`: most recently fetched chapter from user activity (use a `user_activity` upsert or infer from question attempts via `chapter_ref`); null if none
+- [ ] `last_question`: question_id + topic of most recent attempt; null if none
+- [ ] `weak_topics`: topics where user accuracy < 60%, up to 3, sorted by accuracy ascending
+- [ ] If user has no history: returns zeros / nulls — no 500
+- [ ] Endpoint protected by `get_current_user`
+- [ ] Route added to `backend/app/api/v1/routes/stats.py` (or new file if stats.py doesn't exist)
 - [ ] Typecheck passes
 
 ---
 
-### US-003: Backend — embed `steps` in case documents + seed one case
-
-**Description:** As a developer, I need a case-steps data structure so the UI can render
-multi-step clinical questions per case.
-
-**Files:**
-- `backend/app/schemas/case.py` — add `CaseStep` and update `CaseOut`
-- `backend/scripts/seed_case_steps.py` — one-off seeder for ONE example case
-- `backend/app/api/v1/routes/cases.py` — include `steps` in `_doc_to_case_out`
-
-**Schema (embed in case document under field `steps`):**
-```python
-class CaseStep(BaseModel):
-    step_number: int
-    question: str
-    options: List[str]       # exactly 4 strings
-    correct_option: int      # 0-based index
-    explanation: str
-```
-
-`CaseOut` gets `steps: List[CaseStep] = []`
-
-**Seed script**: connects via `MONGO_URI` from `backend/.env`, finds the first case by
-insertion order, upserts 3 realistic clinical-reasoning steps into its `steps` field,
-prints the updated `case_id`. Run with: `python backend/scripts/seed_case_steps.py`
+### US-003: Case questions — backend schema + API
+**Description:** As a developer, I need a `case_questions` MongoDB collection with REST endpoints so the case detail page can serve multi-step clinical reasoning questions.
 
 **Acceptance Criteria:**
-- [ ] `CaseStep` Pydantic model defined in `backend/app/schemas/case.py`
-- [ ] `CaseOut` includes `steps: List[CaseStep] = []`
-- [ ] `_doc_to_case_out` maps `doc.get("steps", [])` into the response
-- [ ] `seed_case_steps.py` exists, runnable, and upserts 3 steps into one case
-- [ ] `GET /api/v1/cases/{case_id}` for the seeded case returns `"steps"` with 3 items
+- [ ] Pydantic schemas in `backend/app/schemas/case_question.py`:
+  - `CaseQuestionOut`: `case_question_id`, `case_id`, `step` (int ≥ 1), `stem`, `options` (list[str]), `correct_option` (int), `explanation`
+  - `CaseAttemptCreate`: `selected_option` (int)
+  - `CaseAttemptResult`: `correct` (bool), `correct_option` (int), `explanation` (str)
+- [ ] `GET /api/v1/cases/{case_id}/questions` → `List[CaseQuestionOut]` ordered by `step` asc; returns `[]` if none (no 404)
+- [ ] `POST /api/v1/cases/{case_id}/questions/{question_id}/attempt` → `CaseAttemptResult`
+- [ ] Both endpoints protected by JWT
+- [ ] Routes added to `backend/app/api/v1/routes/cases.py`
 - [ ] Typecheck passes
 
 ---
 
-### US-004: Backend — case step attempt endpoint
-
-**Description:** As a user, I want to submit my answer for a case step and receive
-immediate feedback (correct/incorrect + explanation).
-
-**File:** `backend/app/api/v1/routes/cases.py`
-
-**New endpoint:** `POST /cases/{case_id}/steps/{step_number}/attempt`
-- Request body: `{ "selected_option": 0 }` (int, 0-based)
-- Response: `{ "correct": bool, "correct_option": int, "explanation": str }`
-- 404 if case not found or `step_number` not present in `steps`
-- Stateless — does not persist to DB
+### US-004: Seed sample case questions for first 5 cases
+**Description:** As a developer, I need clinically relevant multi-step questions for the first 5 cases in the database so the UI can be built and tested with real data.
 
 **Acceptance Criteria:**
-- [ ] Endpoint registered and reachable at the correct URL
-- [ ] Returns `correct: true` when `selected_option == correct_option`
-- [ ] Returns `correct: false` otherwise
-- [ ] Returns HTTP 404 when case or step is missing
-- [ ] Typecheck passes
+- [ ] Script at `backend/scripts/seed_case_questions.py` reads the first 5 `case_id` values from the `cases` collection
+- [ ] Inserts 2 step-questions per case (step 1 and step 2) with realistic clinical content drawn from each case's `diagnosis`, `specialty`, and `presentation` fields
+- [ ] Q1 should ask about initial diagnosis / most likely finding; Q2 should ask about management / next step
+- [ ] Each question has 4 options, `correct_option` (0-indexed), and an explanation paragraph
+- [ ] Script is idempotent: checks for existing entries and skips duplicates
+- [ ] After running: `GET /api/v1/cases/{any of 5 case_ids}/questions` returns 2 items
+- [ ] Script instructions added as a comment at the top of the file
 
 ---
 
-### US-005: Dashboard — Study Deck redesign
-
-**Description:** As a user, I want a rich Study Deck dashboard showing my streak, question
-stats, weak topics, and performance charts — without any reading-progress tracking.
-
-**File:** `frontend/src/pages/DashboardPage.tsx`
-
-**Layout (single column, max-w-4xl, space-y-6):**
-
-**Row 1 — Three stat tiles (grid-cols-3):**
-- Tile 1: `current_streak` + label "Day Streak" (show flame emoji or simple icon)
-- Tile 2: `total_questions_answered` + label "Questions Answered"
-- Tile 3: `correct_percentage.toFixed(1) + "%"` + label "Accuracy"
-
-**Row 2 — "Needs Work" section (only when ≥ 1 attempt exists):**
-- Heading "Needs Work"
-- Take `by_topic` sorted by `accuracy` ascending, slice first 3
-- Display as horizontal pills: topic name + `XX%` badge
-
-**Row 3 — AccuracyBarChart "Performance by Difficulty"** (existing component)
-
-**Row 4 — AccuracyBarChart "Performance by Specialty"** — pass top 8 topics sorted by
-`attempted` descending
-
-**Empty state** (zero attempts): centered card "Head to Question Bank to get started →"
-
-Remove the `StatCard` for "Chapters Covered" (we do not track reading progress).
+### US-005: DashboardPage — Study Deck layout
+**Description:** As a user, I want a Study Deck dashboard that shows my activity, accuracy, streak, and weak topic recommendations so I can orient my study session in seconds.
 
 **Acceptance Criteria:**
-- [ ] Streak tile shows `overview.current_streak` as "N Day Streak"
-- [ ] "Chapters Covered" stat tile removed
-- [ ] "Needs Work" section with bottom-3 topics visible when attempts exist
-- [ ] Both AccuracyBarChart rows render correctly
-- [ ] Empty state shown when `total_questions_answered === 0`
+- [ ] Page fetches `GET /api/v1/stats/dashboard` on mount
+- [ ] Stats bar (horizontal on desktop): **Streak** (🔥 N days), **Questions answered** (N), **Accuracy** (N%)
+- [ ] "Continue" card: shows last visited chapter (title, link to `/chapters/{id}`) and last attempted question (topic, link to `/questions/{id}`); hidden if both are null
+- [ ] "Focus topics" section: up to 3 topic chips, each clickable → navigates to `/questions?topic=<topic>`; hidden if `weak_topics` is empty
+- [ ] Loading skeleton shown while request is in-flight
+- [ ] Empty state when no history: "Start by reading a chapter or trying a question — your progress will appear here."
+- [ ] Layout is 2-column on desktop (stats+continue left, focus right), 1-column on mobile
 - [ ] Typecheck passes
 - [ ] Verify changes work in browser
 
 ---
 
-### US-006: Questions page — topic cards with accuracy stats
-
-**Description:** As a user, I want to see my accuracy and attempt count on each topic card
-before I start drilling, so I know where to focus.
-
-**Files:** `frontend/src/pages/QuestionsPage.tsx`
-
-**Changes:**
-- In the initial `useEffect`, fetch `getQuestionStats()` in parallel with `getQuestionTopics()`
-- Build `topicStatsMap: Map<string, {accuracy: number, attempted: number}>` from
-  `questionStats.by_topic`
-- Below the topic name on each card show:
-  - `attempted > 0`: `"XX.X% · N attempted"` in muted small text
-  - `attempted === 0`: `"Not started"` in muted small text
-- Card left-border color:
-  - `accuracy >= 70` → `border-l-4 border-l-emerald-500`
-  - `40 <= accuracy < 70` → `border-l-4 border-l-amber-500`
-  - `accuracy < 40 && attempted > 0` → `border-l-4 border-l-rose-500`
-  - `attempted === 0` → no colored border
+### US-006: ChaptersPage — Specialty Spine layout
+**Description:** As a user, I want a left sidebar listing the book's Parts with a search bar so I can navigate chapters by spine structure using an accordion layout.
 
 **Acceptance Criteria:**
-- [ ] `getQuestionStats()` called on mount alongside topics
-- [ ] Stats displayed on each topic card with correct values
-- [ ] Left-border coloring applied per accuracy tier
-- [ ] Question player (answering, next/prev, random mode) has no regressions
+- [ ] Two-pane layout: fixed left sidebar (~220px) + scrollable main content
+- [ ] Sidebar top: text input "Search chapters…" that filters both sidebar and accordion in real time (debounced 300ms)
+- [ ] Sidebar body: list of Part names (Part 1, Part 2, …); clicking a Part scrolls to and expands that part's accordion; active Part is highlighted
+- [ ] Main area: Parts as accordion headers showing "Part N · Title (M chapters)"; chapters listed below when expanded
+- [ ] Chapter rows: chapter number (small muted) + chapter title; clicking navigates to `/chapters/{id}`
+- [ ] Search: when query is non-empty, only Parts/chapters matching the query (title or number) are visible; matched text is bolded
+- [ ] Default state: all accordions collapsed, Part 1 expanded
 - [ ] Typecheck passes
 - [ ] Verify changes work in browser
 
 ---
 
-### US-007: Chapters page — specialty spine three-panel layout
-
-**Description:** As a user, I want a parts sidebar (with search above it) so I can jump
-to any specialty and see its chapters as an accordion.
-
-**File:** `frontend/src/pages/ChaptersPage.tsx`
-
-**New layout (`flex flex-row h-full`):**
-
-```
-┌──────────────┬────────────────────────────────┐
-│  LEFT PANEL  │  MAIN AREA                     │
-│  w-56 fixed  │                                │
-│  [Search…]   │  Accordion: chapters in        │
-│  ──────────  │  the selected part             │
-│  Part 1 ●    │                                │
-│  Part 2      │  OR: search results list       │
-│  Part 3      │  (when search is non-empty)    │
-│  ...         │                                │
-└──────────────┴────────────────────────────────┘
-```
-
-- Left sidebar (`w-56 shrink-0 border-r overflow-y-auto sticky top-20 h-[calc(100vh-5rem)]`):
-  - Search `<input>` at top (reuses existing `searchChapters` debounce logic)
-  - Below: scrollable list of part buttons (`Part N: Title`) — click selects that part
-  - Selected part: `bg-blue-600 text-white` style
-- Main area (`flex-1 overflow-y-auto`):
-  - When search is empty: show chapter accordion for the selected part only (not all parts)
-    - Chapters sorted by `chapter_number`; each is a `<details>` or button that expands
-      to show section links → each section links to `/chapters/{ch.id}/sections/{s.id}`
-    - Chapter header links to `/chapters/{ch.id}` as well
-  - When search is non-empty: show the search results list (same card style as before)
-- Default selected part: first part in `sortedParts`
-- Remove the old "all-parts" accordion rendering
+### US-007: SectionDetailPage — Open book two-page spread
+**Description:** As a user reading a section, I want a two-pane open-book layout where the left pane shows the chapter's full section list and the right pane shows the current section's content.
 
 **Acceptance Criteria:**
-- [ ] Left sidebar lists all parts; clicking one filters the main area to that part's chapters
-- [ ] Search input at top of sidebar, results override accordion when non-empty
-- [ ] First part selected by default on load
-- [ ] Each chapter row links to `/chapters/{ch.id}`
-- [ ] Sections within an expanded chapter link to `/chapters/{ch.id}/sections/{s.id}`
+- [ ] Two-column layout: left pane (260px, sticky) = full section TOC for the current chapter; right pane = section content (already rendered HTML)
+- [ ] TOC items are links (`/chapters/{chapterId}/sections/{sectionId}`); current section is highlighted with accent color and bold
+- [ ] Right pane: heading shows `chapter_title > section_title`; renders `html_content` if available, falls back to plain text
+- [ ] Navigating to a different section via TOC updates the right pane without a full page reload (React Router link)
+- [ ] On mobile (< 768px): left TOC collapses into a sticky "Sections ▾" dropdown at top of right pane
 - [ ] Typecheck passes
 - [ ] Verify changes work in browser
 
 ---
 
-### US-008: Chapter detail — open book two-column layout
-
-**Description:** As a user, when I open a chapter I want to see the section list on the
-left and read section content on the right without navigating to a separate page.
-
-**File:** `frontend/src/pages/ChapterDetailPage.tsx`
-
-**New layout (`flex flex-row` full height):**
-
-```
-┌──────────────────────┬──────────────────────────────┐
-│  LEFT: Section list  │  RIGHT: Section content      │
-│  w-64 border-r       │  flex-1 overflow-y-auto      │
-│                      │                              │
-│  ← Back to Chapters  │  [breadcrumb]                │
-│  Chapter title       │  Section HTML rendered here  │
-│  ─────────────────   │                              │
-│  § Section 1  ●      │                              │
-│  § Section 2         │                              │
-│  ...                 │                              │
-└──────────────────────┴──────────────────────────────┘
-```
-
-- Left panel (`w-64 shrink-0 border-r overflow-y-auto sticky top-20 h-[calc(100vh-5rem)]`):
-  - "← Chapters" back link at top
-  - Chapter title + chapter number
-  - List of sections; clicking one sets `activeSectionId` state and fetches content
-  - Active section: highlighted with `bg-blue-50 text-blue-700`
-- Right panel (`flex-1 overflow-y-auto p-6 prose max-w-none`):
-  - On mount: auto-select first section and fetch its content via `getSectionById`
-  - Renders `sanitizedHtml` with DOMPurify + image URL rewrite (copy from SectionDetailPage)
-  - Loading state: "Loading section…"
-- The existing `SectionDetailPage` at `/chapters/:chapterId/sections/:sectionId` is kept
-  intact for direct URL access
+### US-008: QuestionsPage — topic cards with per-topic stats
+**Description:** As a user, I want to see my question-bank topics as stat cards showing my success rate and question count so I immediately see where I need practice.
 
 **Acceptance Criteria:**
-- [ ] Two-column layout renders correctly
-- [ ] First section is selected and its content loaded on mount
-- [ ] Clicking a section in the left list loads its content in the right panel
-- [ ] Selected section is highlighted
-- [ ] DOMPurify + image URL rewrite applied
-- [ ] "← Chapters" link navigates to `/chapters`
+- [ ] Page layout: topic card grid at top, filterable question list below
+- [ ] Topic card shows: topic name, total question count, user accuracy % (computed from attempt history or "—" if unattempted)
+- [ ] Card accent color by accuracy: green border/bg ≥ 70%, yellow 40–69%, red < 40%, neutral grey = unattempted
+- [ ] Clicking a topic card selects it (highlighted) and filters the question list below to that topic; clicking again deselects (shows all)
+- [ ] Question list items: stem (truncated to ~100 chars), difficulty badge (Easy/Medium/Hard colored chip), topic chip
+- [ ] Existing difficulty dropdown and search input still functional alongside topic card selection
+- [ ] URL reflects selected topic as `?topic=<topic>` so links from Dashboard Focus section work
 - [ ] Typecheck passes
 - [ ] Verify changes work in browser
 
 ---
 
-### US-009: Cases page — card library + rename
-
-**Description:** As a user, I want to browse cases as a card grid and quickly filter by
-specialty; the section should be called "Case Studies".
-
-**Files:**
-- `frontend/src/pages/CasesPage.tsx`
-- `frontend/src/components/TopNavbar.tsx` — "Cases" label → "Case Studies"
-
-**Layout:**
-- Page heading: `Case Studies`
-- Specialty filter: horizontal chip row (`All` + one chip per specialty); selected chip
-  uses `bg-blue-600 text-white`
-- Card grid: `grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3`
-- Each card:
-  - 4px left border in specialty color (from `SPECIALTY_COLORS`)
-  - Specialty chip (top-right)
-  - Case title (bold)
-  - `"Open Case →"` link button → `/cases/{case_id}`
+### US-009: QuestionDetailPage — richer attempt UX
+**Description:** As a user answering a question, I want styled option cards that reveal the correct answer and explanation inline after I submit so the feedback is immediate and clear.
 
 **Acceptance Criteria:**
-- [ ] Heading shows "Case Studies"
-- [ ] TopNavbar label updated to "Case Studies"
-- [ ] Specialty filter uses chip buttons
-- [ ] Cards display specialty color bar + title + specialty chip + "Open Case →"
-- [ ] Filtering by specialty shows only matching cases
+- [ ] Options rendered as full-width clickable cards (not radio buttons)
+- [ ] Selecting an option highlights it; Submit button activates
+- [ ] After submission: selected option turns red (if wrong) or green (if correct); correct option always turns green
+- [ ] Explanation panel expands below the options with the explanation text
+- [ ] "Next question" button appears after submission; navigates to the next question in the current topic filter (use URL state or fall back to a random unanswered question)
+- [ ] Question header shows topic chip + difficulty badge
 - [ ] Typecheck passes
 - [ ] Verify changes work in browser
 
 ---
 
-### US-010: Case detail — vignette layout
-
-**Description:** As a user, I want to read the case as a structured clinical vignette on
-the left, with discussion and questions on the right.
-
-**File:** `frontend/src/pages/CaseDetailPage.tsx`
-
-**Layout (`flex flex-col lg:flex-row gap-6`):**
-
-Left column (`lg:w-1/2`):
-- "← Case Studies" breadcrumb
-- Card per vignette section, each is an open `<details>` by default:
-  - Presentation, History, Physical Examination, Labs, Imaging
-- Spoiler `<details>` closed by default: Diagnosis, Management
-- Optional: chapter reference link if `chapter_title` is set
-
-Right column (`lg:w-1/2`):
-- "Discussion" heading + `case.discussion` text
-- Horizontal divider
-- `<CaseQuestionPlayer caseId={case.case_id} steps={case.steps ?? []} />`
-  (component created in US-011; just import + render it here, no crash if empty)
+### US-010: CasesPage — Case Library card grid
+**Description:** As a user, I want to browse cases as a visual card grid with specialty badges so I can quickly find relevant clinical scenarios.
 
 **Acceptance Criteria:**
-- [ ] Two-column layout (stacked on mobile)
-- [ ] Five vignette sections open by default in `<details>` elements
-- [ ] Diagnosis + Management in a separate closed `<details>`
-- [ ] Discussion text renders in right column
-- [ ] `<CaseQuestionPlayer>` renders without crashing (may show empty state)
-- [ ] Breadcrumb navigates to `/cases`
+- [ ] Page heading reads "Case Studies" (route stays `/cases`)
+- [ ] Card grid: 3 columns on desktop, 2 on tablet, 1 on mobile
+- [ ] Each card: case title (bold), specialty badge (color-coded by specialty string), first 120 chars of `presentation` as preview text, a subtle "→" affordance
+- [ ] Specialty filter: a row of tab/pill buttons at top ("All" + one per distinct specialty); clicking filters the grid
+- [ ] Clicking a card navigates to `/cases/{id}`
 - [ ] Typecheck passes
 - [ ] Verify changes work in browser
 
 ---
 
-### US-011: Case detail — multi-step question player
-
-**Description:** As a user, I want to answer a sequence of clinical questions about the
-case — one step at a time, with feedback after each — without leaving the page.
-
-**Files:**
-- `frontend/src/components/CaseQuestionPlayer.tsx` (new)
-- `frontend/src/api/casesApi.ts` (add `CaseStep` type + `submitCaseStepAttempt`)
-
-**`CaseStep` type (add to `casesApi.ts`):**
-```typescript
-export interface CaseStep {
-  step_number: number;
-  question: string;
-  options: string[];
-  correct_option: number;
-  explanation: string;
-}
-```
-
-**`submitCaseStepAttempt(caseId, stepNumber, selectedOption)` → `POST /cases/{caseId}/steps/{stepNumber}/attempt`**
-
-**`CaseQuestionPlayer` props:** `{ caseId: string; steps: CaseStep[] }`
-
-**Behavior:**
-- Empty state: `steps.length === 0` → muted text "No clinical questions for this case."
-- Render completed steps as a slim summary row (step N · ✓ or ✗)
-- Current step: show question text + 4 option buttons (A/B/C/D)
-- On option click: call API; show green/red feedback + explanation
-- "Next →" button after feedback; last step shows "Case Complete" summary card showing N/M correct
-- Once answered, a step cannot be changed
+### US-011: CaseDetailPage — Vignette + discussion + multi-step questions
+**Description:** As a user, I want to read a case vignette, see the clinical discussion, and work through step-gated diagnostic questions on the same scrollable page.
 
 **Acceptance Criteria:**
-- [ ] Component file exists at `frontend/src/components/CaseQuestionPlayer.tsx`
-- [ ] Empty state text shown when `steps` is empty
-- [ ] Steps render sequentially; answered steps show summary row
-- [ ] Option selection calls `submitCaseStepAttempt` and shows feedback
-- [ ] "Next →" advances to the next step
-- [ ] Completion card appears after all steps answered
-- [ ] `casesApi.ts` has `CaseStep` type and `submitCaseStepAttempt` function
-- [ ] Typecheck passes
-- [ ] Verify changes work in browser using the seeded case from US-003
-
----
-
-### US-012: AI inline highlight → ask (section detail page)
-
-**Description:** As a user reading a section, I want to select any text and click "Ask AI"
-to send it directly to the AI assistant without losing my place.
-
-**Files:**
-- `frontend/src/context/AiContext.tsx` (new)
-- `frontend/src/components/AppShell.tsx` (wrap with AiContext provider)
-- `frontend/src/components/AiChatLauncher.tsx` (consume context, auto-open + prefill)
-- `frontend/src/components/AssistantChat.tsx` (accept `initialText` prop to prefill input)
-- `frontend/src/pages/SectionDetailPage.tsx` (selection listener + floating button)
-
-**`AiContext`:** `{ prefillText: string | null; setPrefillText: (t: string | null) => void }`
-
-**`SectionDetailPage` changes:**
-- Add `useRef` on the section content container div (`contentRef`)
-- `useEffect` registers `document.addEventListener("selectionchange", handler)` and cleans
-  up on unmount
-- Handler: check `window.getSelection()?.toString().trim()`; if length ≥ 10 AND the
-  selection is contained within `contentRef.current`, show the floating button
-- Floating button: absolute positioned near the selection (use `getBoundingClientRect` of
-  the selection range); label "Ask AI ✦"; click → `setPrefillText(selectedText)`; clear
-  highlight state
-
-**`AiChatLauncher` changes:**
-- Consume `prefillText` from context
-- `useEffect` on `prefillText`: when non-null, set `open = true` and pass text to child
-
-**`AssistantChat` changes:**
-- Accept `initialText?: string` prop; when set, prefill the chat input on mount
-
-**Acceptance Criteria:**
-- [ ] `AiContext.tsx` created; `AppShell` wraps children in `<AiContextProvider>`
-- [ ] Selecting ≥ 10 characters inside the section content area shows floating "Ask AI ✦"
-- [ ] Clicking opens the AI chat panel with the selected text pre-filled
-- [ ] Deselecting text hides the button
-- [ ] Feature does not appear on other pages
-- [ ] No memory leak (event listener cleaned up)
+- [ ] Single-scroll layout with three sections: **Vignette**, **Discussion**, **Questions**
+- [ ] Vignette section: fields displayed as labeled blocks — Presentation, History, Physical Exam, Labs, Imaging, Diagnosis
+- [ ] Discussion section: Management + Discussion fields rendered as prose
+- [ ] Questions section: fetches `GET /api/v1/cases/{id}/questions`; hidden entirely if response is `[]`
+- [ ] Questions render as styled MCQ cards (same look as QuestionDetailPage)
+- [ ] Step-gating: only step 1 is visible initially; after answering step 1 (and seeing explanation), step 2 appears below; and so on
+- [ ] Each step shows its explanation after answering before unlocking the next step
 - [ ] Typecheck passes
 - [ ] Verify changes work in browser
 
 ---
 
-### US-013: Remove /chat page and clean up nav
-
-**Description:** As a developer, I want to remove the standalone chat page since AI is
-now accessed only via the floating launcher and inline highlight.
-
-**Files:**
-- `frontend/src/router.tsx` — remove `/chat` route + `ChatPage` import
-- `frontend/src/components/TopNavbar.tsx` — remove "AI Assistant" nav link if it links to `/chat`
-- `frontend/src/pages/ChatPage.tsx` — delete the file
+### US-012: Remove /chat route; make AI launcher a slide-over panel
+**Description:** As a user, I want the AI assistant to be a slide-over panel accessible from any page, not a dedicated route, so I never lose my place.
 
 **Acceptance Criteria:**
-- [ ] `/chat` route entry removed from `router.tsx`
-- [ ] `ChatPage` import removed from `router.tsx`
-- [ ] `ChatPage.tsx` file deleted
-- [ ] No TypeScript errors from dangling imports
-- [ ] TopNavbar has no link pointing to `/chat`
-- [ ] Navigating to `/chat` in browser falls through to the root/login route
+- [ ] `/chat` route removed from `router.tsx`
+- [ ] "AI Assistant" nav link removed from `TopNavbar` (and any sidebar)
+- [ ] `AiChatLauncher` floating button remains visible on all authenticated pages (already in AppShell)
+- [ ] Clicking the launcher opens a right-side slide-over panel (fixed overlay, ~420px wide on desktop, full-width on mobile) with the existing `AssistantChat` interface inside
+- [ ] Panel has a close button (×) and closes on Escape key press
+- [ ] Background page remains visible and non-interactive while panel is open (semi-transparent overlay)
 - [ ] Typecheck passes
+- [ ] Verify changes work in browser
+
+---
+
+### US-013: SectionDetailPage — inline highlight → ask AI
+**Description:** As a user reading a section, I want to select any text and click "Ask AI" to open the AI panel with that text pre-loaded as context.
+
+**Acceptance Criteria:**
+- [ ] Selecting text within the section content area (right pane) shows a small floating popover near the selection with a single "Ask AI about this" button
+- [ ] Clicking the button: opens the AI slide-over panel AND pre-fills the input with `"Regarding: \"[selected text]\" — "` leaving cursor at the end for the user to type their question
+- [ ] Popover disappears when the selection is cleared or the panel opens
+- [ ] The popover does not appear outside the content area (e.g. not on TOC or page chrome)
+- [ ] Typecheck passes
+- [ ] Verify changes work in browser
 
 ---
 
 ## Non-Goals
 
-- No reading-progress tracking (chapters read, time on page)
-- No user settings or profile page changes
-- No new data import or PDF re-extraction
-- No deployment — user will trigger deploy manually after reviewing
-- No Route 53 / custom domain
-- No pagination for the case question player (all steps on one page)
-- No persisting case step answers to the database (stateless for MVP)
+- No reading-progress tracking (chapters are browsed freely; no "mark as read")
+- No new PDF ingestion or textbook content changes
+- No multi-stage questions in the main Question Bank (cases only)
+- No deployment to AWS (commit only — deploy separately on request)
+- No dark mode
+- No custom domain, SSL cert, or infra changes
+- No changes to auth/register pages
 
 ---
 
 ## Technical Considerations
 
-- **Color palette / fonts**: Tailwind slate/blue throughout; no new design tokens
-- **Existing reusable components**: `StatCard`, `AccuracyBarChart`, `AppShell`,
-  `TopNavbar`, `AiChatLauncher`, `AssistantChat`
-- **Stats already available**: `/api/v1/stats/questions` returns `by_topic[]` with
-  `accuracy` + `attempted`; `/api/v1/stats/overview` returns question counts (streak
-  added in US-002)
-- **Section HTML rendering**: reuse DOMPurify + image-URL rewrite from
-  `SectionDetailPage.tsx` lines 32–39
-- **Case steps are stateless**: no DB writes for step attempts (acceptable MVP)
-- **`selectionchange` listener**: must be cleaned up in `useEffect` return to prevent
-  memory leaks
-- **Story order matters**: US-001 → US-002/US-003/US-004 (backend) → US-005 through
-  US-013 (frontend); frontend stories can mostly run in any order except US-011 depends
-  on US-010, and US-012 depends on AppShell being correct
+- **Tailwind CSS**: preserve slate/blue palette; use existing utility classes; no new design tokens
+- **AppShell + TopNavbar** already committed (US-001); all stories build on top of this layout
+- **AiChatLauncher / AssistantChat** components already exist; US-012 wires them into a slide-over
+- **case_questions**: new MongoDB collection — no migration needed, just insert documents
+- **Stats**: computed from `question_attempts` collection; `chapter_ref` on questions links to chapters and cases
+- **`last_chapter` tracking**: the simplest approach is to upsert a `last_visited_chapter` field on the user document whenever a chapter detail is loaded (one extra PATCH on the backend); alternatively infer from attempts
+- **Story ordering**: US-001 → 002 → 003 → 004 (backend complete) → 005–013 (frontend, can be parallelised per surface)

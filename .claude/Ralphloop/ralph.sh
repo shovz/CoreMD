@@ -28,7 +28,7 @@ get_explanation_path() {
     python -c "
 import re, sys
 try:
-    text = open('PRD.md').read()
+    text = open('PRD.md', encoding='utf-8').read()
     m = re.search(r'^#\s+PRD:\s*(.+)', text, re.MULTILINE)
     title = m.group(1).strip() if m else 'unknown'
     slug = re.sub(r'[^a-z0-9]+', '-', title.lower()).strip('-')
@@ -74,7 +74,7 @@ for ((i=1; i<=$MAX; i++)); do
     # Pre-extract the next incomplete task block from PRD.md
     TASK_BLOCK=$(python -c "
 import re
-text = open('PRD.md').read()
+text = open('PRD.md', encoding='utf-8').read()
 sections = re.split(r'^(?=### )', text, flags=re.MULTILINE)
 for s in sections:
     if '- [ ]' in s:
@@ -93,7 +93,7 @@ for s in sections:
     # Pass only the Learnings section of progress.txt (not the full iteration history)
     LEARNINGS=$(python -c "
 import re
-text = open('progress.txt').read()
+text = open('progress.txt', encoding='utf-8').read()
 m = re.match(r'(.*?)^## Iteration', text, re.DOTALL | re.MULTILINE)
 print(m.group(1).strip() if m else text.strip())
 ")

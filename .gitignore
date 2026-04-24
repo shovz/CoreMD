@@ -101,6 +101,7 @@ Thumbs.db
 ehthumbs.db
 Desktop.ini
 $RECYCLE.BIN/
+*.stackdump
 
 # Node.js (for frontend)
 node_modules/
