@@ -107,15 +107,15 @@ Complete redesign of CoreMD across five surfaces: Dashboard (Study Deck), Chapte
 **Description:** As a user, I want a left sidebar listing the book's Parts with a search bar so I can navigate chapters by spine structure using an accordion layout.
 
 **Acceptance Criteria:**
-- [ ] Two-pane layout: fixed left sidebar (~220px) + scrollable main content
-- [ ] Sidebar top: text input "Search chapters…" that filters both sidebar and accordion in real time (debounced 300ms)
-- [ ] Sidebar body: list of Part names (Part 1, Part 2, …); clicking a Part scrolls to and expands that part's accordion; active Part is highlighted
-- [ ] Main area: Parts as accordion headers showing "Part N · Title (M chapters)"; chapters listed below when expanded
-- [ ] Chapter rows: chapter number (small muted) + chapter title; clicking navigates to `/chapters/{id}`
-- [ ] Search: when query is non-empty, only Parts/chapters matching the query (title or number) are visible; matched text is bolded
-- [ ] Default state: all accordions collapsed, Part 1 expanded
-- [ ] Typecheck passes
-- [ ] Verify changes work in browser
+- [x] Two-pane layout: fixed left sidebar (~220px) + scrollable main content
+- [x] Sidebar top: text input "Search chapters…" that filters both sidebar and accordion in real time (debounced 300ms)
+- [x] Sidebar body: list of Part names (Part 1, Part 2, …); clicking a Part scrolls to and expands that part's accordion; active Part is highlighted
+- [x] Main area: Parts as accordion headers showing "Part N · Title (M chapters)"; chapters listed below when expanded
+- [x] Chapter rows: chapter number (small muted) + chapter title; clicking navigates to `/chapters/{id}`
+- [x] Search: when query is non-empty, only Parts/chapters matching the query (title or number) are visible; matched text is bolded
+- [x] Default state: all accordions collapsed, Part 1 expanded
+- [x] Typecheck passes
+- [x] Verify changes work in browser
 
 ---
 
