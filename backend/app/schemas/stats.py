@@ -4,6 +4,25 @@ from pydantic import BaseModel, Field
 from typing import Dict, List, Optional
 
 
+class LastChapterInfo(BaseModel):
+    id: str
+    title: str
+
+
+class LastQuestionInfo(BaseModel):
+    id: str
+    topic: str
+
+
+class DashboardStatsOut(BaseModel):
+    streak_days: int = 0
+    questions_answered: int = 0
+    accuracy_pct: float = 0.0
+    last_chapter: Optional[LastChapterInfo] = None
+    last_question: Optional[LastQuestionInfo] = None
+    weak_topics: List[str] = Field(default_factory=list)
+
+
 class OverviewStatsOut(BaseModel):
     total_questions_answered: int = 0
     correct_percentage: float = 0.0

@@ -33,7 +33,7 @@ Complete redesign of CoreMD across five surfaces: Dashboard (Study Deck), Chapte
 **Description:** As a developer, I need a `GET /api/v1/stats/dashboard` endpoint that returns everything the Study Deck widget needs.
 
 **Acceptance Criteria:**
-- [ ] Response schema (add to `backend/app/schemas/stats.py`):
+- [x] Response schema (add to `backend/app/schemas/stats.py`):
   ```json
   {
     "streak_days": 3,
@@ -44,16 +44,16 @@ Complete redesign of CoreMD across five surfaces: Dashboard (Study Deck), Chapte
     "weak_topics": ["Nephrology", "Endocrinology"]
   }
   ```
-- [ ] `streak_days`: count of consecutive calendar days with at least one attempt in `question_attempts`
-- [ ] `questions_answered`: total attempts by current user
-- [ ] `accuracy_pct`: (correct attempts / total attempts) × 100, rounded to 1 decimal
-- [ ] `last_chapter`: most recently fetched chapter from user activity (use a `user_activity` upsert or infer from question attempts via `chapter_ref`); null if none
-- [ ] `last_question`: question_id + topic of most recent attempt; null if none
-- [ ] `weak_topics`: topics where user accuracy < 60%, up to 3, sorted by accuracy ascending
-- [ ] If user has no history: returns zeros / nulls — no 500
-- [ ] Endpoint protected by `get_current_user`
-- [ ] Route added to `backend/app/api/v1/routes/stats.py` (or new file if stats.py doesn't exist)
-- [ ] Typecheck passes
+- [x] `streak_days`: count of consecutive calendar days with at least one attempt in `question_attempts`
+- [x] `questions_answered`: total attempts by current user
+- [x] `accuracy_pct`: (correct attempts / total attempts) × 100, rounded to 1 decimal
+- [x] `last_chapter`: most recently fetched chapter from user activity (use a `user_activity` upsert or infer from question attempts via `chapter_ref`); null if none
+- [x] `last_question`: question_id + topic of most recent attempt; null if none
+- [x] `weak_topics`: topics where user accuracy < 60%, up to 3, sorted by accuracy ascending
+- [x] If user has no history: returns zeros / nulls — no 500
+- [x] Endpoint protected by `get_current_user`
+- [x] Route added to `backend/app/api/v1/routes/stats.py` (or new file if stats.py doesn't exist)
+- [x] Typecheck passes
 
 ---
 
