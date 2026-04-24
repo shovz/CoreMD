@@ -169,6 +169,90 @@ def get_question_stats(db: Database, user_id: str) -> Dict:
     }
 
 
+def get_dashboard_stats(db: Database, user_id: str) -> Dict:
+    """Returns all data needed for the Study Deck dashboard widget."""
+    oid = ObjectId(user_id)
+
+    agg = list(db.question_attempts.aggregate([
+        {"$match": {"user_id": oid}},
+        {"$group": {
+            "_id": None,
+            "total": {"$sum": 1},
+            "correct": {"$sum": {"$cond": ["$is_correct", 1, 0]}},
+        }},
+    ]))
+
+    if agg:
+        total = agg[0]["total"]
+        correct = agg[0]["correct"]
+        accuracy_pct = round(correct / total * 100, 1) if total > 0 else 0.0
+    else:
+        total = 0
+        accuracy_pct = 0.0
+
+    last_attempt = list(db.question_attempts.aggregate([
+        {"$match": {"user_id": oid}},
+        {"$sort": {"created_at": -1}},
+        {"$limit": 1},
+        {"$lookup": {
+            "from": "questions",
+            "localField": "question_id",
+            "foreignField": "question_id",
+            "as": "question",
+        }},
+        {"$unwind": {"path": "$question", "preserveNullAndEmptyArrays": True}},
+    ]))
+
+    last_question = None
+    last_chapter = None
+    if last_attempt:
+        attempt = last_attempt[0]
+        q = attempt.get("question")
+        if q:
+            last_question = {"id": attempt["question_id"], "topic": q.get("topic", "")}
+            chapter_ref = q.get("chapter_ref")
+            if chapter_ref:
+                ch_doc = db.chapters.find_one(
+                    {"chapter_id": chapter_ref}, {"_id": 0, "title": 1}
+                )
+                if ch_doc:
+                    last_chapter = {"id": chapter_ref, "title": ch_doc["title"]}
+
+    weak_topics_agg = list(db.question_attempts.aggregate([
+        {"$match": {"user_id": oid}},
+        {"$lookup": {
+            "from": "questions",
+            "localField": "question_id",
+            "foreignField": "question_id",
+            "as": "question",
+        }},
+        {"$unwind": "$question"},
+        {"$group": {
+            "_id": "$question.topic",
+            "attempted": {"$sum": 1},
+            "correct": {"$sum": {"$cond": ["$is_correct", 1, 0]}},
+        }},
+        {"$project": {
+            "_id": 0,
+            "topic": "$_id",
+            "accuracy": {"$multiply": [{"$divide": ["$correct", "$attempted"]}, 100]},
+        }},
+        {"$match": {"accuracy": {"$lt": 60}}},
+        {"$sort": {"accuracy": 1}},
+        {"$limit": 3},
+    ]))
+    weak_topics = [item["topic"] for item in weak_topics_agg if item.get("topic")]
+
+    return {
+        "streak_days": _compute_streak(db, user_id),
+        "questions_answered": total,
+        "accuracy_pct": accuracy_pct,
+        "last_chapter": last_chapter,
+        "last_question": last_question,
+        "weak_topics": weak_topics,
+    }
+
+
 def get_chapter_stats(db: Database, user_id: str) -> List[Dict]:
     """
     Returns per-chapter mastery stats.

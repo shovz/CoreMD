@@ -11,7 +11,8 @@ from app.services import stats_service
 from app.schemas.stats import (
     OverviewStatsOut,
     QuestionStatsOut,
-    ChapterStatsOut
+    ChapterStatsOut,
+    DashboardStatsOut,
 )
 
 
@@ -50,6 +51,23 @@ def question_stats(
     data = stats_service.get_question_stats(db, user_id)
     redis.setex(cache_key, 120, json.dumps(data))
     return data
+
+@router.get("/dashboard", response_model=DashboardStatsOut)
+def dashboard_stats(
+    db: Database = Depends(mongo_db),
+    redis: Redis = Depends(redis_client),
+    user_id: str = Depends(get_current_user),
+):
+    cache_key = f"stats:dashboard:{user_id}"
+
+    cached = redis.get(cache_key)
+    if cached:
+        return json.loads(cached)
+
+    data = stats_service.get_dashboard_stats(db, user_id)
+    redis.setex(cache_key, 120, json.dumps(data))
+    return data
+
 
 @router.get("/chapters", response_model=ChapterStatsOut)
 def chapter_stats(
