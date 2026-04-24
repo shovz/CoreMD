@@ -22,10 +22,10 @@ Complete redesign of CoreMD across five surfaces: Dashboard (Study Deck), Chapte
 **Description:** As a developer, I need all uncommitted changes (AppShell, TopNavbar, AiChatLauncher, AssistantChat, all page rewrites, route/schema/test fixes, CSS, vite.config) committed to git so every subsequent story has a stable base.
 
 **Acceptance Criteria:**
-- [ ] `git add` all changed and untracked frontend + backend files
-- [ ] Commit with message: `feat: add AppShell layout, navigation components, and page scaffolding`
-- [ ] `git status` shows a clean working tree after the commit
-- [ ] No deploy (local only)
+- [x] `git add` all changed and untracked frontend + backend files
+- [x] Commit with message: `feat: add AppShell layout, navigation components, and page scaffolding`
+- [x] `git status` shows a clean working tree after the commit
+- [x] No deploy (local only)
 
 ---
 
