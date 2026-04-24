@@ -4,6 +4,7 @@ from pymongo.database import Database
 
 from app.core.auth import get_current_user
 from app.schemas.case import CaseListItem, CaseOut
+from app.schemas.case_question import CaseQuestionOut, CaseAttemptCreate, CaseAttemptResult
 from app.db.deps import mongo_db
 
 router = APIRouter(
@@ -70,3 +71,45 @@ def get_case(
             chapter_title = ch["title"]
 
     return _doc_to_case_out(doc, chapter_title)
+
+
+@router.get("/{case_id}/questions", response_model=List[CaseQuestionOut])
+def get_case_questions(
+    case_id: str,
+    current_user: dict = Depends(get_current_user),
+    db: Database = Depends(mongo_db),
+):
+    docs = db["case_questions"].find({"case_id": case_id}, {"_id": 0}).sort("step", 1)
+    return [
+        {
+            "case_question_id": doc["case_question_id"],
+            "case_id": doc["case_id"],
+            "step": doc["step"],
+            "stem": doc["stem"],
+            "options": doc["options"],
+            "correct_option": doc["correct_option"],
+            "explanation": doc["explanation"],
+        }
+        for doc in docs
+    ]
+
+
+@router.post("/{case_id}/questions/{question_id}/attempt", response_model=CaseAttemptResult)
+def attempt_case_question(
+    case_id: str,
+    question_id: str,
+    attempt: CaseAttemptCreate,
+    current_user: dict = Depends(get_current_user),
+    db: Database = Depends(mongo_db),
+):
+    doc = db["case_questions"].find_one(
+        {"case_question_id": question_id, "case_id": case_id}
+    )
+    if not doc:
+        raise HTTPException(status_code=404, detail="Case question not found")
+
+    return {
+        "correct": attempt.selected_option == doc["correct_option"],
+        "correct_option": doc["correct_option"],
+        "explanation": doc["explanation"],
+    }
