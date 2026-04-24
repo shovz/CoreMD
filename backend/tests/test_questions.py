@@ -1,4 +1,3 @@
-import uuid
 import pytest
 from fastapi.testclient import TestClient
 
@@ -54,6 +53,20 @@ class TestListQuestions:
     def test_requires_auth(self, client: TestClient):
         resp = client.get("/api/v1/questions/")
         assert resp.status_code == 401
+
+    def test_search_filter_matches_stem(self, client: TestClient, auth_headers):
+        resp = client.get("/api/v1/questions", params={"search": "pneumonia"}, headers=auth_headers)
+        assert resp.status_code == 200
+        body = resp.json()
+        assert len(body) == 1
+        assert body[0]["question_id"] == "q-test-002"
+
+
+class TestTopics:
+    def test_topics_returns_distinct_sorted_topics(self, client: TestClient, auth_headers):
+        resp = client.get("/api/v1/questions/topics", headers=auth_headers)
+        assert resp.status_code == 200
+        assert resp.json() == ["Infectious Disease", "Physiology"]
 
 
 class TestGetQuestion:

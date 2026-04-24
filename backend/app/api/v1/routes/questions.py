@@ -10,10 +10,7 @@ from app.services.question_attempt_service import record_attempt
 from app.db.deps import mongo_db, redis_client
 
 
-router = APIRouter(
-    prefix="/questions",
-    tags=["questions"]
-)
+router = APIRouter(prefix="/questions", tags=["questions"])
 
 
 def _doc_to_question_out(doc: dict) -> dict:
@@ -35,16 +32,9 @@ def _doc_to_question_full(doc: dict) -> dict:
     }
 
 
-@router.get("", response_model=List[QuestionOut])
-def get_questions(
-    topic: Optional[str] = Query(None),
-    chapter_id: Optional[str] = Query(None),
-    difficulty: Optional[Difficulty] = Query(None),
-    limit: int = Query(20, ge=1, le=100),
-    offset: int = Query(0, ge=0),
-    current_user: str = Depends(get_current_user),
-    db: Database = Depends(mongo_db),
-):
+def _build_questions_query(
+    topic: Optional[str], chapter_id: Optional[str], difficulty: Optional[Difficulty], search: Optional[str]
+) -> dict:
     query: dict = {}
     if topic:
         query["topic"] = topic
@@ -52,9 +42,63 @@ def get_questions(
         query["chapter_ref"] = chapter_id
     if difficulty:
         query["difficulty"] = difficulty.value
+    if search:
+        query["$or"] = [
+            {"stem": {"$regex": search, "$options": "i"}},
+            {"topic": {"$regex": search, "$options": "i"}},
+        ]
+    return query
 
+
+def _list_questions(
+    db: Database,
+    topic: Optional[str],
+    chapter_id: Optional[str],
+    difficulty: Optional[Difficulty],
+    search: Optional[str],
+    limit: int,
+    offset: int,
+) -> List[dict]:
+    query = _build_questions_query(topic, chapter_id, difficulty, search)
     docs = db["questions"].find(query, {"_id": 0}).skip(offset).limit(limit)
     return [_doc_to_question_out(doc) for doc in docs]
+
+
+@router.get("", response_model=List[QuestionOut])
+def get_questions(
+    topic: Optional[str] = Query(None),
+    chapter_id: Optional[str] = Query(None),
+    difficulty: Optional[Difficulty] = Query(None),
+    search: Optional[str] = Query(None),
+    limit: int = Query(20, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+    current_user: str = Depends(get_current_user),
+    db: Database = Depends(mongo_db),
+):
+    return _list_questions(db, topic, chapter_id, difficulty, search, limit, offset)
+
+
+@router.get("/", response_model=List[QuestionOut], include_in_schema=False)
+def get_questions_with_trailing_slash(
+    topic: Optional[str] = Query(None),
+    chapter_id: Optional[str] = Query(None),
+    difficulty: Optional[Difficulty] = Query(None),
+    search: Optional[str] = Query(None),
+    limit: int = Query(20, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+    current_user: str = Depends(get_current_user),
+    db: Database = Depends(mongo_db),
+):
+    return _list_questions(db, topic, chapter_id, difficulty, search, limit, offset)
+
+
+@router.get("/topics", response_model=List[str])
+def get_question_topics(
+    current_user: str = Depends(get_current_user),
+    db: Database = Depends(mongo_db),
+):
+    topics = db["questions"].distinct("topic")
+    return sorted([t for t in topics if isinstance(t, str) and t.strip()])
 
 
 @router.get("/{question_id}", response_model=QuestionFull)

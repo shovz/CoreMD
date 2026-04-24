@@ -35,3 +35,12 @@ class SectionContentOut(BaseModel):
     section_title: str
     content: str
     html_content: Optional[str] = None
+
+
+class ChapterSearchResult(BaseModel):
+    chapter_id: str
+    chapter_title: str
+    chapter_number: Optional[int] = None
+    part_number: Optional[int] = None
+    part_title: Optional[str] = None
+    occurrence_count: int

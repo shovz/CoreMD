@@ -28,11 +28,10 @@ export default function CasesPage() {
   const [selectedSpecialty, setSelectedSpecialty] = useState("");
 
   useEffect(() => {
-    setLoading(true);
-    setError(null);
     getCases()
       .then((res) => {
         setCases(res.data);
+        setError(null);
         setLoading(false);
       })
       .catch(() => {
@@ -55,7 +54,6 @@ export default function CasesPage() {
     <div style={{ padding: 24, maxWidth: 800, margin: "0 auto" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
         <h1 style={{ margin: 0 }}>Clinical Cases</h1>
-        <Link to="/">← Dashboard</Link>
       </div>
 
       <div style={{ marginBottom: 20 }}>

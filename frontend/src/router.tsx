@@ -1,5 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { type ReactNode } from "react";
+import { BrowserRouter, Routes, Route, Navigate, Outlet } from "react-router-dom";
 
 import Home from "./pages/Home";
 import LoginPage from "./pages/LoginPage";
@@ -13,99 +12,50 @@ import QuestionDetailPage from "./pages/QuestionDetailPage";
 import CasesPage from "./pages/CasesPage";
 import CaseDetailPage from "./pages/CaseDetailPage";
 import ChatPage from "./pages/ChatPage";
+import AppShell from "./components/AppShell";
 
-function ProtectedRoute({ children }: { children: ReactNode }) {
+function ProtectedRoute() {
   const token = localStorage.getItem("access_token");
 
   if (!token) {
     return <Navigate to="/login" replace />;
   }
 
-  return children;
+  return <Outlet />;
+}
+
+function RootRoute() {
+  return localStorage.getItem("access_token") ? (
+    <Navigate to="/dashboard" replace />
+  ) : (
+    <Home />
+  );
 }
 
 export default function AppRouter() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route
-          path="/"
-          element={
-            localStorage.getItem("access_token") ? (
-              <ProtectedRoute>
-                <DashboardPage />
-              </ProtectedRoute>
-            ) : (
-              <Home />
-            )
-          }
-        />
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/register" element={<RegisterPage />} />
-        <Route
-          path="/chapters"
-          element={
-            <ProtectedRoute>
-              <ChaptersPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/chapters/:chapterId"
-          element={
-            <ProtectedRoute>
-              <ChapterDetailPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/chapters/:chapterId/sections/:sectionId"
-          element={
-            <ProtectedRoute>
-              <SectionDetailPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/questions"
-          element={
-            <ProtectedRoute>
-              <QuestionsPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/questions/:id"
-          element={
-            <ProtectedRoute>
-              <QuestionDetailPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/cases"
-          element={
-            <ProtectedRoute>
-              <CasesPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/cases/:id"
-          element={
-            <ProtectedRoute>
-              <CaseDetailPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/chat"
-          element={
-            <ProtectedRoute>
-              <ChatPage />
-            </ProtectedRoute>
-          }
-        />
+        <Route element={<AppShell />}>
+          <Route path="/" element={<RootRoute />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
+
+          <Route element={<ProtectedRoute />}>
+            <Route path="/dashboard" element={<DashboardPage />} />
+            <Route path="/chapters" element={<ChaptersPage />} />
+            <Route path="/chapters/:chapterId" element={<ChapterDetailPage />} />
+            <Route
+              path="/chapters/:chapterId/sections/:sectionId"
+              element={<SectionDetailPage />}
+            />
+            <Route path="/questions" element={<QuestionsPage />} />
+            <Route path="/questions/:id" element={<QuestionDetailPage />} />
+            <Route path="/cases" element={<CasesPage />} />
+            <Route path="/cases/:id" element={<CaseDetailPage />} />
+            <Route path="/chat" element={<ChatPage />} />
+          </Route>
+        </Route>
       </Routes>
     </BrowserRouter>
   );

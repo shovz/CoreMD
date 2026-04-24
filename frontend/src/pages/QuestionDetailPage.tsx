@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { getQuestionById, submitAttempt, type QuestionFull, type AttemptResult } from "../api/questionsApi";
 
+const LEFT_ARROW = "<";
+
 export default function QuestionDetailPage() {
   const { id } = useParams<{ id: string }>();
 
@@ -73,7 +75,7 @@ export default function QuestionDetailPage() {
   return (
     <div style={{ padding: 24, maxWidth: 720, margin: "0 auto" }}>
       <Link to="/questions" style={{ fontSize: 14, display: "inline-block", marginBottom: 20 }}>
-        ← Back to Questions
+        {LEFT_ARROW} Back to Questions
       </Link>
 
       <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>

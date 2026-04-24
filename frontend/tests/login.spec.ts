@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test } from '@playwright/test';
 
 test('login with exact user credentials', async ({ page }) => {
   const apiResponses: { status: number; url: string; body: string }[] = [];
@@ -6,7 +6,11 @@ test('login with exact user credentials', async ({ page }) => {
   page.on('response', async (res) => {
     if (res.url().includes('/auth/')) {
       let body = '';
-      try { body = await res.text(); } catch {}
+      try {
+        body = await res.text();
+      } catch {
+        body = '';
+      }
       apiResponses.push({ status: res.status(), url: res.url(), body });
     }
   });
@@ -28,7 +32,11 @@ test('register with exact user credentials', async ({ page }) => {
   page.on('response', async (res) => {
     if (res.url().includes('/auth/')) {
       let body = '';
-      try { body = await res.text(); } catch {}
+      try {
+        body = await res.text();
+      } catch {
+        body = '';
+      }
       apiResponses.push({ status: res.status(), url: res.url(), body });
     }
   });

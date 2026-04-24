@@ -9,6 +9,8 @@ import {
   type QuestionStats,
 } from "../api/statsApi";
 
+const EM_DASH = "\u2014";
+
 export default function DashboardPage() {
   const [overview, setOverview] = useState<OverviewStats | null>(null);
   const [questionStats, setQuestionStats] = useState<QuestionStats | null>(null);
@@ -24,11 +26,6 @@ export default function DashboardPage() {
       .catch(() => setError("Failed to load stats."))
       .finally(() => setLoading(false));
   }, []);
-
-  const handleLogout = () => {
-    localStorage.removeItem("access_token");
-    window.location.href = "/login";
-  };
 
   const difficultyData = questionStats
     ? Object.entries(questionStats.by_difficulty).map(([key, val]) => ({
@@ -47,21 +44,13 @@ export default function DashboardPage() {
   const isEmpty = !loading && overview?.total_questions_answered === 0;
 
   return (
-    <div style={{ padding: 24 }}>
-      <nav style={{ display: "flex", marginTop: 24, justifyContent: "space-between", alignItems: "center" }}>
-        <div style={{ display: "flex", gap: 16}}>
-          <Link to="/">Dashboard</Link>
-          <Link to="/chapters">Chapters</Link>
-          <Link to="/questions">Question Bank</Link>
-        </div>
-        <button onClick={handleLogout}>Logout</button>
-      </nav>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
-        <h1 style={{ margin: 0 }}>My Dashboard</h1>
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h1 className="m-0 text-3xl font-bold text-slate-900">My Dashboard</h1>
       </div>
 
       {error ? (
-        <p style={{ color: "#dc2626" }}>{error}</p>
+        <p className="text-red-600">{error}</p>
       ) : (
         <>
           <div
@@ -74,28 +63,27 @@ export default function DashboardPage() {
           >
             <StatCard
               label="Questions Answered"
-              value={loading ? "—" : overview?.total_questions_answered ?? "—"}
+              value={loading ? EM_DASH : overview?.total_questions_answered ?? EM_DASH}
             />
             <StatCard
               label="Accuracy"
               value={
                 loading
-                  ? "—"
+                  ? EM_DASH
                   : overview != null
                     ? `${overview.correct_percentage.toFixed(1)}%`
-                    : "—"
+                    : EM_DASH
               }
             />
             <StatCard
               label="Chapters Covered"
-              value={loading ? "—" : overview?.unique_chapters_covered ?? "—"}
+              value={loading ? EM_DASH : overview?.unique_chapters_covered ?? EM_DASH}
             />
           </div>
 
           {isEmpty ? (
-            <p style={{ color: "#6b7280", fontStyle: "italic" }}>
-              No attempts yet — head to the{" "}
-              <Link to="/questions">Question Bank</Link> to get started
+            <p className="italic text-slate-500">
+              No attempts yet {EM_DASH} head to the <Link to="/questions">Question Bank</Link> to get started
             </p>
           ) : (
             <>
