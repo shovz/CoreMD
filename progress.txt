@@ -1,6 +1,11 @@
 # Progress Log
 
 ## Learnings
-(Patterns discovered during implementation)
+- CSS variables like `var(--paper)` must be used as Tailwind arbitrary values: `bg-[var(--paper)]`
+- `DOMPurify.sanitize()` is already available in SectionDetailPage — import pattern: `import DOMPurify from "dompurify"`
+- `useAiContext()` gives `{ openWithText }` for pre-filling the AI panel from any component
+- `getSectionById(chapterId, sectionId)` returns `{ data: SectionContentOut }` with `html_content` and `content` fields
+- On Windows with Python 3.11, always pass `encoding="utf-8"` when opening files
+- `getStats()` in `statsApi.ts` is just a typed alias for `getQuestionStats()` — it calls `/stats/questions` which returns `by_difficulty` and `by_topic`
 
 ---

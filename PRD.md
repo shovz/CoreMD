@@ -51,13 +51,13 @@ Six targeted corrections to the previous implementation: (1) replace top navbar 
 **Description:** As a user, I want to see my performance charts below the Study Deck so I have a full picture of my progress.
 
 **Acceptance Criteria:**
-- [ ] `DashboardPage.tsx` also calls `GET /api/v1/stats` (existing endpoint returning `by_difficulty` and `by_topic`); add `getStats()` to `frontend/src/api/statsApi.ts` if it doesn't exist
-- [ ] Below the existing Study Deck section, add a "Performance" section with two cards side-by-side on desktop:
+- [x] `DashboardPage.tsx` also calls `GET /api/v1/stats` (existing endpoint returning `by_difficulty` and `by_topic`); add `getStats()` to `frontend/src/api/statsApi.ts` if it doesn't exist
+- [x] Below the existing Study Deck section, add a "Performance" section with two cards side-by-side on desktop:
   - **Difficulty breakdown card**: rows for Easy / Medium / Hard, each showing attempted count + CSS progress bar for accuracy %
   - **Topics breakdown card**: up to 8 topics sorted by accuracy % desc, each as a labeled horizontal bar row
-- [ ] Both cards show skeleton while loading; "No data yet — start answering questions" if no attempts
-- [ ] `npm run build` passes
-- [ ] Verify changes work in browser
+- [x] Both cards show skeleton while loading; "No data yet — start answering questions" if no attempts
+- [x] `npm run build` passes
+- [x] Verify changes work in browser
 
 ---
 

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { getDashboardStats, type DashboardStats } from "../api/statsApi";
+import { getDashboardStats, getStats, type DashboardStats, type QuestionStats } from "../api/statsApi";
 
 function SkeletonBlock({ className = "" }: { className?: string }) {
   return <div className={`animate-pulse rounded-xl bg-slate-200 ${className}`} />;
@@ -10,6 +10,8 @@ export default function DashboardPage() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [perfStats, setPerfStats] = useState<QuestionStats | null>(null);
+  const [perfLoading, setPerfLoading] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -17,11 +19,24 @@ export default function DashboardPage() {
       .then((res) => setStats(res.data))
       .catch(() => setError("Failed to load dashboard."))
       .finally(() => setLoading(false));
+    getStats()
+      .then((res) => setPerfStats(res.data))
+      .catch(() => {})
+      .finally(() => setPerfLoading(false));
   }, []);
 
   const isEmpty = !loading && !error && (stats?.questions_answered ?? 0) === 0;
   const hasLastActivity = stats?.last_chapter != null || stats?.last_question != null;
   const hasFocusTopics = (stats?.weak_topics?.length ?? 0) > 0;
+
+  const DIFFICULTY_ORDER = ["easy", "medium", "hard"];
+  const totalAttempted = perfStats
+    ? Object.values(perfStats.by_difficulty).reduce((sum, d) => sum + d.attempted, 0)
+    : 0;
+  const hasPerfData = totalAttempted > 0;
+  const sortedTopics = perfStats
+    ? [...perfStats.by_topic].sort((a, b) => b.accuracy - a.accuracy).slice(0, 8)
+    : [];
 
   return (
     <div className="space-y-6">
@@ -30,6 +45,7 @@ export default function DashboardPage() {
       {error && <p className="text-red-600">{error}</p>}
 
       {!error && (
+        <>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Left column: stats bar + continue card */}
           <div className="space-y-4">
@@ -132,6 +148,85 @@ export default function DashboardPage() {
             )}
           </div>
         </div>
+
+        {/* Performance section */}
+        <div className="space-y-4">
+          <h2 className="text-2xl font-bold text-slate-900">Performance</h2>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Difficulty breakdown card */}
+            {perfLoading ? (
+              <SkeletonBlock className="h-40" />
+            ) : (
+              <div className="rounded-xl border border-slate-200 bg-white p-5 space-y-4">
+                <h3 className="text-lg font-semibold text-slate-800">By Difficulty</h3>
+                {!hasPerfData ? (
+                  <p className="italic text-slate-500">
+                    No data yet — start answering questions
+                  </p>
+                ) : (
+                  <div className="space-y-3">
+                    {DIFFICULTY_ORDER.map((diff) => {
+                      const d = perfStats?.by_difficulty[diff];
+                      if (!d) return null;
+                      return (
+                        <div key={diff}>
+                          <div className="flex justify-between text-sm mb-1">
+                            <span className="font-medium text-slate-700 capitalize">{diff}</span>
+                            <span className="text-slate-500">
+                              {d.attempted} attempts · {Math.round(d.accuracy)}%
+                            </span>
+                          </div>
+                          <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
+                            <div
+                              className="h-full rounded-full bg-blue-500 transition-all"
+                              style={{ width: `${Math.round(d.accuracy)}%` }}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Topics breakdown card */}
+            {perfLoading ? (
+              <SkeletonBlock className="h-40" />
+            ) : (
+              <div className="rounded-xl border border-slate-200 bg-white p-5 space-y-4">
+                <h3 className="text-lg font-semibold text-slate-800">By Topic</h3>
+                {!hasPerfData ? (
+                  <p className="italic text-slate-500">
+                    No data yet — start answering questions
+                  </p>
+                ) : (
+                  <div className="space-y-3">
+                    {sortedTopics.map((t) => (
+                      <div key={t.topic}>
+                        <div className="flex justify-between text-sm mb-1">
+                          <span className="font-medium text-slate-700 truncate max-w-[60%]">
+                            {t.topic}
+                          </span>
+                          <span className="text-slate-500">
+                            {t.attempted} · {Math.round(t.accuracy)}%
+                          </span>
+                        </div>
+                        <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
+                          <div
+                            className="h-full rounded-full bg-emerald-500 transition-all"
+                            style={{ width: `${Math.round(t.accuracy)}%` }}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+        </>
       )}
     </div>
   );
