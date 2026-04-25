@@ -1,18 +1,19 @@
 import { Outlet, useLocation } from "react-router-dom";
-import TopNavbar from "./TopNavbar";
+import Sidebar from "./Sidebar";
 import AiChatLauncher from "./AiChatLauncher";
 
 export default function AppShell() {
   const location = useLocation();
   const isAuthenticated = Boolean(localStorage.getItem("access_token"));
 
-  const showLauncher =
-    isAuthenticated && !["/login", "/register"].includes(location.pathname);
+  const isAuthPage = ["/login", "/register"].includes(location.pathname);
+  const showSidebar = isAuthenticated && !isAuthPage;
+  const showLauncher = isAuthenticated && !isAuthPage;
 
   return (
-    <div className="min-h-screen">
-      <TopNavbar isAuthenticated={isAuthenticated} />
-      <main className="mx-auto w-full max-w-7xl px-4 pb-8 pt-20 sm:px-6 lg:px-8">
+    <div className="flex flex-row h-screen">
+      {showSidebar && <Sidebar />}
+      <main className="flex-1 overflow-y-auto h-screen">
         <Outlet />
       </main>
       {showLauncher && <AiChatLauncher />}

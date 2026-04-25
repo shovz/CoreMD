@@ -33,17 +33,17 @@ Six targeted corrections to the previous implementation: (1) replace top navbar 
 **Description:** As a user, I want a left sidebar for navigation instead of a top bar so the layout matches the wireframe.
 
 **Acceptance Criteria:**
-- [ ] New file `frontend/src/components/Sidebar.tsx` created
-- [ ] Sidebar is ~220px wide, fixed height full-screen, `bg-[var(--paper-2)]`, right border `1px solid var(--ink-4)`
-- [ ] Logo area at top: bold "CoreMD" with accent-colored dot
-- [ ] Nav items: Dashboard, Chapters, Question Bank, Cases — each with an icon and label
-- [ ] Active nav item: `bg-blue-600 text-white`; inactive: `text-[var(--ink-dim)] hover:bg-[var(--ink-4)] hover:text-[var(--ink)]`
-- [ ] Bottom of sidebar: "Ask AI" button that calls `useAiContext().setOpen(true)`
-- [ ] `AppShell.tsx` updated: `flex flex-row h-screen` — `<Sidebar />` on left, `<main className="flex-1 overflow-y-auto h-screen">` on right
-- [ ] `TopNavbar` no longer rendered in AppShell
-- [ ] Mobile (< 768px): sidebar hidden; hamburger `☰` button shown top-left of main area; clicking toggles a fixed slide-in drawer with overlay
-- [ ] `npm run build` passes
-- [ ] Verify changes work in browser
+- [x] New file `frontend/src/components/Sidebar.tsx` created
+- [x] Sidebar is ~220px wide, fixed height full-screen, `bg-[var(--paper-2)]`, right border `1px solid var(--ink-4)`
+- [x] Logo area at top: bold "CoreMD" with accent-colored dot
+- [x] Nav items: Dashboard, Chapters, Question Bank, Cases — each with an icon and label
+- [x] Active nav item: `bg-blue-600 text-white`; inactive: `text-[var(--ink-dim)] hover:bg-[var(--ink-4)] hover:text-[var(--ink)]`
+- [x] Bottom of sidebar: "Ask AI" button that calls `useAiContext().setOpen(true)`
+- [x] `AppShell.tsx` updated: `flex flex-row h-screen` — `<Sidebar />` on left, `<main className="flex-1 overflow-y-auto h-screen">` on right
+- [x] `TopNavbar` no longer rendered in AppShell
+- [x] Mobile (< 768px): sidebar hidden; hamburger `☰` button shown top-left of main area; clicking toggles a fixed slide-in drawer with overlay
+- [x] `npm run build` passes
+- [x] Verify changes work in browser
 
 ---
 
