@@ -11,7 +11,6 @@ import QuestionsPage from "./pages/QuestionsPage";
 import QuestionDetailPage from "./pages/QuestionDetailPage";
 import CasesPage from "./pages/CasesPage";
 import CaseDetailPage from "./pages/CaseDetailPage";
-import ChatPage from "./pages/ChatPage";
 import AppShell from "./components/AppShell";
 
 function ProtectedRoute() {
@@ -53,7 +52,6 @@ export default function AppRouter() {
             <Route path="/questions/:id" element={<QuestionDetailPage />} />
             <Route path="/cases" element={<CasesPage />} />
             <Route path="/cases/:id" element={<CaseDetailPage />} />
-            <Route path="/chat" element={<ChatPage />} />
           </Route>
         </Route>
       </Routes>
