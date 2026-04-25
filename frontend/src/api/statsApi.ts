@@ -31,3 +31,7 @@ export const getQuestionStats = () => {
 export const getDashboardStats = () => {
   return api.get<DashboardStats>("/stats/dashboard");
 };
+
+export const getStats = () => {
+  return api.get<QuestionStats>("/stats/questions");
+};
