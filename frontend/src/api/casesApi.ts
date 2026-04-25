@@ -20,6 +20,22 @@ export interface CaseFull extends CaseListItem {
   chapter_title: string | null;
 }
 
+export interface CaseQuestion {
+  case_question_id: string;
+  case_id: string;
+  step: number;
+  stem: string;
+  options: string[];
+  correct_option: number;
+  explanation: string;
+}
+
+export interface CaseAttemptResult {
+  correct: boolean;
+  correct_option: number;
+  explanation: string;
+}
+
 export const getCases = (specialty?: string) => {
   const params: Record<string, string> = {};
   if (specialty) params.specialty = specialty;
@@ -28,4 +44,19 @@ export const getCases = (specialty?: string) => {
 
 export const getCaseById = (id: string) => {
   return api.get<CaseFull>(`/cases/${id}`);
+};
+
+export const getCaseQuestions = (caseId: string) => {
+  return api.get<CaseQuestion[]>(`/cases/${caseId}/questions`);
+};
+
+export const submitCaseAttempt = (
+  caseId: string,
+  questionId: string,
+  selectedOption: number
+) => {
+  return api.post<CaseAttemptResult>(
+    `/cases/${caseId}/questions/${questionId}/attempt`,
+    { selected_option: selectedOption }
+  );
 };
