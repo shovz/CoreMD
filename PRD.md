@@ -182,15 +182,15 @@ Complete redesign of CoreMD across five surfaces: Dashboard (Study Deck), Chapte
 **Description:** As a user, I want to read a case vignette, see the clinical discussion, and work through step-gated diagnostic questions on the same scrollable page.
 
 **Acceptance Criteria:**
-- [ ] Single-scroll layout with three sections: **Vignette**, **Discussion**, **Questions**
-- [ ] Vignette section: fields displayed as labeled blocks — Presentation, History, Physical Exam, Labs, Imaging, Diagnosis
-- [ ] Discussion section: Management + Discussion fields rendered as prose
-- [ ] Questions section: fetches `GET /api/v1/cases/{id}/questions`; hidden entirely if response is `[]`
-- [ ] Questions render as styled MCQ cards (same look as QuestionDetailPage)
-- [ ] Step-gating: only step 1 is visible initially; after answering step 1 (and seeing explanation), step 2 appears below; and so on
-- [ ] Each step shows its explanation after answering before unlocking the next step
-- [ ] Typecheck passes
-- [ ] Verify changes work in browser
+- [x] Single-scroll layout with three sections: **Vignette**, **Discussion**, **Questions**
+- [x] Vignette section: fields displayed as labeled blocks — Presentation, History, Physical Exam, Labs, Imaging, Diagnosis
+- [x] Discussion section: Management + Discussion fields rendered as prose
+- [x] Questions section: fetches `GET /api/v1/cases/{id}/questions`; hidden entirely if response is `[]`
+- [x] Questions render as styled MCQ cards (same look as QuestionDetailPage)
+- [x] Step-gating: only step 1 is visible initially; after answering step 1 (and seeing explanation), step 2 appears below; and so on
+- [x] Each step shows its explanation after answering before unlocking the next step
+- [x] Typecheck passes
+- [x] Verify changes work in browser
 
 ---
 
