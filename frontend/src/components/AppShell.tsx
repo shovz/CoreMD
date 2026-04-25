@@ -7,7 +7,7 @@ export default function AppShell() {
   const isAuthenticated = Boolean(localStorage.getItem("access_token"));
 
   const showLauncher =
-    isAuthenticated && !["/chat", "/login", "/register"].includes(location.pathname);
+    isAuthenticated && !["/login", "/register"].includes(location.pathname);
 
   return (
     <div className="min-h-screen">

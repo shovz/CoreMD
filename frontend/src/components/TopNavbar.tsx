@@ -45,7 +45,6 @@ export default function TopNavbar({ isAuthenticated }: TopNavbarProps) {
               <NavItem to="/chapters" label="Chapters" />
               <NavItem to="/questions" label="Question Bank" />
               <NavItem to="/cases" label="Cases" />
-              <NavItem to="/chat" label="Chat" />
               <button
                 onClick={handleLogout}
                 className="ml-2 rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100"
