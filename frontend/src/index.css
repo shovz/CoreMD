@@ -1,9 +1,16 @@
 @import "tailwindcss";
 
 :root {
+  --paper: #faf8f4;
+  --paper-2: #f0ede6;
+  --ink: #1a1814;
+  --ink-dim: #6b6760;
+  --ink-4: rgba(26, 24, 20, 0.08);
+  --accent: #2563eb;
+
   font-family: "Inter", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   color: #0f172a;
-  background-color: #f8fafc;
+  background-color: var(--paper);
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -21,7 +28,7 @@ body,
 
 body {
   margin: 0;
-  background: radial-gradient(circle at top right, #e0f2fe 0%, #f8fafc 45%, #f8fafc 100%);
+  background: var(--paper);
 }
 
 .section-content {
