@@ -153,14 +153,14 @@ Complete redesign of CoreMD across five surfaces: Dashboard (Study Deck), Chapte
 **Description:** As a user answering a question, I want styled option cards that reveal the correct answer and explanation inline after I submit so the feedback is immediate and clear.
 
 **Acceptance Criteria:**
-- [ ] Options rendered as full-width clickable cards (not radio buttons)
-- [ ] Selecting an option highlights it; Submit button activates
-- [ ] After submission: selected option turns red (if wrong) or green (if correct); correct option always turns green
-- [ ] Explanation panel expands below the options with the explanation text
-- [ ] "Next question" button appears after submission; navigates to the next question in the current topic filter (use URL state or fall back to a random unanswered question)
-- [ ] Question header shows topic chip + difficulty badge
-- [ ] Typecheck passes
-- [ ] Verify changes work in browser
+- [x] Options rendered as full-width clickable cards (not radio buttons)
+- [x] Selecting an option highlights it; Submit button activates
+- [x] After submission: selected option turns red (if wrong) or green (if correct); correct option always turns green
+- [x] Explanation panel expands below the options with the explanation text
+- [x] "Next question" button appears after submission; navigates to the next question in the current topic filter (use URL state or fall back to a random unanswered question)
+- [x] Question header shows topic chip + difficulty badge
+- [x] Typecheck passes
+- [x] Verify changes work in browser
 
 ---
 
