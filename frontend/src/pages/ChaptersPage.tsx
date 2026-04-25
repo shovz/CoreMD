@@ -1,6 +1,14 @@
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
-import { Link } from "react-router-dom";
-import { getChapters, type Chapter } from "../api/chaptersApi";
+import DOMPurify from "dompurify";
+import { getChapters, getChapterById, type Chapter } from "../api/chaptersApi";
+import { getSectionById, type SectionResponse } from "../api/sectionApi";
+import { useAiContext } from "../context/AiContext";
+
+interface Popover {
+  x: number;
+  y: number;
+  text: string;
+}
 
 function highlight(text: string, query: string): ReactNode {
   if (!query) return text;
@@ -21,12 +29,24 @@ export default function ChaptersPage() {
   const [chapters, setChapters] = useState<Chapter[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [expandedParts, setExpandedParts] = useState<Set<number>>(new Set([1]));
-  const [activePart, setActivePart] = useState<number>(1);
+
+  // Left pane
+  const [expandedPart, setExpandedPart] = useState<number | null>(null);
   const [searchInput, setSearchInput] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
+
+  // Right pane / book reader
+  const [currentChapter, setCurrentChapter] = useState<Chapter | null>(null);
+  const [currentSectionIndex, setCurrentSectionIndex] = useState(0);
+  const [sectionContent, setSectionContent] = useState<SectionResponse | null>(null);
+  const [sectionLoading, setSectionLoading] = useState(false);
+
+  // Text-selection popover
+  const [popover, setPopover] = useState<Popover | null>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const partRefs = useRef<Map<number, HTMLDivElement>>(new Map());
+
+  const { openWithText } = useAiContext();
 
   useEffect(() => {
     getChapters()
@@ -38,7 +58,6 @@ export default function ChaptersPage() {
         setError("Failed to load chapters");
         setLoading(false);
       });
-
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
@@ -54,32 +73,6 @@ export default function ChaptersPage() {
     }
     return [...partsMap.entries()].sort(([a], [b]) => a - b);
   }, [chapters]);
-
-  const handleSearchChange = (value: string) => {
-    setSearchInput(value);
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => setSearchQuery(value.trim()), 300);
-  };
-
-  const togglePart = (partNum: number) => {
-    setExpandedParts((prev) => {
-      const next = new Set(prev);
-      if (next.has(partNum)) next.delete(partNum);
-      else next.add(partNum);
-      return next;
-    });
-  };
-
-  const handleSidebarPartClick = (partNum: number) => {
-    setActivePart(partNum);
-    setExpandedParts((prev) => {
-      if (prev.has(partNum)) return prev;
-      const next = new Set(prev);
-      next.add(partNum);
-      return next;
-    });
-    partRefs.current.get(partNum)?.scrollIntoView({ behavior: "smooth", block: "start" });
-  };
 
   const visibleParts = useMemo(() => {
     if (!searchQuery) return sortedParts;
@@ -100,113 +93,278 @@ export default function ChaptersPage() {
       .filter((x): x is [number, { title: string; chapters: Chapter[] }] => x !== null);
   }, [sortedParts, searchQuery]);
 
+  const handleSearchChange = (value: string) => {
+    setSearchInput(value);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => setSearchQuery(value.trim()), 300);
+  };
+
+  function togglePart(partNum: number) {
+    if (searchQuery) return;
+    setExpandedPart((prev) => (prev === partNum ? null : partNum));
+  }
+
+  async function handleChapterClick(chapterId: string) {
+    setSectionLoading(true);
+    setSectionContent(null);
+    try {
+      const chapterRes = await getChapterById(chapterId);
+      const fullChapter = chapterRes.data;
+      setCurrentChapter(fullChapter);
+      setCurrentSectionIndex(0);
+      if (fullChapter.sections.length > 0) {
+        const sectionRes = await getSectionById(chapterId, fullChapter.sections[0].id);
+        setSectionContent(sectionRes.data);
+      }
+    } finally {
+      setSectionLoading(false);
+    }
+  }
+
+  async function goToSection(index: number) {
+    if (!currentChapter) return;
+    const section = currentChapter.sections[index];
+    if (!section) return;
+    setSectionLoading(true);
+    setSectionContent(null);
+    try {
+      const sectionRes = await getSectionById(currentChapter.id, section.id);
+      setCurrentSectionIndex(index);
+      setSectionContent(sectionRes.data);
+    } finally {
+      setSectionLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    function handleMouseUp() {
+      const selection = window.getSelection();
+      if (!selection || selection.isCollapsed || !contentRef.current) {
+        setPopover(null);
+        return;
+      }
+      const range = selection.getRangeAt(0);
+      if (!contentRef.current.contains(range.commonAncestorContainer)) {
+        setPopover(null);
+        return;
+      }
+      const text = selection.toString().trim();
+      if (!text) {
+        setPopover(null);
+        return;
+      }
+      const rect = range.getBoundingClientRect();
+      setPopover({ x: rect.left + rect.width / 2, y: rect.top, text });
+    }
+
+    function handleSelectionChange() {
+      const selection = window.getSelection();
+      if (!selection || selection.isCollapsed) setPopover(null);
+    }
+
+    document.addEventListener("mouseup", handleMouseUp);
+    document.addEventListener("selectionchange", handleSelectionChange);
+    return () => {
+      document.removeEventListener("mouseup", handleMouseUp);
+      document.removeEventListener("selectionchange", handleSelectionChange);
+    };
+  }, []);
+
+  function handleAskAi() {
+    if (!popover) return;
+    const text = popover.text;
+    setPopover(null);
+    window.getSelection()?.removeAllRanges();
+    openWithText(text);
+  }
+
+  const apiBase = (import.meta.env.VITE_API_URL ?? "http://localhost:8000/api/v1").replace(
+    "/api/v1",
+    ""
+  );
+
+  const sanitizedHtml = sectionContent?.html_content
+    ? DOMPurify.sanitize(
+        sectionContent.html_content.replace(/src="\/static\//g, `src="${apiBase}/static/`)
+      )
+    : null;
+
   if (loading) return <p className="p-6 text-slate-600">Loading chapters...</p>;
   if (error) return <p className="p-6 text-red-600">{error}</p>;
 
+  const totalSections = currentChapter?.sections.length ?? 0;
+
   return (
-    <div className="flex gap-6">
-      {/* Left Sidebar */}
-      <aside className="w-56 flex-shrink-0">
-        <div className="sticky top-24 space-y-3">
+    <div className="flex h-full">
+      {/* Floating selection popover */}
+      {popover && (
+        <div
+          style={{
+            position: "fixed",
+            left: popover.x,
+            top: popover.y,
+            transform: "translate(-50%, calc(-100% - 8px))",
+            zIndex: 60,
+          }}
+        >
+          <button
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={handleAskAi}
+            className="whitespace-nowrap rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white shadow-lg transition hover:bg-blue-700"
+          >
+            Ask AI about this
+          </button>
+        </div>
+      )}
+
+      {/* Left pane: ~260px sticky full-height */}
+      <aside className="w-[260px] flex-shrink-0 border-r border-slate-200 flex flex-col overflow-hidden">
+        <div className="p-3 border-b border-slate-100 flex-shrink-0">
           <input
             value={searchInput}
             onChange={(e) => handleSearchChange(e.target.value)}
             placeholder="Search chapters…"
             className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
           />
-          <nav className="max-h-[calc(100vh-10rem)] overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-sm">
-            {sortedParts.map(([partNum, part]) => (
-              <button
-                key={partNum}
-                onClick={() => handleSidebarPartClick(partNum)}
-                className={`block w-full px-3 py-2 text-left text-sm transition ${
-                  activePart === partNum
-                    ? "bg-blue-600 font-semibold text-white"
-                    : "text-slate-700 hover:bg-slate-100"
-                }`}
-              >
-                <span className="block truncate">Part {partNum}</span>
-                <span
-                  className={`block truncate text-xs font-normal ${
-                    activePart === partNum ? "text-blue-100" : "text-slate-400"
-                  }`}
-                >
-                  {part.title}
-                </span>
-              </button>
-            ))}
-          </nav>
-        </div>
-      </aside>
-
-      {/* Main Content */}
-      <main className="min-w-0 flex-1">
-        <div className="mb-4 space-y-1">
-          <h1 className="m-0 text-3xl font-bold text-slate-900">Chapters</h1>
-          <p className="text-sm text-slate-600">
-            {chapters.length} chapters across {sortedParts.length} parts
-          </p>
         </div>
 
-        {visibleParts.length === 0 && searchQuery && (
-          <p className="py-4 text-sm text-slate-600">
-            No parts or chapters match &ldquo;{searchQuery}&rdquo;.
-          </p>
-        )}
-
-        <div className="space-y-2">
+        <nav className="flex-1 overflow-y-auto">
+          {visibleParts.length === 0 && searchQuery && (
+            <p className="p-4 text-sm text-slate-500">
+              No results for &ldquo;{searchQuery}&rdquo;
+            </p>
+          )}
           {visibleParts.map(([partNum, part]) => {
-            const isOpen = !!searchQuery || expandedParts.has(partNum);
+            const isOpen = !!searchQuery || expandedPart === partNum;
             const sorted = [...part.chapters].sort(
               (a, b) => (a.chapter_number ?? 0) - (b.chapter_number ?? 0)
             );
-
             return (
-              <div
-                key={partNum}
-                ref={(el) => {
-                  if (el) partRefs.current.set(partNum, el);
-                  else partRefs.current.delete(partNum);
-                }}
-                className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm"
-              >
+              <div key={partNum} className="border-b border-slate-100">
                 <button
                   onClick={() => togglePart(partNum)}
-                  className={`flex w-full items-center justify-between px-4 py-3 text-left text-sm font-semibold transition ${
+                  className={`flex w-full items-center justify-between px-3 py-2.5 text-left text-sm font-semibold transition ${
                     isOpen
                       ? "bg-blue-600 text-white"
-                      : "bg-slate-50 text-slate-900 hover:bg-slate-100"
+                      : "bg-slate-50 text-slate-800 hover:bg-slate-100"
                   }`}
                 >
-                  <span>
-                    Part {partNum} &middot;{" "}
+                  <span className="min-w-0 truncate leading-snug">
+                    <span
+                      className={`block text-xs font-normal ${isOpen ? "text-blue-200" : "text-slate-400"}`}
+                    >
+                      Part {partNum}
+                    </span>
                     {searchQuery ? highlight(part.title, searchQuery) : part.title}
                   </span>
-                  <span className={`text-xs ${isOpen ? "text-blue-100" : "text-slate-500"}`}>
-                    {sorted.length} chapters {isOpen ? "▾" : "▸"}
+                  <span
+                    className={`ml-2 shrink-0 text-xs ${isOpen ? "text-blue-100" : "text-slate-400"}`}
+                  >
+                    {isOpen ? "▾" : "▸"}
                   </span>
                 </button>
 
                 {isOpen && (
-                  <div className="divide-y divide-slate-100">
-                    {sorted.map((ch) => (
-                      <Link
-                        key={ch.id}
-                        to={`/chapters/${ch.id}`}
-                        className="block px-5 py-3 text-sm text-blue-700 hover:bg-blue-50"
-                      >
-                        {ch.chapter_number != null && (
-                          <span className="mr-2 text-xs text-slate-500">Ch. {ch.chapter_number}</span>
-                        )}
-                        {searchQuery ? highlight(ch.title, searchQuery) : ch.title}
-                      </Link>
-                    ))}
+                  <div className="divide-y divide-slate-100 bg-white">
+                    {sorted.map((ch) => {
+                      const isActive = currentChapter?.id === ch.id;
+                      return (
+                        <button
+                          key={ch.id}
+                          onClick={() => handleChapterClick(ch.id)}
+                          className={`block w-full px-4 py-2 text-left text-sm transition ${
+                            isActive
+                              ? "bg-blue-50 font-semibold text-blue-700"
+                              : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                          }`}
+                        >
+                          {ch.chapter_number != null && (
+                            <span className="mr-1.5 text-xs text-slate-400">
+                              Ch. {ch.chapter_number}
+                            </span>
+                          )}
+                          {searchQuery ? highlight(ch.title, searchQuery) : ch.title}
+                        </button>
+                      );
+                    })}
                   </div>
                 )}
               </div>
             );
           })}
-        </div>
+        </nav>
+      </aside>
+
+      {/* Right pane: book reader */}
+      <main className="min-w-0 flex-1 flex flex-col overflow-hidden">
+        {sectionLoading ? (
+          <div className="flex flex-1 items-center justify-center text-slate-500">
+            <p>Loading section…</p>
+          </div>
+        ) : !currentChapter ? (
+          <div className="flex flex-1 items-center justify-center p-12 text-center">
+            <p className="text-lg font-medium text-slate-500">
+              Select a chapter from the left to start reading
+            </p>
+          </div>
+        ) : (
+          <div className="flex flex-1 flex-col overflow-hidden px-8 py-6">
+            {/* Heading */}
+            <div className="flex-shrink-0">
+              <h1 className="text-2xl font-bold leading-tight text-slate-900">
+                {sectionContent?.chapter_title ?? currentChapter.title}
+                {sectionContent && (
+                  <>
+                    <span className="mx-2 font-normal text-slate-400">›</span>
+                    <span className="text-slate-700">{sectionContent.section_title}</span>
+                  </>
+                )}
+              </h1>
+              <p className="mt-1 text-sm text-slate-500">
+                Section {currentSectionIndex + 1} of {totalSections}
+              </p>
+            </div>
+
+            {/* Scrollable section content */}
+            <div className="mt-6 flex-1 overflow-y-auto" ref={contentRef}>
+              {sanitizedHtml ? (
+                <div
+                  className="section-content"
+                  dangerouslySetInnerHTML={{ __html: sanitizedHtml }}
+                />
+              ) : sectionContent ? (
+                <div className="space-y-4 text-[15px] leading-7 text-slate-800">
+                  {sectionContent.content.split("\n\n").map((para, i) => (
+                    <p key={i} className="m-0">
+                      {para.trim()}
+                    </p>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+
+            {/* Prev / Next */}
+            <div className="mt-4 flex-shrink-0 flex items-center justify-between border-t border-slate-200 pt-4">
+              <button
+                onClick={() => goToSection(currentSectionIndex - 1)}
+                disabled={currentSectionIndex === 0}
+                className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                ← Previous
+              </button>
+              <span className="text-sm text-slate-500">
+                Section {currentSectionIndex + 1} of {totalSections}
+              </span>
+              <button
+                onClick={() => goToSection(currentSectionIndex + 1)}
+                disabled={currentSectionIndex >= totalSections - 1}
+                className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                Next →
+              </button>
+            </div>
+          </div>
+        )}
       </main>
     </div>
   );

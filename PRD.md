@@ -65,17 +65,17 @@ Six targeted corrections to the previous implementation: (1) replace top navbar 
 **Description:** As a user, I want to browse parts/chapters and read sections without leaving the chapters page — the secondary sidebar shows the parts accordion and the book area shows section content with prev/next navigation.
 
 **Acceptance Criteria:**
-- [ ] `ChaptersPage.tsx` fully rewritten as a two-pane layout (within the main content area, i.e. to the right of the main Sidebar):
+- [x] `ChaptersPage.tsx` fully rewritten as a two-pane layout (within the main content area, i.e. to the right of the main Sidebar):
   - **Left pane** (~260px, sticky full-height): search input at top; Parts list as accordion — clicking a part expands its chapters below it; clicking same part again collapses; only one part open at a time
   - **Right pane** (flex-1): book reader area
-- [ ] When a chapter is clicked: fetch `getChapterById(id)`, set `currentSectionIndex = 0`, fetch `getSectionById(chapterId, sections[0].id)`, display content
-- [ ] Book reader right pane shows: chapter + section heading, section content via `dangerouslySetInnerHTML` with DOMPurify, Prev / Next buttons at bottom, "Section N of M" counter; Prev/Next disabled at boundaries
-- [ ] No React Router navigation when selecting chapters/sections — all state is local to ChaptersPage
-- [ ] Text selection in the right pane shows "Ask AI about this" popover (reuse `useAiContext` + `openWithText` from SectionDetailPage)
-- [ ] Empty state shown in right pane when no chapter selected: "Select a chapter from the left to start reading"
-- [ ] Existing routes `/chapters/:chapterId` and `/chapters/:chapterId/sections/:sectionId` still work in router.tsx as deep links
-- [ ] `npm run build` passes
-- [ ] Verify changes work in browser
+- [x] When a chapter is clicked: fetch `getChapterById(id)`, set `currentSectionIndex = 0`, fetch `getSectionById(chapterId, sections[0].id)`, display content
+- [x] Book reader right pane shows: chapter + section heading, section content via `dangerouslySetInnerHTML` with DOMPurify, Prev / Next buttons at bottom, "Section N of M" counter; Prev/Next disabled at boundaries
+- [x] No React Router navigation when selecting chapters/sections — all state is local to ChaptersPage
+- [x] Text selection in the right pane shows "Ask AI about this" popover (reuse `useAiContext` + `openWithText` from SectionDetailPage)
+- [x] Empty state shown in right pane when no chapter selected: "Select a chapter from the left to start reading"
+- [x] Existing routes `/chapters/:chapterId` and `/chapters/:chapterId/sections/:sectionId` still work in router.tsx as deep links
+- [x] `npm run build` passes
+- [x] Verify changes work in browser
 
 ---
 
