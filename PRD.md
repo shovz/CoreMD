@@ -213,12 +213,12 @@ Complete redesign of CoreMD across five surfaces: Dashboard (Study Deck), Chapte
 **Description:** As a user reading a section, I want to select any text and click "Ask AI" to open the AI panel with that text pre-loaded as context.
 
 **Acceptance Criteria:**
-- [ ] Selecting text within the section content area (right pane) shows a small floating popover near the selection with a single "Ask AI about this" button
-- [ ] Clicking the button: opens the AI slide-over panel AND pre-fills the input with `"Regarding: \"[selected text]\" — "` leaving cursor at the end for the user to type their question
-- [ ] Popover disappears when the selection is cleared or the panel opens
-- [ ] The popover does not appear outside the content area (e.g. not on TOC or page chrome)
-- [ ] Typecheck passes
-- [ ] Verify changes work in browser
+- [x] Selecting text within the section content area (right pane) shows a small floating popover near the selection with a single "Ask AI about this" button
+- [x] Clicking the button: opens the AI slide-over panel AND pre-fills the input with `"Regarding: \"[selected text]\" — "` leaving cursor at the end for the user to type their question
+- [x] Popover disappears when the selection is cleared or the panel opens
+- [x] The popover does not appear outside the content area (e.g. not on TOC or page chrome)
+- [x] Typecheck passes
+- [x] Verify changes work in browser
 
 ---
 

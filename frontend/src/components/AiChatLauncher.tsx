@@ -1,8 +1,9 @@
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import AssistantChat from "./AssistantChat";
+import { useAiContext } from "../context/AiContext";
 
 export default function AiChatLauncher() {
-  const [open, setOpen] = useState(false);
+  const { open, setOpen, prefillText, clearPrefill } = useAiContext();
 
   useEffect(() => {
     if (!open) return;
@@ -11,7 +12,7 @@ export default function AiChatLauncher() {
     }
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [open]);
+  }, [open, setOpen]);
 
   return (
     <>
@@ -44,7 +45,7 @@ export default function AiChatLauncher() {
             </div>
 
             <div className="flex-1 overflow-hidden p-4">
-              <AssistantChat />
+              <AssistantChat prefillText={prefillText} onPrefillConsumed={clearPrefill} />
             </div>
           </div>
         </>
