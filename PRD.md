@@ -198,14 +198,14 @@ Complete redesign of CoreMD across five surfaces: Dashboard (Study Deck), Chapte
 **Description:** As a user, I want the AI assistant to be a slide-over panel accessible from any page, not a dedicated route, so I never lose my place.
 
 **Acceptance Criteria:**
-- [ ] `/chat` route removed from `router.tsx`
-- [ ] "AI Assistant" nav link removed from `TopNavbar` (and any sidebar)
-- [ ] `AiChatLauncher` floating button remains visible on all authenticated pages (already in AppShell)
-- [ ] Clicking the launcher opens a right-side slide-over panel (fixed overlay, ~420px wide on desktop, full-width on mobile) with the existing `AssistantChat` interface inside
-- [ ] Panel has a close button (×) and closes on Escape key press
-- [ ] Background page remains visible and non-interactive while panel is open (semi-transparent overlay)
-- [ ] Typecheck passes
-- [ ] Verify changes work in browser
+- [x] `/chat` route removed from `router.tsx`
+- [x] "AI Assistant" nav link removed from `TopNavbar` (and any sidebar)
+- [x] `AiChatLauncher` floating button remains visible on all authenticated pages (already in AppShell)
+- [x] Clicking the launcher opens a right-side slide-over panel (fixed overlay, ~420px wide on desktop, full-width on mobile) with the existing `AssistantChat` interface inside
+- [x] Panel has a close button (×) and closes on Escape key press
+- [x] Background page remains visible and non-interactive while panel is open (semi-transparent overlay)
+- [x] Typecheck passes
+- [x] Verify changes work in browser
 
 ---
 
