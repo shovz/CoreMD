@@ -245,10 +245,15 @@ export default function QuestionsPage() {
           <p className="text-slate-600">No questions match current filters.</p>
         ) : (
           <div className="space-y-2">
-            {questions.map((q) => (
+            {questions.map((q, idx) => (
               <Link
                 key={q.question_id}
                 to={`/questions/${q.question_id}`}
+                state={{
+                  questionIds: questions.map((qq) => qq.question_id),
+                  currentIndex: idx,
+                  topic: selectedTopic,
+                }}
                 className="block rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition hover:border-blue-300 hover:shadow-md"
               >
                 <p className="text-sm text-slate-800">
