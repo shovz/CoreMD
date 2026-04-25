@@ -25,6 +25,7 @@ class CaseListItem(BaseModel):
     case_id: str
     title: str
     specialty: str
+    presentation: str
 
     class Config:
         orm_mode = True

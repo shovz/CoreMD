@@ -168,13 +168,13 @@ Complete redesign of CoreMD across five surfaces: Dashboard (Study Deck), Chapte
 **Description:** As a user, I want to browse cases as a visual card grid with specialty badges so I can quickly find relevant clinical scenarios.
 
 **Acceptance Criteria:**
-- [ ] Page heading reads "Case Studies" (route stays `/cases`)
-- [ ] Card grid: 3 columns on desktop, 2 on tablet, 1 on mobile
-- [ ] Each card: case title (bold), specialty badge (color-coded by specialty string), first 120 chars of `presentation` as preview text, a subtle "→" affordance
-- [ ] Specialty filter: a row of tab/pill buttons at top ("All" + one per distinct specialty); clicking filters the grid
-- [ ] Clicking a card navigates to `/cases/{id}`
-- [ ] Typecheck passes
-- [ ] Verify changes work in browser
+- [x] Page heading reads "Case Studies" (route stays `/cases`)
+- [x] Card grid: 3 columns on desktop, 2 on tablet, 1 on mobile
+- [x] Each card: case title (bold), specialty badge (color-coded by specialty string), first 120 chars of `presentation` as preview text, a subtle "→" affordance
+- [x] Specialty filter: a row of tab/pill buttons at top ("All" + one per distinct specialty); clicking filters the grid
+- [x] Clicking a card navigates to `/cases/{id}`
+- [x] Typecheck passes
+- [x] Verify changes work in browser
 
 ---
 

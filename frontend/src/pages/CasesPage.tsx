@@ -1,37 +1,37 @@
 import { useEffect, useState, useMemo } from "react";
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { getCases, type CaseListItem } from "../api/casesApi";
 
-const SPECIALTY_COLORS: Record<string, string> = {
-  cardiology: "#c62828",
-  pulmonology: "#1565c0",
-  gastroenterology: "#2e7d32",
-  nephrology: "#6a1b9a",
-  endocrinology: "#e65100",
-  hematology: "#ad1457",
-  infectious: "#00695c",
-  neurology: "#4527a0",
+const SPECIALTY_COLORS: Record<string, { bg: string; text: string }> = {
+  cardiology:      { bg: "bg-red-100",    text: "text-red-800" },
+  pulmonology:     { bg: "bg-blue-100",   text: "text-blue-800" },
+  gastroenterology:{ bg: "bg-green-100",  text: "text-green-800" },
+  nephrology:      { bg: "bg-purple-100", text: "text-purple-800" },
+  endocrinology:   { bg: "bg-orange-100", text: "text-orange-800" },
+  hematology:      { bg: "bg-pink-100",   text: "text-pink-800" },
+  infectious:      { bg: "bg-teal-100",   text: "text-teal-800" },
+  neurology:       { bg: "bg-violet-100", text: "text-violet-800" },
 };
 
-function getSpecialtyColor(specialty: string): string {
+function getSpecialtyClasses(specialty: string): { bg: string; text: string } {
   const key = specialty.toLowerCase();
-  for (const [prefix, color] of Object.entries(SPECIALTY_COLORS)) {
-    if (key.includes(prefix)) return color;
+  for (const [prefix, classes] of Object.entries(SPECIALTY_COLORS)) {
+    if (key.includes(prefix)) return classes;
   }
-  return "#455a64";
+  return { bg: "bg-slate-100", text: "text-slate-700" };
 }
 
 export default function CasesPage() {
   const [cases, setCases] = useState<CaseListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedSpecialty, setSelectedSpecialty] = useState("");
+  const [selectedSpecialty, setSelectedSpecialty] = useState<string>("All");
+  const navigate = useNavigate();
 
   useEffect(() => {
     getCases()
       .then((res) => {
         setCases(res.data);
-        setError(null);
         setLoading(false);
       })
       .catch(() => {
@@ -42,90 +42,81 @@ export default function CasesPage() {
 
   const specialties = useMemo(() => {
     const unique = Array.from(new Set(cases.map((c) => c.specialty))).sort();
-    return unique;
+    return ["All", ...unique];
   }, [cases]);
 
   const filtered = useMemo(() => {
-    if (!selectedSpecialty) return cases;
+    if (selectedSpecialty === "All") return cases;
     return cases.filter((c) => c.specialty === selectedSpecialty);
   }, [cases, selectedSpecialty]);
 
   return (
-    <div style={{ padding: 24, maxWidth: 800, margin: "0 auto" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-        <h1 style={{ margin: 0 }}>Clinical Cases</h1>
+    <div className="mx-auto max-w-6xl px-4 py-8">
+      <h1 className="mb-6 text-3xl font-bold text-slate-900">Case Studies</h1>
+
+      {/* Specialty filter pills */}
+      <div className="mb-6 flex flex-wrap gap-2">
+        {specialties.map((s) => (
+          <button
+            key={s}
+            onClick={() => setSelectedSpecialty(s)}
+            className={
+              selectedSpecialty === s
+                ? "rounded-full px-4 py-1.5 text-sm font-semibold bg-blue-600 text-white shadow-sm"
+                : "rounded-full px-4 py-1.5 text-sm font-medium bg-white text-slate-600 border border-slate-200 hover:bg-slate-50 transition-colors"
+            }
+          >
+            {s}
+          </button>
+        ))}
       </div>
 
-      <div style={{ marginBottom: 20 }}>
-        <select
-          value={selectedSpecialty}
-          onChange={(e) => setSelectedSpecialty(e.target.value)}
-          style={{ padding: "6px 10px", borderRadius: 4, border: "1px solid #ccc", minWidth: 200 }}
-        >
-          <option value="">All Specialties</option>
-          {specialties.map((s) => (
-            <option key={s} value={s}>{s}</option>
+      {loading && (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="animate-pulse rounded-xl border border-slate-200 bg-white p-5">
+              <div className="mb-3 h-5 w-3/4 rounded bg-slate-200" />
+              <div className="mb-3 h-4 w-1/4 rounded bg-slate-200" />
+              <div className="h-3 w-full rounded bg-slate-100" />
+              <div className="mt-1 h-3 w-5/6 rounded bg-slate-100" />
+            </div>
           ))}
-        </select>
-      </div>
+        </div>
+      )}
 
-      {loading && <p>Loading cases...</p>}
-      {error && <p style={{ color: "red" }}>{error}</p>}
+      {error && <p className="text-red-600">{error}</p>}
 
       {!loading && !error && filtered.length === 0 && (
-        <p style={{ color: "#666" }}>No cases found for the selected specialty.</p>
+        <p className="text-slate-500">No cases found for this specialty.</p>
       )}
 
       {!loading && !error && filtered.length > 0 && (
-        <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
-          {filtered.map((c) => (
-            <li
-              key={c.case_id}
-              style={{
-                border: "1px solid #ddd",
-                borderRadius: 6,
-                padding: "16px",
-                marginBottom: 12,
-                display: "flex",
-                flexDirection: "column",
-                gap: 8,
-              }}
-            >
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 8 }}>
-                <h3 style={{ margin: 0, fontSize: 16 }}>{c.title}</h3>
-                <span
-                  style={{
-                    background: getSpecialtyColor(c.specialty),
-                    color: "#fff",
-                    borderRadius: 4,
-                    padding: "2px 10px",
-                    fontSize: 12,
-                    fontWeight: 500,
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  {c.specialty}
-                </span>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {filtered.map((c) => {
+            const { bg, text } = getSpecialtyClasses(c.specialty);
+            const preview = c.presentation.slice(0, 120) + (c.presentation.length > 120 ? "…" : "");
+            return (
+              <div
+                key={c.case_id}
+                onClick={() => navigate(`/cases/${c.case_id}`)}
+                className="group flex cursor-pointer flex-col justify-between rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition-shadow hover:shadow-md"
+              >
+                <div>
+                  <div className="mb-3 flex items-start justify-between gap-2">
+                    <span className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-semibold ${bg} ${text}`}>
+                      {c.specialty}
+                    </span>
+                  </div>
+                  <h2 className="mb-2 text-base font-bold text-slate-900 leading-snug">{c.title}</h2>
+                  <p className="text-sm text-slate-500 leading-relaxed">{preview}</p>
+                </div>
+                <div className="mt-4 flex justify-end">
+                  <span className="text-lg text-slate-400 transition-transform group-hover:translate-x-1">→</span>
+                </div>
               </div>
-              <div>
-                <Link
-                  to={`/cases/${c.case_id}`}
-                  style={{
-                    display: "inline-block",
-                    padding: "6px 14px",
-                    background: "#1565c0",
-                    color: "#fff",
-                    borderRadius: 4,
-                    textDecoration: "none",
-                    fontSize: 14,
-                  }}
-                >
-                  View Case
-                </Link>
-              </div>
-            </li>
-          ))}
-        </ul>
+            );
+          })}
+        </div>
       )}
     </div>
   );

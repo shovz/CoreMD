@@ -18,6 +18,7 @@ def _doc_to_case_list_item(doc: dict) -> dict:
         "case_id": doc["case_id"],
         "title": doc["title"],
         "specialty": doc["specialty"],
+        "presentation": doc.get("presentation", ""),
     }
 
 

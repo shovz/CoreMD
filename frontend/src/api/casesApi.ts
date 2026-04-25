@@ -4,6 +4,7 @@ export interface CaseListItem {
   case_id: string;
   title: string;
   specialty: string;
+  presentation: string;
 }
 
 export interface CaseFull extends CaseListItem {
