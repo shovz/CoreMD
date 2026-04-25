@@ -17,15 +17,31 @@ function truncate(text: string, max: number): string {
   return text.length > max ? `${text.slice(0, max - 1)}${ELLIPSIS}` : text;
 }
 
-export default function AssistantChat({ compact = false }: { compact?: boolean }) {
+interface Props {
+  compact?: boolean;
+  prefillText?: string;
+  onPrefillConsumed?: () => void;
+}
+
+export default function AssistantChat({ compact = false, prefillText, onPrefillConsumed }: Props) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  useEffect(() => {
+    if (!prefillText) return;
+    setInput(prefillText);
+    onPrefillConsumed?.();
+    setTimeout(() => {
+      inputRef.current?.focus();
+    }, 50);
+  }, [prefillText]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const completedMessages = messages.filter((m) => !m.loading);
   const limitReached = completedMessages.length >= MESSAGE_LIMIT;
@@ -145,6 +161,7 @@ export default function AssistantChat({ compact = false }: { compact?: boolean }
 
       <div className="flex gap-2 border-t border-slate-200 pt-3">
         <input
+          ref={inputRef}
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}

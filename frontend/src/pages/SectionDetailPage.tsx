@@ -3,13 +3,23 @@ import { useEffect, useRef, useState } from "react";
 import DOMPurify from "dompurify";
 import { getSectionById, type SectionResponse } from "../api/sectionApi";
 import { getChapterById, type Chapter } from "../api/chaptersApi";
+import { useAiContext } from "../context/AiContext";
+
+interface Popover {
+  x: number;
+  y: number;
+  text: string;
+}
 
 export default function SectionDetailPage() {
   const { chapterId, sectionId } = useParams();
   const [section, setSection] = useState<SectionResponse | null>(null);
   const [chapter, setChapter] = useState<Chapter | null>(null);
   const [tocOpen, setTocOpen] = useState(false);
+  const [popover, setPopover] = useState<Popover | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const { openWithText } = useAiContext();
 
   useEffect(() => {
     if (!chapterId || !sectionId) return;
@@ -31,6 +41,42 @@ export default function SectionDetailPage() {
     document.addEventListener("mousedown", handleOutsideClick);
     return () => document.removeEventListener("mousedown", handleOutsideClick);
   }, [tocOpen]);
+
+  useEffect(() => {
+    function handleMouseUp() {
+      const selection = window.getSelection();
+      if (!selection || selection.isCollapsed || !contentRef.current) {
+        setPopover(null);
+        return;
+      }
+      const range = selection.getRangeAt(0);
+      if (!contentRef.current.contains(range.commonAncestorContainer)) {
+        setPopover(null);
+        return;
+      }
+      const text = selection.toString().trim();
+      if (!text) {
+        setPopover(null);
+        return;
+      }
+      const rect = range.getBoundingClientRect();
+      setPopover({ x: rect.left + rect.width / 2, y: rect.top, text });
+    }
+
+    function handleSelectionChange() {
+      const selection = window.getSelection();
+      if (!selection || selection.isCollapsed) {
+        setPopover(null);
+      }
+    }
+
+    document.addEventListener("mouseup", handleMouseUp);
+    document.addEventListener("selectionchange", handleSelectionChange);
+    return () => {
+      document.removeEventListener("mouseup", handleMouseUp);
+      document.removeEventListener("selectionchange", handleSelectionChange);
+    };
+  }, []);
 
   if (!section) return <p className="p-6">Loading section...</p>;
 
@@ -70,8 +116,37 @@ export default function SectionDetailPage() {
     </ul>
   );
 
+  function handleAskAi() {
+    if (!popover) return;
+    const text = popover.text;
+    setPopover(null);
+    window.getSelection()?.removeAllRanges();
+    openWithText(text);
+  }
+
   return (
     <div className="flex min-h-[calc(100vh-4rem)]">
+      {/* Floating selection popover */}
+      {popover && (
+        <div
+          style={{
+            position: "fixed",
+            left: popover.x,
+            top: popover.y,
+            transform: "translate(-50%, calc(-100% - 8px))",
+            zIndex: 60,
+          }}
+        >
+          <button
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={handleAskAi}
+            className="whitespace-nowrap rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white shadow-lg transition hover:bg-blue-700"
+          >
+            Ask AI about this
+          </button>
+        </div>
+      )}
+
       {/* Left TOC pane — desktop (≥768px) */}
       <aside className="hidden w-[260px] shrink-0 md:block">
         <div className="sticky top-16 max-h-[calc(100vh-4rem)] overflow-y-auto border-r border-slate-200 bg-white p-4">
@@ -119,7 +194,7 @@ export default function SectionDetailPage() {
         </h1>
 
         {/* Section content */}
-        <div className="mt-6">
+        <div className="mt-6" ref={contentRef}>
           {sanitizedHtml ? (
             <div className="section-content" dangerouslySetInnerHTML={{ __html: sanitizedHtml }} />
           ) : (
