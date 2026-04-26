@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { useAiContext } from "../context/AiContext";
+import { useAuthContext } from "../context/AuthContext";
 
 function DashboardIcon() {
   return (
@@ -44,12 +45,20 @@ const navItems = [
 function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const navigate = useNavigate();
   const { setOpen } = useAiContext();
+  const { user, logout } = useAuthContext();
+  const [profileOpen, setProfileOpen] = useState(false);
 
-  const handleLogout = () => {
-    localStorage.removeItem("access_token");
+  const handleSignOut = () => {
+    logout();
     navigate("/login", { replace: true });
     onNavigate?.();
   };
+
+  const fullName = user?.full_name ?? "";
+  const lastName = fullName ? fullName.split(" ").pop()! : "";
+  const badgeText = fullName
+    ? "DR"
+    : (user?.email?.charAt(0).toUpperCase() ?? "?");
 
   return (
     <div className="flex h-full flex-col">
@@ -81,6 +90,39 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
       </nav>
 
       <div className="space-y-2 px-3 pb-6">
+        {/* Profile widget */}
+        <div className="relative">
+          <button
+            onClick={() => setProfileOpen((o) => !o)}
+            className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm transition hover:bg-[var(--ink-4)]"
+          >
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-blue-600 text-xs font-bold text-white">
+              {badgeText}
+            </span>
+            <div className="min-w-0 flex-1 text-left">
+              {lastName && (
+                <div className="truncate font-medium text-[var(--ink)]">
+                  {lastName}
+                </div>
+              )}
+              <div className="text-xs text-[var(--ink-dim)]">Resident</div>
+            </div>
+          </button>
+          {profileOpen && (
+            <div
+              className="absolute bottom-full left-0 right-0 mb-1 rounded-md border bg-[var(--paper-2)] py-1 shadow-md"
+              style={{ borderColor: "var(--ink-4)" }}
+            >
+              <button
+                onClick={handleSignOut}
+                className="w-full px-3 py-2 text-left text-sm text-[var(--ink-dim)] transition hover:bg-[var(--ink-4)] hover:text-[var(--ink)]"
+              >
+                Sign Out
+              </button>
+            </div>
+          )}
+        </div>
+
         <button
           onClick={() => {
             setOpen(true);
@@ -89,13 +131,6 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
           className="w-full rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-blue-700"
         >
           Ask AI
-        </button>
-        <button
-          onClick={handleLogout}
-          className="w-full rounded-md px-3 py-2 text-sm font-medium text-[var(--ink-dim)] transition hover:bg-[var(--ink-4)] hover:text-[var(--ink)]"
-          style={{ border: "1px solid var(--ink-4)" }}
-        >
-          Logout
         </button>
       </div>
     </div>
