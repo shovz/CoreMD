@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import List
+from typing import List, Optional
 from enum import Enum
 
 
@@ -14,7 +14,7 @@ class QuestionOut(BaseModel):
     stem: str
     options: List[str]
     topic: str
-    chapter_ref: str
+    chapter_ref: Optional[str] = None
     difficulty: Difficulty
 
     class Config:

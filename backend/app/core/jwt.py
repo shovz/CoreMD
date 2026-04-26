@@ -6,7 +6,9 @@ from app.core.config import settings
 ALGORITHM = settings.JWT_ALGORITHM
 
 
-def create_access_token(subject: str, expires_minutes: int = 60) -> str:
+def create_access_token(subject: str, expires_minutes: int | None = None) -> str:
+    if expires_minutes is None:
+        expires_minutes = settings.JWT_EXPIRES_MINUTES
     expire = datetime.now(timezone.utc) + timedelta(minutes=expires_minutes)
     payload = {
         "sub": subject,
