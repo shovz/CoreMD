@@ -66,3 +66,7 @@ export const submitAttempt = (questionId: string, selectedOption: number) => {
     selected_option: selectedOption,
   });
 };
+
+export const getAnsweredCorrectly = () => {
+  return api.get<{ question_ids: string[] }>("/questions/answered-correctly");
+};
