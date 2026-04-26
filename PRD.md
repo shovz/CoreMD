@@ -28,20 +28,20 @@ Currently users register with only email and password. Adding a full name field 
 **Description:** As a developer, I need the `/auth/me` endpoint to include `full_name` in its response so the frontend can load the user's profile on app startup.
 
 **Acceptance Criteria:**
-- [ ] `backend/app/api/v1/routes/auth.py` `/me` endpoint constructs `UserOut` with `full_name=current_user.get("full_name", "")` (current_user is the full MongoDB dict from `deps/auth.get_current_user`)
-- [ ] `/register` response also includes `full_name` (it returns `UserOut` which already gains the field from US-001)
-- [ ] Typecheck passes
+- [x] `backend/app/api/v1/routes/auth.py` `/me` endpoint constructs `UserOut` with `full_name=current_user.get("full_name", "")` (current_user is the full MongoDB dict from `deps/auth.get_current_user`)
+- [x] `/register` response also includes `full_name` (it returns `UserOut` which already gains the field from US-001)
+- [x] Typecheck passes
 
 ### US-003: Frontend — authApi.ts update + RegisterPage full_name field
 **Description:** As a new user, I want to enter my full name at registration so the platform can address me personally.
 
 **Acceptance Criteria:**
-- [ ] `frontend/src/api/authApi.ts` `RegisterRequest` has `full_name: string`
-- [ ] `frontend/src/api/authApi.ts` `LoginResponse` and `RegisterResponse` have `full_name?: string`
-- [ ] `frontend/src/api/authApi.ts` exports `getMe(): Promise<LoginResponse>` calling `GET /auth/me` via the authenticated apiClient
-- [ ] `frontend/src/pages/RegisterPage.tsx` has a "Full name" text input (above email), bound to local state, sent as `full_name` in the register call
-- [ ] Typecheck passes
-- [ ] Verify changes work in browser: register form shows full name field
+- [x] `frontend/src/api/authApi.ts` `RegisterRequest` has `full_name: string`
+- [x] `frontend/src/api/authApi.ts` `LoginResponse` and `RegisterResponse` have `full_name?: string`
+- [x] `frontend/src/api/authApi.ts` exports `getMe(): Promise<LoginResponse>` calling `GET /auth/me` via the authenticated apiClient
+- [x] `frontend/src/pages/RegisterPage.tsx` has a "Full name" text input (above email), bound to local state, sent as `full_name` in the register call
+- [x] Typecheck passes
+- [x] Verify changes work in browser: register form shows full name field
 
 ### US-004: Frontend — AuthContext providing current user profile
 **Description:** As a developer, I need a React context that loads and exposes the authenticated user's profile (including full_name) so components like Sidebar and Dashboard can access it without prop drilling.
