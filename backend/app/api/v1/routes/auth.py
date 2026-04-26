@@ -22,7 +22,8 @@ def register(
         return UserOut(
             id=str(created.id),
             email=created.email,
-            role=created.role,  
+            role=created.role,
+            full_name=created.full_name if hasattr(created, "full_name") else "",
         )
     # except Exception as e:
     #     print ('Registration error:', e)
@@ -53,4 +54,5 @@ def read_me(current_user=Depends(get_current_user)):
         id=str(current_user["_id"]),
         email=current_user["email"],
         role=current_user.get("role", "user"),
+        full_name=current_user.get("full_name", ""),
     )
