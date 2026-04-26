@@ -5,6 +5,7 @@ import { register } from "../api/authApi";
 
 export default function RegisterPage() {
   const navigate = useNavigate();
+  const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -16,7 +17,7 @@ export default function RegisterPage() {
     setLoading(true);
 
     try {
-      await register({ email, password });
+      await register({ full_name: fullName, email, password });
       navigate("/login", { replace: true });
     } catch (err: unknown) {
       const axiosErr = err as AxiosError<{ detail?: string }>;
@@ -50,6 +51,18 @@ export default function RegisterPage() {
           </p>
 
           <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="mb-1 block text-sm font-medium text-slate-700">Full name</label>
+              <input
+                type="text"
+                placeholder="Jane Smith"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                required
+                className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+              />
+            </div>
+
             <div>
               <label className="mb-1 block text-sm font-medium text-slate-700">Email</label>
               <input
