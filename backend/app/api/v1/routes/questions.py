@@ -2,6 +2,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from typing import List, Optional
 from redis import Redis
 from pymongo.database import Database
+from bson import ObjectId
+from pydantic import BaseModel
 
 from app.core.auth import get_current_user
 from app.schemas.question import QuestionOut, QuestionFull, Difficulty
@@ -121,6 +123,22 @@ def get_questions_with_trailing_slash(
         limit,
         offset,
     )
+
+
+class AnsweredCorrectlyResponse(BaseModel):
+    question_ids: List[str]
+
+
+@router.get("/answered-correctly", response_model=AnsweredCorrectlyResponse)
+def get_answered_correctly(
+    current_user: str = Depends(get_current_user),
+    db: Database = Depends(mongo_db),
+):
+    ids = db["question_attempts"].distinct(
+        "question_id",
+        {"user_id": ObjectId(current_user), "is_correct": True},
+    )
+    return {"question_ids": [str(qid) for qid in ids]}
 
 
 @router.get("/topics", response_model=List[str])
