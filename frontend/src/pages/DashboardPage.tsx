@@ -1,18 +1,25 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { getDashboardStats, getStats, type DashboardStats, type QuestionStats } from "../api/statsApi";
+import { useAuthContext } from "../context/AuthContext";
 
 function SkeletonBlock({ className = "" }: { className?: string }) {
   return <div className={`animate-pulse rounded-xl bg-slate-200 ${className}`} />;
 }
 
 export default function DashboardPage() {
+  const { user } = useAuthContext();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [perfStats, setPerfStats] = useState<QuestionStats | null>(null);
   const [perfLoading, setPerfLoading] = useState(true);
   const navigate = useNavigate();
+
+  const hour = new Date().getHours();
+  const timeOfDay = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
+  const lastName = user?.full_name?.trim().split(/\s+/).at(-1) ?? "";
+  const greeting = lastName ? `${timeOfDay}, Dr. ${lastName} ✦` : `${timeOfDay}, Doctor ✦`;
 
   useEffect(() => {
     getDashboardStats()
@@ -39,8 +46,8 @@ export default function DashboardPage() {
     : [];
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-3xl font-bold text-slate-900">Study Deck</h1>
+    <div className="space-y-6 px-6 py-8">
+      <h1 className="text-3xl font-bold text-slate-900">{greeting}</h1>
 
       {error && <p className="text-red-600">{error}</p>}
 
