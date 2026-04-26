@@ -47,25 +47,25 @@ Currently users register with only email and password. Adding a full name field 
 **Description:** As a developer, I need a React context that loads and exposes the authenticated user's profile (including full_name) so components like Sidebar and Dashboard can access it without prop drilling.
 
 **Acceptance Criteria:**
-- [ ] New file `frontend/src/context/AuthContext.tsx` created
-- [ ] Context provides: `user: LoginResponse | null`, `setUser`, `logout()` (clears localStorage token + sets user to null)
-- [ ] On mount: if `localStorage.getItem("token")` exists, calls `getMe()` and sets `user`; on 401 clears token
-- [ ] `frontend/src/main.tsx` (or `App.tsx`) wraps the app in `<AuthProvider>`
-- [ ] `useAuthContext()` hook exported from the same file
-- [ ] Typecheck passes
+- [x] New file `frontend/src/context/AuthContext.tsx` created
+- [x] Context provides: `user: LoginResponse | null`, `setUser`, `logout()` (clears localStorage token + sets user to null)
+- [x] On mount: if `localStorage.getItem("token")` exists, calls `getMe()` and sets `user`; on 401 clears token
+- [x] `frontend/src/main.tsx` (or `App.tsx`) wraps the app in `<AuthProvider>`
+- [x] `useAuthContext()` hook exported from the same file
+- [x] Typecheck passes
 
 ### US-005: Frontend — Sidebar user profile widget
 **Description:** As a resident, I want to see my name and a logout option at the bottom of the sidebar so I always know who I'm logged in as.
 
 **Acceptance Criteria:**
-- [ ] `frontend/src/components/Sidebar.tsx` imports `useAuthContext`
-- [ ] A profile section appears at the bottom of the sidebar (above the existing Ask AI and Logout buttons, replacing the standalone Logout button)
-- [ ] Shows: circular blue badge with "DR" text + last name (`full_name.split(" ").pop()`) + "Resident" subtitle
-- [ ] Falls back to showing email initial if `full_name` is empty
-- [ ] Clicking the profile section toggles a small dropdown with a "Sign Out" option that calls `logout()` from AuthContext
-- [ ] The old standalone Logout button is removed from the sidebar
-- [ ] Typecheck passes
-- [ ] Verify changes work in browser
+- [x] `frontend/src/components/Sidebar.tsx` imports `useAuthContext`
+- [x] A profile section appears at the bottom of the sidebar (above the existing Ask AI and Logout buttons, replacing the standalone Logout button)
+- [x] Shows: circular blue badge with "DR" text + last name (`full_name.split(" ").pop()`) + "Resident" subtitle
+- [x] Falls back to showing email initial if `full_name` is empty
+- [x] Clicking the profile section toggles a small dropdown with a "Sign Out" option that calls `logout()` from AuthContext
+- [x] The old standalone Logout button is removed from the sidebar
+- [x] Typecheck passes
+- [x] Verify changes work in browser
 
 ### US-006: Frontend — Dashboard dynamic greeting
 **Description:** As a resident, I want to see a personalised time-aware greeting on the dashboard so the app feels welcoming.
