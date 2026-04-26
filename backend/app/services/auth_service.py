@@ -17,6 +17,7 @@ def register_user(db: Database, user_in: UserCreate) -> UserInDB:
     user = UserInDB(
         email=user_in.email,
         hashed_password=hashed_pw,
+        full_name=user_in.full_name,
     )
 
     db[USERS_COLLECTION].insert_one(user.to_mongo())

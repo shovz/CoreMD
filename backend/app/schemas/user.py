@@ -7,11 +7,13 @@ class UserBase(BaseModel):
 
 class UserCreate(UserBase):
     password: str = Field(..., min_length=8, max_length=72)  # bcrypt limit
+    full_name: str
 
 
 class UserOut(UserBase):
     id: str
     role: str
+    full_name: str = ""
 
     class Config:
         orm_mode = True
