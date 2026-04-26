@@ -7,7 +7,7 @@ export interface QuestionOut {
   stem: string;
   options: string[];
   topic: string;
-  chapter_ref: string;
+  chapter_ref: string | null;
   difficulty: Difficulty;
 }
 
@@ -21,6 +21,7 @@ export interface QuestionsFilter {
   chapter_id?: string;
   difficulty?: Difficulty;
   search?: string;
+  has_followups?: boolean;
   limit?: number;
   offset?: number;
 }
@@ -31,6 +32,7 @@ export const getQuestions = (filters?: QuestionsFilter) => {
   if (filters?.chapter_id) params.chapter_id = filters.chapter_id;
   if (filters?.difficulty) params.difficulty = filters.difficulty;
   if (filters?.search) params.search = filters.search;
+  if (filters?.has_followups !== undefined) params.has_followups = String(filters.has_followups);
   if (filters?.limit !== undefined) params.limit = filters.limit;
   if (filters?.offset !== undefined) params.offset = filters.offset;
   return api.get<QuestionOut[]>("/questions", { params });
@@ -42,6 +44,15 @@ export const getQuestionTopics = () => {
 
 export const getQuestionById = (id: string) => {
   return api.get<QuestionFull>(`/questions/${id}`);
+};
+
+export interface FollowUpsParams {
+  trigger?: string;
+  limit?: number;
+}
+
+export const getQuestionFollowUps = (questionId: string, params?: FollowUpsParams) => {
+  return api.get<QuestionOut[]>(`/questions/${questionId}/followups`, { params });
 };
 
 export interface AttemptResult {

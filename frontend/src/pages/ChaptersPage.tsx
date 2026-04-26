@@ -31,7 +31,7 @@ export default function ChaptersPage() {
   const [error, setError] = useState<string | null>(null);
 
   // Left pane
-  const [expandedPart, setExpandedPart] = useState<number | null>(null);
+  const [expandedPart, setExpandedPart] = useState<number | null>(1);
   const [searchInput, setSearchInput] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
 

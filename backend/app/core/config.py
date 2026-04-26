@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     # Security
     JWT_SECRET: str
     JWT_ALGORITHM: str = "HS256"
+    JWT_EXPIRES_MINUTES: int = 60
 
     # LLM / AI keys
     OPENAI_API_KEY: str | None = None

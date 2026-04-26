@@ -35,7 +35,7 @@ def _doc_to_question_full(doc: dict) -> dict:
 def _build_questions_query(
     topic: Optional[str], chapter_id: Optional[str], difficulty: Optional[Difficulty], search: Optional[str]
 ) -> dict:
-    query: dict = {}
+    query: dict = {"is_chain": {"$ne": True}}
     if topic:
         query["topic"] = topic
     if chapter_id:
@@ -56,10 +56,21 @@ def _list_questions(
     chapter_id: Optional[str],
     difficulty: Optional[Difficulty],
     search: Optional[str],
+    has_followups: Optional[bool],
     limit: int,
     offset: int,
 ) -> List[dict]:
     query = _build_questions_query(topic, chapter_id, difficulty, search)
+
+    if has_followups:
+        parent_ids = db["question_followups"].distinct(
+            "parent_question_id",
+            {"trigger": "correct"},
+        )
+        if not parent_ids:
+            return []
+        query["question_id"] = {"$in": parent_ids}
+
     docs = db["questions"].find(query, {"_id": 0}).skip(offset).limit(limit)
     return [_doc_to_question_out(doc) for doc in docs]
 
@@ -70,12 +81,22 @@ def get_questions(
     chapter_id: Optional[str] = Query(None),
     difficulty: Optional[Difficulty] = Query(None),
     search: Optional[str] = Query(None),
+    has_followups: Optional[bool] = Query(None),
     limit: int = Query(20, ge=1, le=100),
     offset: int = Query(0, ge=0),
     current_user: str = Depends(get_current_user),
     db: Database = Depends(mongo_db),
 ):
-    return _list_questions(db, topic, chapter_id, difficulty, search, limit, offset)
+    return _list_questions(
+        db,
+        topic,
+        chapter_id,
+        difficulty,
+        search,
+        has_followups,
+        limit,
+        offset,
+    )
 
 
 @router.get("/", response_model=List[QuestionOut], include_in_schema=False)
@@ -84,12 +105,22 @@ def get_questions_with_trailing_slash(
     chapter_id: Optional[str] = Query(None),
     difficulty: Optional[Difficulty] = Query(None),
     search: Optional[str] = Query(None),
+    has_followups: Optional[bool] = Query(None),
     limit: int = Query(20, ge=1, le=100),
     offset: int = Query(0, ge=0),
     current_user: str = Depends(get_current_user),
     db: Database = Depends(mongo_db),
 ):
-    return _list_questions(db, topic, chapter_id, difficulty, search, limit, offset)
+    return _list_questions(
+        db,
+        topic,
+        chapter_id,
+        difficulty,
+        search,
+        has_followups,
+        limit,
+        offset,
+    )
 
 
 @router.get("/topics", response_model=List[str])
@@ -111,6 +142,52 @@ def get_question(
     if not doc:
         raise HTTPException(status_code=404, detail="Question not found")
     return _doc_to_question_full(doc)
+
+
+@router.get("/{question_id}/followups", response_model=List[QuestionOut])
+def get_question_followups(
+    question_id: str,
+    trigger: str = Query("correct"),
+    limit: int = Query(3, ge=1, le=10),
+    current_user: str = Depends(get_current_user),
+    db: Database = Depends(mongo_db),
+):
+    parent_exists = db["questions"].find_one({"question_id": question_id}, {"_id": 1})
+    if not parent_exists:
+        raise HTTPException(status_code=404, detail="Question not found")
+
+    links = list(
+        db["question_followups"]
+        .find(
+            {"parent_question_id": question_id, "trigger": trigger},
+            {"_id": 0, "followup_question_id": 1, "priority": 1},
+        )
+        .sort("priority", 1)
+        .limit(limit)
+    )
+
+    if not links:
+        return []
+
+    followup_ids = [link["followup_question_id"] for link in links if "followup_question_id" in link]
+    if not followup_ids:
+        return []
+
+    followup_docs = list(
+        db["questions"].find(
+            {"question_id": {"$in": followup_ids}},
+            {"_id": 0},
+        )
+    )
+    by_id = {doc["question_id"]: doc for doc in followup_docs}
+
+    ordered = []
+    for followup_id in followup_ids:
+        doc = by_id.get(followup_id)
+        if doc:
+            ordered.append(_doc_to_question_out(doc))
+
+    return ordered
 
 
 @router.post("/{question_id}/attempt", response_model=AttemptResult)

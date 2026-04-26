@@ -1,11 +1,30 @@
-# Progress Log
+﻿# Progress Log
 
 ## Learnings
+- For OpenAI-backed seed scripts, perform writes in two phases (questions first, follow-up links second) to keep reruns idempotent and relationship checks deterministic.
 - CSS variables like `var(--paper)` must be used as Tailwind arbitrary values: `bg-[var(--paper)]`
-- `DOMPurify.sanitize()` is already available in SectionDetailPage — import pattern: `import DOMPurify from "dompurify"`
+- `DOMPurify.sanitize()` is already available in SectionDetailPage ג€” import pattern: `import DOMPurify from "dompurify"`
 - `useAiContext()` gives `{ openWithText }` for pre-filling the AI panel from any component
 - `getSectionById(chapterId, sectionId)` returns `{ data: SectionContentOut }` with `html_content` and `content` fields
 - On Windows with Python 3.11, always pass `encoding="utf-8"` when opening files
-- `getStats()` in `statsApi.ts` is just a typed alias for `getQuestionStats()` — it calls `/stats/questions` which returns `by_difficulty` and `by_topic`
+- `getStats()` in `statsApi.ts` is just a typed alias for `getQuestionStats()` ג€” it calls `/stats/questions` which returns `by_difficulty` and `by_topic`
+- US-005 verification: `python -m py_compile backend/scripts/generate_linked_questions.py` failed on Windows with `[WinError 5] Access is denied` writing to `backend/scripts/__pycache__`
+- US-005 reusable pattern: enforce idempotent question-link seeding with stable IDs (`question_id`, `link_id`), unique indexes, and insert-only-missing checks before writes.
+- US-005 reusable check pattern (2026-04-25): when `py_compile` is blocked by `__pycache__` permissions on Windows, validate script integrity with `compile(open(...).read(), ..., "exec")` to confirm syntax without filesystem bytecode writes.
 
 ---
+- US-005 data integrity pattern (2026-04-25): after generating follow-ups, validate both parent_question_id and followup_question_id exist in questions before counting the run complete.
+- US-006 verification (2026-04-25): `npm run build` in `frontend/` failed in this environment with Vite/esbuild `spawn EPERM` while loading `vite.config.ts`; fallback `npx tsc -b` passed and backend pytest passed.
+- US-006 UI flow pattern (2026-04-25): model chained follow-ups as `followUps: Array<{ question, result }>` and gate next-fetch on `result?.is_correct` with a hard per-visit chain cap to prevent random fallback and unbounded recursion.
+
+- US-006 verification rerun (2026-04-25): `npm run build` in `frontend/` still fails with Vite/esbuild `spawn EPERM` while loading `vite.config.ts`.
+- US-006 verification rerun (2026-04-25): `python -m pytest` in `backend/` reports unrelated failures in `tests/test_cases.py` (`/api/v1/cases/` returned 404); targeted `python -m pytest tests/test_questions.py` passed.
+- US-006 verification rerun (2026-04-25): `npm run build` in `frontend/` continues to fail in this runtime with Vite/esbuild `spawn EPERM` while loading `vite.config.ts`; backend checks `python -c "import app"` and `python -m pytest tests/test_questions.py` passed.
+- US-006 blocker pattern (2026-04-25): when Windows blocks Vite/esbuild child process creation (`spawn EPERM` from `vite.config.ts`), treat browser verification as environment-blocked and keep the PRD browser-check criterion explicitly unchecked with a concrete note.
+- US-006 verification rerun (2026-04-25): `npm run build` in `frontend/` failed again with Vite/esbuild `spawn EPERM` from `vite.config.ts`; fallback `npx tsc -b` passed, and backend checks `python -c "import app"` plus `python -m pytest tests/test_questions.py` passed.
+- US-006 reusable UX pattern (2026-04-25): reveal the main progression CTA only after terminal chain states (`incorrect`, `no follow-up`, or `max chain reached`) so inline follow-ups remain the primary flow.
+
+- US-006 chain questions (2026-04-25): AI-generated chain questions must have `chapter_ref: None` (null) since they're not tied to a Harrison's chapter. Pydantic schema must use `Optional[str] = None` for `chapter_ref` in `QuestionOut` — otherwise serializing a chain question returns a 500 and the error is silently swallowed in `fetchMsFollowUp`'s try/catch, ending the chain immediately.
+- US-006 prompt engineering trap (2026-04-25): including literal example values in an OpenAI JSON template (e.g. `"correct_option": 0` for Q1, `1` for Q2, `2` for Q3) causes the model to copy those values verbatim every run. Always shuffle options programmatically after parsing the response — never rely on the model to randomize positions.
+- US-006 seeding data quality (2026-04-25): the original Harrison's MCQ seed had 96/100 questions with `correct_option: 1` (B). Fixed by shuffling all 148 questions in-place (preserve correct answer text, update index). New distribution: A=34, B=33, C=39, D=42.
+- US-006 multi-step UX (2026-04-25): QuestionsPage "Multi-steps" mode needs a dedicated chain view — not the standard Prev/Next player. Implemented as a separate render branch: loads entry-point questions with `has_followups=true`, picks one randomly, stacks follow-up cards below on correct answer, shows "Next Chain →" at chain end.

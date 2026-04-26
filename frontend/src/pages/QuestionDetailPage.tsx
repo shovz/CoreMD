@@ -4,6 +4,7 @@ import {
   getQuestionById,
   submitAttempt,
   getQuestions,
+  getQuestionFollowUps,
   type QuestionFull,
   type AttemptResult,
 } from "../api/questionsApi";
@@ -14,91 +15,42 @@ interface LocationState {
   topic?: string | null;
 }
 
+type FollowUpState = { question: QuestionFull; result: AttemptResult | null };
+
+const MAX_FOLLOWUPS_PER_VISIT = 3;
+
 const DIFF_BADGE: Record<string, string> = {
   easy: "bg-emerald-100 text-emerald-700",
   medium: "bg-amber-100 text-amber-700",
   hard: "bg-rose-100 text-rose-700",
 };
 
-export default function QuestionDetailPage() {
-  const { id } = useParams<{ id: string }>();
-  const location = useLocation();
-  const navigate = useNavigate();
-  const state = (location.state ?? {}) as LocationState;
+interface QuestionCardProps {
+  question: QuestionFull;
+  result: AttemptResult | null;
+  onResult: (result: AttemptResult) => Promise<void>;
+  onError: (message: string) => void;
+}
 
-  const [question, setQuestion] = useState<QuestionFull | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
+function QuestionCard({ question, result, onResult, onError }: QuestionCardProps) {
   const [selected, setSelected] = useState<number | null>(null);
-  const [result, setResult] = useState<AttemptResult | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    if (!id) return;
-    setQuestion(null);
     setSelected(null);
-    setResult(null);
-    setError(null);
-    setLoading(true);
-    getQuestionById(id)
-      .then((res) => {
-        setQuestion(res.data);
-        setLoading(false);
-      })
-      .catch(() => {
-        setError("Failed to load question.");
-        setLoading(false);
-      });
-  }, [id]);
+    setSubmitting(false);
+  }, [question.question_id]);
 
   const handleSubmit = async () => {
-    if (selected === null || result || submitting || !id) return;
+    if (selected === null || result || submitting) return;
     setSubmitting(true);
     try {
-      const res = await submitAttempt(id, selected);
-      setResult(res.data);
+      const res = await submitAttempt(question.question_id, selected);
+      await onResult(res.data);
     } catch {
-      setError("Failed to submit attempt.");
+      onError("Failed to submit attempt.");
     } finally {
       setSubmitting(false);
-    }
-  };
-
-  const goToNext = async () => {
-    const { questionIds, currentIndex } = state;
-    if (
-      questionIds &&
-      currentIndex !== undefined &&
-      currentIndex + 1 < questionIds.length
-    ) {
-      const nextId = questionIds[currentIndex + 1];
-      navigate(`/questions/${nextId}`, {
-        state: {
-          questionIds,
-          currentIndex: currentIndex + 1,
-          topic: state.topic,
-        },
-      });
-      return;
-    }
-    // Fallback: random question in the same topic
-    try {
-      const res = await getQuestions({
-        topic: state.topic ?? undefined,
-        limit: 50,
-      });
-      const others = res.data.filter((q) => q.question_id !== id);
-      if (others.length > 0) {
-        const next = others[Math.floor(Math.random() * others.length)];
-        navigate(`/questions/${next.question_id}`, {
-          state: { topic: state.topic },
-        });
-      } else {
-        navigate("/questions");
-      }
-    } catch {
-      navigate("/questions");
     }
   };
 
@@ -122,26 +74,8 @@ export default function QuestionDetailPage() {
     return `${base} border-slate-100 bg-slate-50 text-slate-400`;
   };
 
-  if (loading) return <p className="p-6 text-slate-600">Loading question...</p>;
-  if (error) return <p className="p-6 text-red-600">{error}</p>;
-  if (!question) return null;
-
-  const { questionIds, currentIndex } = state;
-  const hasNext =
-    questionIds !== undefined &&
-    currentIndex !== undefined &&
-    currentIndex + 1 < questionIds.length;
-
   return (
-    <div className="mx-auto max-w-2xl space-y-6">
-      <Link
-        to="/questions"
-        className="text-sm text-blue-600 hover:underline"
-      >
-        ← Back to Questions
-      </Link>
-
-      {/* Topic chip + difficulty badge */}
+    <div className="space-y-6">
       <div className="flex flex-wrap gap-2">
         <span className="rounded-full bg-blue-100 px-3 py-0.5 text-xs font-semibold text-blue-700">
           {question.topic}
@@ -156,10 +90,8 @@ export default function QuestionDetailPage() {
         </span>
       </div>
 
-      {/* Question stem */}
       <p className="text-base leading-relaxed text-slate-800">{question.stem}</p>
 
-      {/* Option cards */}
       <div className="space-y-3">
         {question.options.map((option, index) => (
           <button
@@ -176,18 +108,16 @@ export default function QuestionDetailPage() {
         ))}
       </div>
 
-      {/* Submit button — visible only before submission */}
       {!result && (
         <button
           onClick={handleSubmit}
           disabled={selected === null || submitting}
           className="w-full rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-40"
         >
-          {submitting ? "Submitting…" : "Submit Answer"}
+          {submitting ? "Submitting..." : "Submit Answer"}
         </button>
       )}
 
-      {/* Explanation panel */}
       {result && (
         <div
           className={`rounded-xl border-l-4 p-5 ${
@@ -208,14 +138,194 @@ export default function QuestionDetailPage() {
           </p>
         </div>
       )}
+    </div>
+  );
+}
 
-      {/* Next question button — visible only after submission */}
-      {result && (
+export default function QuestionDetailPage() {
+  const { id } = useParams<{ id: string }>();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const state = (location.state ?? {}) as LocationState;
+
+  const [question, setQuestion] = useState<QuestionFull | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const [result, setResult] = useState<AttemptResult | null>(null);
+  const [followUps, setFollowUps] = useState<FollowUpState[]>([]);
+  const [chainEnded, setChainEnded] = useState(false);
+  const [loadingFollowUp, setLoadingFollowUp] = useState(false);
+
+  useEffect(() => {
+    if (!id) return;
+    setQuestion(null);
+    setResult(null);
+    setFollowUps([]);
+    setChainEnded(false);
+    setLoadingFollowUp(false);
+    setError(null);
+    setLoading(true);
+
+    getQuestionById(id)
+      .then((res) => {
+        setQuestion(res.data);
+        setLoading(false);
+      })
+      .catch(() => {
+        setError("Failed to load question.");
+        setLoading(false);
+      });
+  }, [id]);
+
+  const fetchAndAppendFollowUp = async (
+    parentQuestionId: string,
+    currentFollowUpCount: number
+  ) => {
+    if (currentFollowUpCount >= MAX_FOLLOWUPS_PER_VISIT) {
+      return false;
+    }
+
+    setLoadingFollowUp(true);
+    try {
+      const listRes = await getQuestionFollowUps(parentQuestionId, {
+        trigger: "correct",
+        limit: 1,
+      });
+
+      const next = listRes.data[0];
+      if (!next) return false;
+
+      const fullRes = await getQuestionById(next.question_id);
+
+      setFollowUps((prev) => [
+        ...prev,
+        {
+          question: fullRes.data,
+          result: null,
+        },
+      ]);
+      return true;
+    } catch {
+      setError("Failed to load follow-up question.");
+      return false;
+    } finally {
+      setLoadingFollowUp(false);
+    }
+  };
+
+  const handleRootResult = async (attempt: AttemptResult) => {
+    setResult(attempt);
+
+    if (!attempt.correct) {
+      setChainEnded(true);
+      return;
+    }
+
+    const appended = await fetchAndAppendFollowUp(id ?? "", followUps.length);
+    setChainEnded(!appended);
+  };
+
+  const handleFollowUpResult = async (index: number, attempt: AttemptResult) => {
+    const answeredQuestionId = followUps[index]?.question.question_id;
+    if (!answeredQuestionId) return;
+
+    setFollowUps((prev) =>
+      prev.map((item, itemIndex) =>
+        itemIndex === index ? { ...item, result: attempt } : item
+      )
+    );
+
+    if (!attempt.correct) {
+      setChainEnded(true);
+      return;
+    }
+
+    const appended = await fetchAndAppendFollowUp(answeredQuestionId, followUps.length);
+    setChainEnded(!appended);
+  };
+
+  const goToNext = async () => {
+    const { questionIds, currentIndex } = state;
+    if (
+      questionIds &&
+      currentIndex !== undefined &&
+      currentIndex + 1 < questionIds.length
+    ) {
+      const nextId = questionIds[currentIndex + 1];
+      navigate(`/questions/${nextId}`, {
+        state: {
+          questionIds,
+          currentIndex: currentIndex + 1,
+          topic: state.topic,
+        },
+      });
+      return;
+    }
+
+    try {
+      const res = await getQuestions({
+        topic: state.topic ?? undefined,
+        limit: 50,
+      });
+      const others = res.data.filter((q) => q.question_id !== id);
+      if (others.length > 0) {
+        const next = others[Math.floor(Math.random() * others.length)];
+        navigate(`/questions/${next.question_id}`, {
+          state: { topic: state.topic },
+        });
+      } else {
+        navigate("/questions");
+      }
+    } catch {
+      navigate("/questions");
+    }
+  };
+
+  if (loading) return <p className="p-6 text-slate-600">Loading question...</p>;
+  if (error) return <p className="p-6 text-red-600">{error}</p>;
+  if (!question) return null;
+
+  return (
+    <div className="mx-auto max-w-2xl space-y-6">
+      <Link
+        to="/questions"
+        className="text-sm text-blue-600 hover:underline"
+      >
+        {"<- Back to Questions"}
+      </Link>
+
+      <QuestionCard
+        question={question}
+        result={result}
+        onResult={handleRootResult}
+        onError={setError}
+      />
+
+      {followUps.map((followUp, index) => (
+        <div key={followUp.question.question_id} className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+            Follow-up {index + 1}
+          </p>
+          <QuestionCard
+            question={followUp.question}
+            result={followUp.result}
+            onResult={(attempt) => handleFollowUpResult(index, attempt)}
+            onError={setError}
+          />
+        </div>
+      ))}
+
+      {loadingFollowUp && (
+        <p className="text-sm text-slate-600">Loading follow-up question...</p>
+      )}
+
+      {result && chainEnded && (
         <button
           onClick={goToNext}
           className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
         >
-          {hasNext ? "Next Question →" : "Random Question →"}
+          Next Question {"->"}
         </button>
       )}
     </div>
