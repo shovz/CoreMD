@@ -13,6 +13,7 @@ import CasesPage from "./pages/CasesPage";
 import CaseDetailPage from "./pages/CaseDetailPage";
 import AppShell from "./components/AppShell";
 import { AiContextProvider } from "./context/AiContext";
+import { AuthProvider } from "./context/AuthContext";
 
 function ProtectedRoute() {
   const token = localStorage.getItem("access_token");
@@ -34,6 +35,7 @@ function RootRoute() {
 
 export default function AppRouter() {
   return (
+    <AuthProvider>
     <AiContextProvider>
     <BrowserRouter>
       <Routes>
@@ -59,5 +61,6 @@ export default function AppRouter() {
       </Routes>
     </BrowserRouter>
     </AiContextProvider>
+    </AuthProvider>
   );
 }
