@@ -36,11 +36,8 @@ export default function AssistantChat({ compact = false, prefillText, onPrefillC
 
   useEffect(() => {
     if (!prefillText) return;
-    setInput(prefillText);
     onPrefillConsumed?.();
-    setTimeout(() => {
-      inputRef.current?.focus();
-    }, 50);
+    submitQuestion(prefillText);
   }, [prefillText]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const completedMessages = messages.filter((m) => !m.loading);
@@ -52,8 +49,7 @@ export default function AssistantChat({ compact = false, prefillText, onPrefillC
     setInput("");
   }
 
-  async function handleSubmit() {
-    const question = input.trim();
+  async function submitQuestion(question: string) {
     if (!question || inputDisabled) return;
 
     const history: Message[] = completedMessages.map((m) => ({
@@ -89,6 +85,10 @@ export default function AssistantChat({ compact = false, prefillText, onPrefillC
     }
   }
 
+  function handleSubmit() {
+    submitQuestion(input.trim());
+  }
+
   function handleKeyDown(e: KeyboardEvent<HTMLInputElement>) {
     if (e.key === "Enter") {
       handleSubmit();
@@ -97,15 +97,17 @@ export default function AssistantChat({ compact = false, prefillText, onPrefillC
 
   return (
     <div className="flex h-full flex-col">
-      <div className="mb-3 flex items-center justify-between border-b border-slate-200 pb-2">
-        <h2 className="m-0 text-lg font-semibold text-slate-900">Harrison&apos;s AI Assistant</h2>
-        <button
-          onClick={startNewConversation}
-          className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-100"
-        >
-          New Chat
-        </button>
-      </div>
+      {!compact && (
+        <div className="mb-3 flex items-center justify-between border-b border-slate-200 pb-2">
+          <h2 className="m-0 text-lg font-semibold text-slate-900">Harrison&apos;s AI Assistant</h2>
+          <button
+            onClick={startNewConversation}
+            className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-100"
+          >
+            New Chat
+          </button>
+        </div>
+      )}
 
       <div className="flex-1 space-y-3 overflow-y-auto pb-3">
         {messages.length === 0 && (
@@ -166,7 +168,7 @@ export default function AssistantChat({ compact = false, prefillText, onPrefillC
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder={limitReached ? "Start a new conversation to continue" : "Ask a clinical question..."}
+          placeholder={limitReached ? "Start a new conversation to continue" : compact ? "Ask anything about Harrison's…" : "Ask a clinical question..."}
           disabled={inputDisabled}
           className="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-slate-100"
         />

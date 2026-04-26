@@ -1,43 +1,37 @@
-# PRD: Section Content Styling
+# PRD: Ask AI Auto-Submit on Prefill
 
 ## Introduction
 
-Enhance the typography and layout of the chapter section reader so that tables, lists, bold/italic text, blockquotes, and inline code render correctly. The raw HTML extracted from Harrison's PDFs contains these elements but the current `.section-content` CSS does not style them, making the content hard to read.
+When a user selects text in the chapter reader and clicks "Ask AI about this", the text is pre-filled into the AI chat input but the user still has to manually press Send. This friction defeats the purpose of the one-click flow. Auto-submitting the question when prefill text arrives makes the experience seamless.
 
 ## Goals
 
-- Tables render with visible borders, padded cells, and a shaded header row
-- Unordered and ordered lists render with proper indentation and item spacing
-- Bold and italic text are visually distinct
-- Blockquotes are offset with a left border
-- Inline code snippets have a monospace font with subtle background
+- Selecting text and clicking "Ask AI about this" immediately triggers an AI response without the user pressing Send
+- The input box is cleared after auto-submit so the user can type a follow-up
+- The fix must avoid stale React state (the submit function must use the prefill text directly, not the `input` state)
 
 ## User Stories
 
-### US-001: Extend .section-content CSS for all content elements
-**Description:** As a resident reading a chapter, I want tables, lists, and formatted text to render correctly so that the content is easy to scan and read.
+### US-001: Auto-submit AssistantChat when prefillText is provided
+**Description:** As a resident reading a chapter, I want the AI to immediately answer when I select text and click "Ask AI about this" so that I don't need to manually press Send.
 
 **Acceptance Criteria:**
-- [x] `.section-content table` — `border-collapse: collapse; width: 100%; margin: 1rem 0`
-- [x] `.section-content th, .section-content td` — `border: 1px solid #e2e8f0; padding: 0.5rem 0.75rem; text-align: left`
-- [x] `.section-content th` — `background: #f8fafc; font-weight: 600`
-- [x] `.section-content ul, .section-content ol` — `padding-left: 1.5rem; margin: 0.75rem 0`
-- [x] `.section-content li` — `margin-bottom: 0.25rem`
-- [x] `.section-content strong, .section-content b` — `font-weight: 600; color: #111827`
-- [x] `.section-content em, .section-content i` — `font-style: italic`
-- [x] `.section-content blockquote` — `border-left: 3px solid #e2e8f0; padding-left: 1rem; color: #6b7280; margin: 1rem 0`
-- [x] `.section-content code` — `font-family: monospace; background: #f1f5f9; padding: 0.1rem 0.3rem; border-radius: 3px; font-size: 0.875em`
-- [x] Only `frontend/src/index.css` is modified — no other files changed
+- [x] In `frontend/src/components/AssistantChat.tsx`, extract submit logic into `submitQuestion(question: string)` that takes the question as an explicit argument (not from `input` state)
+- [x] The `prefillText` useEffect calls `submitQuestion(prefillText)` directly after calling `onPrefillConsumed?.()` — no `setTimeout` needed since we pass the value directly
+- [x] `handleSubmit()` (called by button click and Enter key) calls `submitQuestion(input.trim())`
+- [x] After auto-submit, the input field is empty (cleared by `setInput("")` inside `submitQuestion`)
+- [x] The focus-on-prefill behavior is removed (no longer needed since we auto-submit)
+- [x] Only `frontend/src/components/AssistantChat.tsx` is modified
 - [x] Typecheck passes
-- [x] Verify changes work in browser
+- [ ] Verify changes work in browser: select text in chapter reader → click "Ask AI about this" → AI response appears in the floating panel automatically
 
 ## Non-Goals
 
-- No changes to the HTML extraction pipeline
-- No custom fonts or font loading
-- No dark mode variants
+- No changes to AiContext, AiChatLauncher, or ChaptersPage selection popover
+- No streaming/typing indicator changes
+- No changes to how history is built
 
 ## Technical Considerations
 
-- All rules must be scoped inside `.section-content { }` block that already exists in `frontend/src/index.css`
-- Do not add a new CSS block — extend the existing one
+- The stale-state problem: React `useState` closures mean that calling `handleSubmit()` inside a useEffect will read stale `input`. The fix is to pass the text as a parameter to avoid relying on state.
+- `submitQuestion` signature: `async function submitQuestion(question: string)` — replace `const question = input.trim()` inside with the parameter.
