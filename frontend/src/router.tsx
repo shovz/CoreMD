@@ -11,6 +11,7 @@ import QuestionsPage from "./pages/QuestionsPage";
 import QuestionDetailPage from "./pages/QuestionDetailPage";
 import CasesPage from "./pages/CasesPage";
 import CaseDetailPage from "./pages/CaseDetailPage";
+import HistoryPage from "./pages/HistoryPage";
 import AppShell from "./components/AppShell";
 import { AiContextProvider } from "./context/AiContext";
 import { AuthProvider } from "./context/AuthContext";
@@ -56,6 +57,7 @@ export default function AppRouter() {
             <Route path="/questions/:id" element={<QuestionDetailPage />} />
             <Route path="/cases" element={<CasesPage />} />
             <Route path="/cases/:id" element={<CaseDetailPage />} />
+            <Route path="/history" element={<HistoryPage />} />
           </Route>
         </Route>
       </Routes>
