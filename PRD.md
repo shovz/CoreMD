@@ -1,56 +1,63 @@
-# PRD: Question History Page
+# PRD: Bookmarks / Favourites
 
 ## Introduction
 
-Residents have no way to review their past question attempts or reset their progress. Adding a History page shows a paginated log of all answered questions with pass/fail results, and a "Reset History" action lets them start fresh.
+Residents encounter questions and clinical cases they want to revisit but have no way to save them. A bookmark system lets them star any question or case, then review all saved items from a dedicated Bookmarks page.
 
 ## Goals
 
-- A backend endpoint returns the current user's attempt history with question stems included
-- A backend endpoint deletes all of the current user's attempts
-- A History page in the frontend displays attempts with date, truncated question stem, and result badge
-- A "Reset History" button clears all attempts after confirmation
+- Users can bookmark and un-bookmark individual questions (from the question session view) and cases (from the case detail page)
+- A Bookmarks page shows all saved questions and cases in separate tabs
+- Bookmarks persist across sessions (stored in MongoDB)
 
 ## User Stories
 
-### US-001: Backend — question history endpoints
-**Description:** As a developer, I need API endpoints to retrieve and delete a user's attempt history so the frontend History page can display and reset it.
+### US-001: Backend — bookmarks CRUD endpoints
+**Description:** As a developer, I need REST endpoints to add, remove, and list bookmarks so the frontend can persist them.
 
 **Acceptance Criteria:**
-- [x] `GET /questions/history` added to `backend/app/api/v1/routes/questions.py`
-  - Query params: `limit: int = 50`, `offset: int = 0`
-  - Queries `question_attempts` collection filtered by `user_id: ObjectId(current_user)`, sorted by `created_at` descending
-  - For each attempt, looks up the question in `questions` collection by `question_id` to get `stem`
-  - Returns list of `{attempt_id, question_id, stem, selected_option, correct_option, is_correct, created_at}` + `total` count
-- [x] `DELETE /questions/history` added to `backend/app/api/v1/routes/questions.py`
-  - Deletes all documents in `question_attempts` where `user_id == ObjectId(current_user)`
-  - Returns `{"deleted_count": int}`
-- [x] Both endpoints use `current_user: str = Depends(get_current_user)` from `app.core.auth`
+- [x] New file `backend/app/api/v1/routes/bookmarks.py` created
+- [x] `POST /bookmarks` — body `{type: "question"|"case", item_id: str}` — inserts `{user_id: ObjectId, type, item_id, created_at}` into `bookmarks` collection; returns `{bookmarked: true}`; idempotent (no duplicate if already bookmarked)
+- [x] `DELETE /bookmarks/{item_id}` — removes bookmark for current user + that item_id; returns `{bookmarked: false}`
+- [x] `GET /bookmarks` — query param `type: Optional[str]` — returns list of bookmarks for current user; each item includes the full question or case document joined from the respective collection
+- [x] Router registered in `backend/app/main.py` with prefix `/api/v1/bookmarks`
+- [x] All three endpoints use `current_user: str = Depends(get_current_user)` from `app.core.auth`
 - [x] Typecheck passes
 
-### US-002: Frontend — HistoryPage with reset
-**Description:** As a resident, I want to see all my past question attempts with results so I can review my performance, and reset my history when I want to start fresh.
+### US-002: Frontend — bookmark toggle in Question Bank session
+**Description:** As a resident answering questions, I want to star a question mid-session so I can review it later.
 
 **Acceptance Criteria:**
-- [ ] New file `frontend/src/pages/HistoryPage.tsx` created
-- [ ] Fetches `GET /questions/history?limit=50&offset=0` on mount
-- [ ] Displays a list: each row shows date (formatted as "Apr 26, 2026"), truncated question stem (max 80 chars), a ✓ (green) or ✗ (red) result badge
-- [ ] Empty state: "No question history yet. Start a session in the Question Bank."
-- [ ] "Reset History" button at top-right — clicking shows a confirmation inline message ("Are you sure? This cannot be undone.") with Confirm / Cancel buttons
-- [ ] On confirm: calls `DELETE /questions/history`, clears the list, shows "History reset."
-- [ ] `frontend/src/router.tsx` has a protected route `/history` → `HistoryPage`
-- [ ] `frontend/src/components/Sidebar.tsx` has a "History" nav link (added below the Questions link)
+- [ ] New file `frontend/src/api/bookmarksApi.ts` with `addBookmark(type, itemId)`, `removeBookmark(itemId)`, `getBookmarks(type?)` using the authenticated apiClient
+- [ ] In `frontend/src/pages/QuestionsPage.tsx`, the `ChainCard` component gains a bookmark icon button (★/☆) in its header area
+- [ ] Clicking the icon calls `addBookmark("question", question_id)` or `removeBookmark(question_id)` and toggles the icon state
+- [ ] Bookmark state is local to the card (no pre-fetching of existing bookmarks in the session view)
+- [ ] Typecheck passes
+- [ ] Verify changes work in browser
+
+### US-003: Frontend — case bookmark + BookmarksPage
+**Description:** As a resident, I want to bookmark a case from its detail page and review all my saved items in one place.
+
+**Acceptance Criteria:**
+- [ ] `frontend/src/pages/CaseDetailPage.tsx` has a bookmark icon button in the case header (same ★/☆ pattern as US-002)
+- [ ] New file `frontend/src/pages/BookmarksPage.tsx` created
+  - Two tab buttons: "Questions" and "Cases" (default: Questions)
+  - Each tab fetches `GET /bookmarks?type=question` or `GET /bookmarks?type=case`
+  - Each item row shows: title/stem (truncated 80 chars) + "→" link to `/questions/:id` or `/cases/:id` + remove button (✕) calling `removeBookmark`
+  - Empty state per tab: "No bookmarked questions yet." / "No bookmarked cases yet."
+- [ ] `frontend/src/router.tsx` has a protected route `/bookmarks` → `BookmarksPage`
+- [ ] `frontend/src/components/Sidebar.tsx` has a "Bookmarks" nav link (added below History)
 - [ ] Typecheck passes
 - [ ] Verify changes work in browser
 
 ## Non-Goals
 
-- No case attempt history (questions only in this PRD)
-- No per-topic filtering or date-range filtering
-- No pagination UI (limit=50 is enough for MVP; pagination can be added later)
-- No export/download
+- No folder/collection organisation for bookmarks
+- No shared bookmarks between users
+- No bookmark notes or annotations (separate PRD)
+- No bookmark count badges on nav items
 
 ## Technical Considerations
 
-- The join between `question_attempts` and `questions` should be done in Python (not MongoDB $lookup) for simplicity — fetch attempt docs, collect unique question_ids, bulk-fetch questions in one query, merge in memory
-- `frontend/src/api/` — add `historyApi.ts` with `getHistory(limit, offset)` and `deleteHistory()`
+- `bookmarks` collection needs a compound index on `{user_id, item_id}` — add `db.bookmarks.create_index([("user_id", 1), ("item_id", 1)], unique=True)` in the POST endpoint or a startup script
+- The GET /bookmarks join: collect all `item_id` values, batch-fetch from `questions` or `cases` collection using `{"question_id": {"$in": ids}}` / `{"case_id": {"$in": ids}}`, merge in Python
