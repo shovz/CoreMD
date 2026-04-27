@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from typing import List, Optional
+from datetime import datetime
 from redis import Redis
 from pymongo.database import Database
 from bson import ObjectId
@@ -148,6 +149,74 @@ def get_question_topics(
 ):
     topics = db["questions"].distinct("topic")
     return sorted([t for t in topics if isinstance(t, str) and t.strip()])
+
+
+class AttemptHistoryItem(BaseModel):
+    attempt_id: str
+    question_id: str
+    stem: str
+    selected_option: int
+    correct_option: int
+    is_correct: bool
+    created_at: datetime
+
+
+class AttemptHistoryResponse(BaseModel):
+    items: List[AttemptHistoryItem]
+    total: int
+
+
+class DeleteHistoryResponse(BaseModel):
+    deleted_count: int
+
+
+@router.get("/history", response_model=AttemptHistoryResponse)
+def get_question_history(
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
+    current_user: str = Depends(get_current_user),
+    db: Database = Depends(mongo_db),
+):
+    user_oid = ObjectId(current_user)
+    query = {"user_id": user_oid}
+    total = db["question_attempts"].count_documents(query)
+    attempts = list(
+        db["question_attempts"]
+        .find(query)
+        .sort("created_at", -1)
+        .skip(offset)
+        .limit(limit)
+    )
+    question_ids = [a["question_id"] for a in attempts]
+    stem_map = {
+        q["question_id"]: q["stem"]
+        for q in db["questions"].find(
+            {"question_id": {"$in": question_ids}},
+            {"question_id": 1, "stem": 1, "_id": 0},
+        )
+    }
+    items = [
+        AttemptHistoryItem(
+            attempt_id=str(a["_id"]),
+            question_id=a["question_id"],
+            stem=stem_map.get(a["question_id"], ""),
+            selected_option=a["selected_option"],
+            correct_option=a["correct_option"],
+            is_correct=a["is_correct"],
+            created_at=a["created_at"],
+        )
+        for a in attempts
+    ]
+    return AttemptHistoryResponse(items=items, total=total)
+
+
+@router.delete("/history", response_model=DeleteHistoryResponse)
+def delete_question_history(
+    current_user: str = Depends(get_current_user),
+    db: Database = Depends(mongo_db),
+):
+    result = db["question_attempts"].delete_many({"user_id": ObjectId(current_user)})
+    return DeleteHistoryResponse(deleted_count=result.deleted_count)
 
 
 @router.get("/{question_id}", response_model=QuestionFull)
