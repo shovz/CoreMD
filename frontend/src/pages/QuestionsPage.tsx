@@ -11,6 +11,7 @@ import {
   type QuestionFull,
   type QuestionOut,
 } from "../api/questionsApi";
+import { addBookmark, removeBookmark } from "../api/bookmarksApi";
 
 type Mode = "topic" | "random" | "multi-step";
 type Phase = "settings" | "playing";
@@ -71,11 +72,13 @@ function ChainCard({ question, result, onSubmit, timerSeconds = 0, onTimeUp }: C
   const [selected, setSelected] = useState<number | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [timeLeft, setTimeLeft] = useState(timerSeconds);
+  const [bookmarked, setBookmarked] = useState(false);
   const chainTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     setSelected(null);
     setSubmitting(false);
+    setBookmarked(false);
   }, [question.question_id]);
 
   useEffect(() => {
@@ -123,6 +126,20 @@ function ChainCard({ question, result, onSubmit, timerSeconds = 0, onTimeUp }: C
     try { await onSubmit(selected); } finally { setSubmitting(false); }
   };
 
+  const handleBookmark = async () => {
+    try {
+      if (bookmarked) {
+        await removeBookmark(question.question_id);
+        setBookmarked(false);
+      } else {
+        await addBookmark("question", question.question_id);
+        setBookmarked(true);
+      }
+    } catch {
+      // silently fail — bookmark toggle is non-critical
+    }
+  };
+
   return (
     <div className="space-y-5">
       {timerSeconds > 0 && !result && (
@@ -140,13 +157,22 @@ function ChainCard({ question, result, onSubmit, timerSeconds = 0, onTimeUp }: C
         </div>
       )}
 
-      <div className="flex flex-wrap gap-2">
-        <span className="rounded-full bg-blue-100 px-3 py-0.5 text-xs font-semibold text-blue-700">
-          {question.topic}
-        </span>
-        <span className={`rounded-full px-3 py-0.5 text-xs font-semibold capitalize ${DIFFICULTY_COLORS[question.difficulty]}`}>
-          {question.difficulty}
-        </span>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap gap-2">
+          <span className="rounded-full bg-blue-100 px-3 py-0.5 text-xs font-semibold text-blue-700">
+            {question.topic}
+          </span>
+          <span className={`rounded-full px-3 py-0.5 text-xs font-semibold capitalize ${DIFFICULTY_COLORS[question.difficulty]}`}>
+            {question.difficulty}
+          </span>
+        </div>
+        <button
+          onClick={handleBookmark}
+          title={bookmarked ? "Remove bookmark" : "Bookmark question"}
+          className={`text-xl leading-none transition-colors ${bookmarked ? "text-amber-400 hover:text-amber-500" : "text-slate-300 hover:text-amber-400"}`}
+        >
+          {bookmarked ? "★" : "☆"}
+        </button>
       </div>
 
       <p className="text-base leading-relaxed text-slate-800">{question.stem}</p>
@@ -484,6 +510,7 @@ export default function QuestionsPage() {
 
   const [error, setError] = useState<string | null>(null);
   const [allFilteredByExclude, setAllFilteredByExclude] = useState(false);
+  const [bookmarkedIds, setBookmarkedIds] = useState<Set<string>>(new Set());
 
   // Load topics once (needed for settings screen)
   useEffect(() => {
@@ -745,6 +772,20 @@ export default function QuestionsPage() {
     return `${base} border-slate-200 bg-slate-50 text-slate-500`;
   };
 
+  const handleBookmarkToggle = async (questionId: string) => {
+    try {
+      if (bookmarkedIds.has(questionId)) {
+        await removeBookmark(questionId);
+        setBookmarkedIds((prev) => { const next = new Set(prev); next.delete(questionId); return next; });
+      } else {
+        await addBookmark("question", questionId);
+        setBookmarkedIds((prev) => new Set(prev).add(questionId));
+      }
+    } catch {
+      // silently fail — bookmark toggle is non-critical
+    }
+  };
+
   const handleStart = (s: SessionSettings) => {
     setSettings(s);
     setPhase("playing");
@@ -755,6 +796,7 @@ export default function QuestionsPage() {
     setMsRootQ(null);
     setMsFollowUps([]);
     setMsUsed(new Set());
+    setBookmarkedIds(new Set());
     setAllFilteredByExclude(false);
     setError(null);
   };
@@ -871,13 +913,22 @@ export default function QuestionsPage() {
                 </div>
               )}
 
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="rounded-full bg-blue-100 px-2.5 py-1 text-xs font-semibold text-blue-700">
-                  {currentQuestion.topic}
-                </span>
-                <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${DIFFICULTY_COLORS[currentQuestion.difficulty]}`}>
-                  {currentQuestion.difficulty}
-                </span>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="rounded-full bg-blue-100 px-2.5 py-1 text-xs font-semibold text-blue-700">
+                    {currentQuestion.topic}
+                  </span>
+                  <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${DIFFICULTY_COLORS[currentQuestion.difficulty]}`}>
+                    {currentQuestion.difficulty}
+                  </span>
+                </div>
+                <button
+                  onClick={() => handleBookmarkToggle(currentQuestion.question_id)}
+                  title={bookmarkedIds.has(currentQuestion.question_id) ? "Remove bookmark" : "Bookmark question"}
+                  className={`text-xl leading-none transition-colors ${bookmarkedIds.has(currentQuestion.question_id) ? "text-amber-400 hover:text-amber-500" : "text-slate-300 hover:text-amber-400"}`}
+                >
+                  {bookmarkedIds.has(currentQuestion.question_id) ? "★" : "☆"}
+                </button>
               </div>
 
               <p className="text-lg font-medium leading-7 text-slate-900">{currentQuestion.stem}</p>
