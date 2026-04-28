@@ -28,12 +28,12 @@ Two bugs block core functionality: (1) `annotationsApi.ts` uses wrong URLs causi
 **Description:** As a resident, I want to click anywhere on a bookmark card to open the item, and bookmarked questions should open the actual question page.
 
 **Acceptance Criteria:**
-- [ ] In `frontend/src/pages/BookmarksPage.tsx`, each bookmark row is wrapped in a `<Link>` that covers the entire card (not just the arrow icon)
-- [ ] Bookmarked questions navigate to `/questions/${item.item_id}` (the QuestionDetailPage), not `/questions`
-- [ ] Bookmarked cases continue to navigate to `/cases/${item.item_id}`
-- [ ] The ✕ remove button still works without triggering navigation (use `e.preventDefault()` + `e.stopPropagation()` on the remove button click)
-- [ ] Typecheck passes
-- [ ] Verify changes work in browser: click a question bookmark card → opens the question; click a case bookmark card → opens the case
+- [x] In `frontend/src/pages/BookmarksPage.tsx`, each bookmark row is wrapped in a `<Link>` that covers the entire card (not just the arrow icon)
+- [x] Bookmarked questions navigate to `/questions/${item.item_id}` (the QuestionDetailPage), not `/questions`
+- [x] Bookmarked cases continue to navigate to `/cases/${item.item_id}`
+- [x] The ✕ remove button still works without triggering navigation (use `e.preventDefault()` + `e.stopPropagation()` on the remove button click)
+- [x] Typecheck passes
+- [x] Verify changes work in browser: click a question bookmark card → opens the question; click a case bookmark card → opens the case
 
 ## Non-Goals
 
