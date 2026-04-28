@@ -1,7 +1,6 @@
 # Progress Log
 
 ## Learnings
-- Bookmark toggle state is kept local per card/session (Set<string> for standard player, useState bool for ChainCard). No prefetch needed — AC explicitly forbids it for session view.
-- bookmarksApi.ts follows the same axios-based pattern as other api modules: import apiClient, export typed functions.
+- US-003: When adding a notes sidebar alongside existing content, restructure `main` from `flex-col` to `flex` (row) so the notes panel can sit as a flex sibling to the content area — avoids wrestling with absolute/fixed positioning for a persistent sidebar.
 
 ---

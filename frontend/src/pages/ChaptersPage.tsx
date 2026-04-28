@@ -3,11 +3,22 @@ import DOMPurify from "dompurify";
 import { getChapters, getChapterById, type Chapter } from "../api/chaptersApi";
 import { getSectionById, type SectionResponse } from "../api/sectionApi";
 import { useAiContext } from "../context/AiContext";
+import {
+  createAnnotation,
+  getAnnotationsByChapter,
+  deleteAnnotation,
+  type Annotation,
+} from "../api/annotationsApi";
 
 interface Popover {
   x: number;
   y: number;
   text: string;
+}
+
+interface NotePanel {
+  selectedText: string;
+  sectionId: string;
 }
 
 function highlight(text: string, query: string): ReactNode {
@@ -46,6 +57,12 @@ export default function ChaptersPage() {
   const contentRef = useRef<HTMLDivElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Annotations
+  const [annotations, setAnnotations] = useState<Annotation[]>([]);
+  const [notePanel, setNotePanel] = useState<NotePanel | null>(null);
+  const [noteText, setNoteText] = useState("");
+  const [showNotesPanel, setShowNotesPanel] = useState(false);
+
   const { openWithText } = useAiContext();
 
   useEffect(() => {
@@ -53,6 +70,15 @@ export default function ChaptersPage() {
       .then((res) => {
         setChapters(res.data);
         setLoading(false);
+        const sorted = [...res.data].sort((a, b) => {
+          const pd = (a.part_number ?? 0) - (b.part_number ?? 0);
+          return pd !== 0 ? pd : (a.chapter_number ?? 0) - (b.chapter_number ?? 0);
+        });
+        const first = sorted[0];
+        if (first) {
+          setExpandedPart(first.part_number ?? 1);
+          handleChapterClick(first.id);
+        }
       })
       .catch(() => {
         setError("Failed to load chapters");
@@ -107,11 +133,17 @@ export default function ChaptersPage() {
   async function handleChapterClick(chapterId: string) {
     setSectionLoading(true);
     setSectionContent(null);
+    setNotePanel(null);
+    setNoteText("");
     try {
-      const chapterRes = await getChapterById(chapterId);
+      const [chapterRes, annotationsRes] = await Promise.all([
+        getChapterById(chapterId),
+        getAnnotationsByChapter(chapterId),
+      ]);
       const fullChapter = chapterRes.data;
       setCurrentChapter(fullChapter);
       setCurrentSectionIndex(0);
+      setAnnotations(annotationsRes.data);
       if (fullChapter.sections.length > 0) {
         const sectionRes = await getSectionById(chapterId, fullChapter.sections[0].id);
         setSectionContent(sectionRes.data);
@@ -178,6 +210,42 @@ export default function ChaptersPage() {
     openWithText(text);
   }
 
+  function handleAddNote() {
+    if (!popover || !sectionContent) return;
+    const selectedText = popover.text;
+    const sectionId = sectionContent.section_id;
+    setPopover(null);
+    window.getSelection()?.removeAllRanges();
+    setNotePanel({ selectedText, sectionId });
+    setNoteText("");
+  }
+
+  async function handleSaveNote() {
+    if (!notePanel || !currentChapter) return;
+    try {
+      const res = await createAnnotation({
+        chapter_id: currentChapter.id,
+        section_id: notePanel.sectionId,
+        selected_text: notePanel.selectedText,
+        note_text: noteText,
+      });
+      setAnnotations((prev) => [...prev, res.data]);
+      setNotePanel(null);
+      setNoteText("");
+    } catch {
+      // ignore
+    }
+  }
+
+  async function handleDeleteAnnotation(id: string) {
+    try {
+      await deleteAnnotation(id);
+      setAnnotations((prev) => prev.filter((a) => a.id !== id));
+    } catch {
+      // ignore
+    }
+  }
+
   const apiBase = (import.meta.env.VITE_API_URL ?? "http://localhost:8000/api/v1").replace(
     "/api/v1",
     ""
@@ -207,13 +275,22 @@ export default function ChaptersPage() {
             zIndex: 60,
           }}
         >
-          <button
-            onMouseDown={(e) => e.preventDefault()}
-            onClick={handleAskAi}
-            className="whitespace-nowrap rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white shadow-lg transition hover:bg-blue-700"
-          >
-            Ask AI about this
-          </button>
+          <div className="flex gap-1 rounded-lg bg-slate-800 px-1 py-1 shadow-lg">
+            <button
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={handleAskAi}
+              className="whitespace-nowrap rounded-md bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-blue-700"
+            >
+              Ask AI
+            </button>
+            <button
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={handleAddNote}
+              className="whitespace-nowrap rounded-md bg-slate-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-slate-500"
+            >
+              Add Note
+            </button>
+          </div>
         </div>
       )}
 
@@ -296,7 +373,7 @@ export default function ChaptersPage() {
       </aside>
 
       {/* Right pane: book reader */}
-      <main className="min-w-0 flex-1 flex flex-col overflow-hidden">
+      <main className="min-w-0 flex-1 flex overflow-hidden">
         {sectionLoading ? (
           <div className="flex flex-1 items-center justify-center text-slate-500">
             <p>Loading section…</p>
@@ -308,62 +385,165 @@ export default function ChaptersPage() {
             </p>
           </div>
         ) : (
-          <div className="flex flex-1 flex-col overflow-hidden px-8 py-6">
-            {/* Heading */}
-            <div className="flex-shrink-0">
-              <h1 className="text-2xl font-bold leading-tight text-slate-900">
-                {sectionContent?.chapter_title ?? currentChapter.title}
-                {sectionContent && (
-                  <>
-                    <span className="mx-2 font-normal text-slate-400">›</span>
-                    <span className="text-slate-700">{sectionContent.section_title}</span>
-                  </>
-                )}
-              </h1>
-              <p className="mt-1 text-sm text-slate-500">
-                Section {currentSectionIndex + 1} of {totalSections}
-              </p>
-            </div>
-
-            {/* Scrollable section content */}
-            <div className="mt-6 flex-1 overflow-y-auto" ref={contentRef}>
-              {sanitizedHtml ? (
-                <div
-                  className="section-content"
-                  dangerouslySetInnerHTML={{ __html: sanitizedHtml }}
-                />
-              ) : sectionContent ? (
-                <div className="space-y-4 text-[15px] leading-7 text-slate-800">
-                  {sectionContent.content.split("\n\n").map((para, i) => (
-                    <p key={i} className="m-0">
-                      {para.trim()}
-                    </p>
-                  ))}
+          <>
+            {/* Content area */}
+            <div className="flex flex-1 flex-col overflow-hidden px-8 py-6 min-w-0">
+              {/* Heading row */}
+              <div className="flex-shrink-0 flex items-start justify-between gap-4">
+                <div className="min-w-0">
+                  <h1 className="text-2xl font-bold leading-tight text-slate-900">
+                    {sectionContent?.chapter_title ?? currentChapter.title}
+                    {sectionContent && (
+                      <>
+                        <span className="mx-2 font-normal text-slate-400">›</span>
+                        <span className="text-slate-700">{sectionContent.section_title}</span>
+                      </>
+                    )}
+                  </h1>
+                  <p className="mt-1 text-sm text-slate-500">
+                    Section {currentSectionIndex + 1} of {totalSections}
+                  </p>
                 </div>
-              ) : null}
+                <button
+                  onClick={() => setShowNotesPanel((v) => !v)}
+                  className={`flex-shrink-0 flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium transition ${
+                    showNotesPanel
+                      ? "border-amber-400 bg-amber-50 text-amber-700"
+                      : "border-slate-300 text-slate-600 hover:bg-slate-50"
+                  }`}
+                >
+                  <span>Notes</span>
+                  {annotations.length > 0 && (
+                    <span
+                      className={`rounded-full px-1.5 py-0.5 text-xs font-semibold ${
+                        showNotesPanel ? "bg-amber-200 text-amber-800" : "bg-slate-200 text-slate-600"
+                      }`}
+                    >
+                      {annotations.length}
+                    </span>
+                  )}
+                </button>
+              </div>
+
+              {/* Note input panel */}
+              {notePanel && (
+                <div className="mt-4 flex-shrink-0 rounded-lg border border-amber-300 bg-amber-50 p-3 shadow-sm">
+                  <p className="mb-2 text-xs text-slate-500">
+                    Note for:{" "}
+                    <em className="text-slate-700">
+                      &ldquo;{notePanel.selectedText.slice(0, 80)}
+                      {notePanel.selectedText.length > 80 ? "…" : ""}&rdquo;
+                    </em>
+                  </p>
+                  <textarea
+                    autoFocus
+                    rows={3}
+                    value={noteText}
+                    onChange={(e) => setNoteText(e.target.value)}
+                    placeholder="Your note…"
+                    className="w-full resize-none rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100"
+                  />
+                  <div className="mt-2 flex gap-2">
+                    <button
+                      onClick={handleSaveNote}
+                      disabled={!noteText.trim()}
+                      className="rounded-md bg-amber-500 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-amber-600 disabled:opacity-40"
+                    >
+                      Save
+                    </button>
+                    <button
+                      onClick={() => { setNotePanel(null); setNoteText(""); }}
+                      className="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:bg-slate-100"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Scrollable section content */}
+              <div className="mt-6 flex-1 overflow-y-auto" ref={contentRef}>
+                {sanitizedHtml ? (
+                  <div
+                    className="section-content"
+                    dangerouslySetInnerHTML={{ __html: sanitizedHtml }}
+                  />
+                ) : sectionContent ? (
+                  <div className="space-y-4 text-[15px] leading-7 text-slate-800">
+                    {sectionContent.content.split("\n\n").map((para, i) => (
+                      <p key={i} className="m-0">
+                        {para.trim()}
+                      </p>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+
+              {/* Prev / Next */}
+              <div className="mt-4 flex-shrink-0 flex items-center justify-between border-t border-slate-200 pt-4">
+                <button
+                  onClick={() => goToSection(currentSectionIndex - 1)}
+                  disabled={currentSectionIndex === 0}
+                  className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  ← Previous
+                </button>
+                <span className="text-sm text-slate-500">
+                  Section {currentSectionIndex + 1} of {totalSections}
+                </span>
+                <button
+                  onClick={() => goToSection(currentSectionIndex + 1)}
+                  disabled={currentSectionIndex >= totalSections - 1}
+                  className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  Next →
+                </button>
+              </div>
             </div>
 
-            {/* Prev / Next */}
-            <div className="mt-4 flex-shrink-0 flex items-center justify-between border-t border-slate-200 pt-4">
-              <button
-                onClick={() => goToSection(currentSectionIndex - 1)}
-                disabled={currentSectionIndex === 0}
-                className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                ← Previous
-              </button>
-              <span className="text-sm text-slate-500">
-                Section {currentSectionIndex + 1} of {totalSections}
-              </span>
-              <button
-                onClick={() => goToSection(currentSectionIndex + 1)}
-                disabled={currentSectionIndex >= totalSections - 1}
-                className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                Next →
-              </button>
-            </div>
-          </div>
+            {/* Notes sidebar panel */}
+            {showNotesPanel && (
+              <div className="w-[280px] flex-shrink-0 border-l border-slate-200 flex flex-col overflow-hidden bg-slate-50">
+                <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
+                  <h2 className="text-sm font-semibold text-slate-800">
+                    Notes ({annotations.length})
+                  </h2>
+                  <button
+                    onClick={() => setShowNotesPanel(false)}
+                    className="text-slate-400 hover:text-slate-600 text-lg leading-none"
+                    aria-label="Close notes panel"
+                  >
+                    ×
+                  </button>
+                </div>
+                <div className="flex-1 overflow-y-auto p-3 space-y-3">
+                  {annotations.length === 0 ? (
+                    <p className="text-xs text-slate-500 text-center mt-4">
+                      No notes yet. Select text and click "Add Note".
+                    </p>
+                  ) : (
+                    annotations.map((ann) => (
+                      <div
+                        key={ann.id}
+                        className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm"
+                      >
+                        <p className="mb-1.5 text-xs italic text-slate-500 line-clamp-2">
+                          &ldquo;{ann.selected_text.slice(0, 60)}{ann.selected_text.length > 60 ? "…" : ""}&rdquo;
+                        </p>
+                        <p className="text-sm text-slate-800">{ann.note_text}</p>
+                        <button
+                          onClick={() => handleDeleteAnnotation(ann.id)}
+                          className="mt-2 text-xs text-red-500 hover:text-red-700 transition"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
+          </>
         )}
       </main>
     </div>
