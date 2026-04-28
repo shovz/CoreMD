@@ -31,10 +31,10 @@ Residents studying in the chapter reader want to annotate passages — saving se
 **Description:** As a developer, I need an API client module for annotations so all components use consistent fetch patterns.
 
 **Acceptance Criteria:**
-- [ ] New file `frontend/src/api/annotationsApi.ts` created
-- [ ] Exports: `createAnnotation(data)`, `getAnnotationsByChapter(chapterId)`, `getAllAnnotations()`, `updateAnnotation(id, noteText)`, `deleteAnnotation(id)` — all using the authenticated apiClient
-- [ ] TypeScript interfaces: `Annotation { id, chapter_id, section_id, selected_text, note_text, created_at, chapter_title? }`
-- [ ] Typecheck passes
+- [x] New file `frontend/src/api/annotationsApi.ts` created
+- [x] Exports: `createAnnotation(data)`, `getAnnotationsByChapter(chapterId)`, `getAllAnnotations()`, `updateAnnotation(id, noteText)`, `deleteAnnotation(id)` — all using the authenticated apiClient
+- [x] TypeScript interfaces: `Annotation { id, chapter_id, section_id, selected_text, note_text, created_at, chapter_title? }`
+- [x] Typecheck passes
 
 ### US-003: Frontend — ChaptersPage text selection tooltip + notes sidebar
 **Description:** As a resident reading a chapter, I want to select text and add a note so I can capture my thoughts while studying.
