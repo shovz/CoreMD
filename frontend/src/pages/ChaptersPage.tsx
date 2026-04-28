@@ -135,15 +135,14 @@ export default function ChaptersPage() {
     setSectionContent(null);
     setNotePanel(null);
     setNoteText("");
+    getAnnotationsByChapter(chapterId)
+      .then((r) => setAnnotations(r.data))
+      .catch(() => setAnnotations([]));
     try {
-      const [chapterRes, annotationsRes] = await Promise.all([
-        getChapterById(chapterId),
-        getAnnotationsByChapter(chapterId),
-      ]);
+      const chapterRes = await getChapterById(chapterId);
       const fullChapter = chapterRes.data;
       setCurrentChapter(fullChapter);
       setCurrentSectionIndex(0);
-      setAnnotations(annotationsRes.data);
       if (fullChapter.sections.length > 0) {
         const sectionRes = await getSectionById(chapterId, fullChapter.sections[0].id);
         setSectionContent(sectionRes.data);
