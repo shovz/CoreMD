@@ -26,24 +26,24 @@ Three layout and navigation bugs: (1) Chapter sections fail to render because th
 **Description:** As a resident, I want to return to my bookmarks after opening a question or case from the bookmarks page, and I don't need the redundant arrow icon on each card.
 
 **Acceptance Criteria:**
-- [ ] In `frontend/src/pages/BookmarksPage.tsx`, the `<Link>` navigating to a question or case passes `state={{ from: "bookmarks" }}` via React Router's state prop
-- [ ] The `→` span is removed from the `BookmarkRow` component
-- [ ] `frontend/src/pages/QuestionDetailPage.tsx` reads `location.state?.from`; if `"bookmarks"`, renders a `<Link to="/bookmarks">← Back to Bookmarks</Link>` button at the top of the page
-- [ ] `frontend/src/pages/CaseDetailPage.tsx` same: if `location.state?.from === "bookmarks"`, renders `← Back to Bookmarks` link at top
-- [ ] `useLocation` is imported from `react-router-dom` in both detail pages
-- [ ] Typecheck passes
-- [ ] Verify changes work in browser: click a bookmark → opens detail page with back button → back button returns to /bookmarks
+- [x] In `frontend/src/pages/BookmarksPage.tsx`, the `<Link>` navigating to a question or case passes `state={{ from: "bookmarks" }}` via React Router's state prop
+- [x] The `→` span is removed from the `BookmarkRow` component
+- [x] `frontend/src/pages/QuestionDetailPage.tsx` reads `location.state?.from`; if `"bookmarks"`, renders a `<Link to="/bookmarks">← Back to Bookmarks</Link>` button at the top of the page
+- [x] `frontend/src/pages/CaseDetailPage.tsx` same: if `location.state?.from === "bookmarks"`, renders `← Back to Bookmarks` link at top
+- [x] `useLocation` is imported from `react-router-dom` in both detail pages
+- [x] Typecheck passes
+- [x] Verify changes work in browser: click a bookmark → opens detail page with back button → back button returns to /bookmarks
 
 ### US-003: Dashboard — align Continue and Focus Topics cards
 **Description:** As a resident, I want the Continue and Focus Topics cards to appear side-by-side at the same vertical level on the dashboard.
 
 **Acceptance Criteria:**
-- [ ] In `frontend/src/pages/DashboardPage.tsx`, the stats bar row (streak/questions/accuracy pills) is moved OUTSIDE the 2-column grid to be full-width above it
-- [ ] The 2-column grid contains ONLY the Continue card (left) and Focus Topics card (right) — both start at the same vertical position
-- [ ] The empty state message (`Start by reading a chapter…`) remains below the stats bar
-- [ ] All existing content (performance section, etc.) is unchanged
-- [ ] Typecheck passes
-- [ ] Verify changes work in browser
+- [x] In `frontend/src/pages/DashboardPage.tsx`, the stats bar row (streak/questions/accuracy pills) is moved OUTSIDE the 2-column grid to be full-width above it
+- [x] The 2-column grid contains ONLY the Continue card (left) and Focus Topics card (right) — both start at the same vertical position
+- [x] The empty state message (`Start by reading a chapter…`) remains below the stats bar
+- [x] All existing content (performance section, etc.) is unchanged
+- [x] Typecheck passes
+- [x] Verify changes work in browser
 
 ## Non-Goals
 

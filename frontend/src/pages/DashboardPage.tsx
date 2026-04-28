@@ -19,7 +19,7 @@ export default function DashboardPage() {
   const hour = new Date().getHours();
   const timeOfDay = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
   const lastName = user?.full_name?.trim().split(/\s+/).at(-1) ?? "";
-  const greeting = lastName ? `${timeOfDay}, Dr. ${lastName} ✦` : `${timeOfDay}, Doctor ✦`;
+  const greeting = lastName ? `${timeOfDay}, Dr. ${lastName}` : `${timeOfDay}, Doctor`;
 
   useEffect(() => {
     getDashboardStats()
@@ -53,43 +53,43 @@ export default function DashboardPage() {
 
       {!error && (
         <>
+        {/* Stats bar — full width above the grid */}
+        {loading ? (
+          <SkeletonBlock className="h-16" />
+        ) : (
+          <div className="flex flex-row flex-wrap gap-3">
+            <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-5 py-3">
+              <span className="text-2xl font-bold text-slate-900">
+                🔥 {stats?.streak_days ?? 0}
+              </span>
+              <span className="text-sm text-slate-500">days</span>
+            </div>
+            <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-5 py-3">
+              <span className="text-2xl font-bold text-slate-900">
+                {stats?.questions_answered ?? 0}
+              </span>
+              <span className="text-sm text-slate-500">questions</span>
+            </div>
+            <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-5 py-3">
+              <span className="text-2xl font-bold text-slate-900">
+                {stats?.accuracy_pct ?? 0}%
+              </span>
+              <span className="text-sm text-slate-500">accuracy</span>
+            </div>
+          </div>
+        )}
+
+        {/* Empty state */}
+        {isEmpty && (
+          <p className="italic text-slate-500">
+            Start by reading a chapter or trying a question — your progress will appear here.
+          </p>
+        )}
+
+        {/* 2-column grid: Continue (left) + Focus Topics (right) */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Left column: stats bar + continue card */}
-          <div className="space-y-4">
-            {/* Stats bar */}
-            {loading ? (
-              <SkeletonBlock className="h-16" />
-            ) : (
-              <div className="flex flex-row flex-wrap gap-3">
-                <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-5 py-3">
-                  <span className="text-2xl font-bold text-slate-900">
-                    🔥 {stats?.streak_days ?? 0}
-                  </span>
-                  <span className="text-sm text-slate-500">days</span>
-                </div>
-                <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-5 py-3">
-                  <span className="text-2xl font-bold text-slate-900">
-                    {stats?.questions_answered ?? 0}
-                  </span>
-                  <span className="text-sm text-slate-500">questions</span>
-                </div>
-                <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-5 py-3">
-                  <span className="text-2xl font-bold text-slate-900">
-                    {stats?.accuracy_pct ?? 0}%
-                  </span>
-                  <span className="text-sm text-slate-500">accuracy</span>
-                </div>
-              </div>
-            )}
-
-            {/* Empty state */}
-            {isEmpty && (
-              <p className="italic text-slate-500">
-                Start by reading a chapter or trying a question — your progress will appear here.
-              </p>
-            )}
-
-            {/* Continue card */}
+          {/* Continue card */}
+          <div>
             {loading ? (
               <SkeletonBlock className="h-28" />
             ) : (
@@ -127,7 +127,7 @@ export default function DashboardPage() {
             )}
           </div>
 
-          {/* Right column: focus topics */}
+          {/* Focus Topics card */}
           <div>
             {loading ? (
               <SkeletonBlock className="h-28" />
