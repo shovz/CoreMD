@@ -1,78 +1,47 @@
-# PRD: Notes and Annotations
+# PRD: Bug Fixes — Sections Display + Bookmarks Navigation
 
 ## Introduction
 
-Residents studying in the chapter reader want to annotate passages — saving selected text with a personal note, like writing in the margins of a textbook. Annotations are stored per user, visible as a side panel while reading, and aggregated on a dedicated Notes page. Selected text also gets a persistent yellow highlight in the section HTML so users can see at a glance what they've annotated.
+Two bugs block core functionality: (1) `annotationsApi.ts` uses wrong URLs causing the chapter reader to fail silently and render blank sections; (2) BookmarksPage navigates question cards to the settings screen instead of the actual question, and only the small arrow is clickable instead of the whole card.
 
 ## Goals
 
-- Selecting text in the chapter reader shows a two-button tooltip: [Ask AI] and [Add Note]
-- "Add Note" opens an inline input to save the annotation; the selected text is highlighted yellow
-- An annotations sidebar in the chapter reader lists all notes for the current chapter/section
-- A Notes page lists all of the user's annotations grouped by chapter
+- Chapter sections render correctly when a chapter is selected
+- Notes feature is unblocked (depends on fix 1)
+- Clicking anywhere on a bookmarked question card opens that question
+- Clicking anywhere on a bookmarked case card opens that case
 
 ## User Stories
 
-### US-001: Backend — annotations CRUD endpoints
-**Description:** As a developer, I need REST endpoints to create, read, update, and delete annotations so the frontend can persist and retrieve them.
+### US-001: Fix annotationsApi.ts URL mismatches
+**Description:** As a developer, I need `annotationsApi.ts` to call the correct backend URLs so that the chapter reader works and the notes feature is usable.
 
 **Acceptance Criteria:**
-- [x] New file `backend/app/api/v1/routes/annotations.py` created
-- [x] `POST /annotations` — body `{chapter_id: str, section_id: str, selected_text: str, note_text: str}` — inserts `{user_id: ObjectId, chapter_id, section_id, selected_text, note_text, created_at}` into `annotations` collection; returns the created annotation with `id`
-- [x] `GET /annotations?chapter_id=X` — returns all annotations for current user in the given chapter, sorted by created_at desc
-- [x] `GET /annotations/all` — returns all annotations for current user, sorted by created_at desc; each item includes `chapter_title` looked up from the chapters collection
-- [x] `PATCH /annotations/{id}` — body `{note_text: str}` — updates note_text; validates annotation belongs to current user
-- [x] `DELETE /annotations/{id}` — deletes annotation; validates ownership
-- [x] Router registered in `backend/app/main.py` with prefix `/api/v1/annotations`
-- [x] All endpoints use `current_user: str = Depends(get_current_user)` from `app.core.auth`
+- [x] `frontend/src/api/annotationsApi.ts` `getAnnotationsByChapter(chapterId)` calls `GET /annotations?chapter_id=${chapterId}` (query param, not path param)
+- [x] `frontend/src/api/annotationsApi.ts` `getAllAnnotations()` calls `GET /annotations/all` (not `GET /annotations`)
+- [x] `frontend/src/api/annotationsApi.ts` `updateAnnotation(id, noteText)` uses `PATCH` method (not `PUT`)
+- [x] Only `frontend/src/api/annotationsApi.ts` is modified — no backend changes
 - [x] Typecheck passes
+- [x] Verify changes work in browser: select a chapter → section content renders correctly
 
-### US-002: Frontend — annotationsApi.ts
-**Description:** As a developer, I need an API client module for annotations so all components use consistent fetch patterns.
+### US-002: Fix BookmarksPage — whole card clickable + question route
+**Description:** As a resident, I want to click anywhere on a bookmark card to open the item, and bookmarked questions should open the actual question page.
 
 **Acceptance Criteria:**
-- [x] New file `frontend/src/api/annotationsApi.ts` created
-- [x] Exports: `createAnnotation(data)`, `getAnnotationsByChapter(chapterId)`, `getAllAnnotations()`, `updateAnnotation(id, noteText)`, `deleteAnnotation(id)` — all using the authenticated apiClient
-- [x] TypeScript interfaces: `Annotation { id, chapter_id, section_id, selected_text, note_text, created_at, chapter_title? }`
-- [x] Typecheck passes
-
-### US-003: Frontend — ChaptersPage text selection tooltip + notes sidebar
-**Description:** As a resident reading a chapter, I want to select text and add a note so I can capture my thoughts while studying.
-
-**Acceptance Criteria:**
-- [x] `frontend/src/pages/ChaptersPage.tsx` popover is extended to show two buttons: "Ask AI" (existing) and "Add Note" (new)
-- [x] Clicking "Add Note" closes the popover and opens a compact inline note input panel positioned near the top of the content area (fixed, not at the cursor position to avoid layout issues): a textarea (max 3 rows) with Save and Cancel buttons
-- [x] On Save: calls `createAnnotation({chapter_id, section_id, selected_text, note_text})`; on success, adds annotation to local state and closes input panel
-- [x] A "Notes" toggle button appears in the chapter reader header row (same row as the section heading)
-- [x] Clicking "Notes" toggles a right-side panel (width ~280px) that slides in alongside the content; lists all annotations for the current chapter with: selected_text snippet (italic, truncated 60 chars), note_text, delete button (calls `deleteAnnotation`)
-- [x] Annotations for the current chapter are fetched when the chapter is loaded (`handleChapterClick`)
-- [x] Typecheck passes
-- [x] Verify changes work in browser
-
-### US-004: Frontend — NotesPage
-**Description:** As a resident, I want a single page showing all my annotations so I can review my study notes across all chapters.
-
-**Acceptance Criteria:**
-- [x] New file `frontend/src/pages/NotesPage.tsx` created
-- [x] Fetches `getAllAnnotations()` on mount
-- [x] Groups annotations by chapter (using `chapter_title` or `chapter_id`)
-- [x] Each group shows: chapter title as section header, then each annotation as a card with selected_text (italic), note_text, formatted date, delete button
-- [x] Clicking the chapter title navigates to `/chapters` (the chapter reader — no deep-link needed for MVP)
-- [x] Empty state: "No notes yet. Select text in a chapter and click 'Add Note' to get started."
-- [x] `frontend/src/router.tsx` has a protected route `/notes` → `NotesPage`
-- [x] `frontend/src/components/Sidebar.tsx` has a "Notes" nav link (added below Bookmarks)
-- [x] Typecheck passes
-- [x] Verify changes work in browser
+- [ ] In `frontend/src/pages/BookmarksPage.tsx`, each bookmark row is wrapped in a `<Link>` that covers the entire card (not just the arrow icon)
+- [ ] Bookmarked questions navigate to `/questions/${item.item_id}` (the QuestionDetailPage), not `/questions`
+- [ ] Bookmarked cases continue to navigate to `/cases/${item.item_id}`
+- [ ] The ✕ remove button still works without triggering navigation (use `e.preventDefault()` + `e.stopPropagation()` on the remove button click)
+- [ ] Typecheck passes
+- [ ] Verify changes work in browser: click a question bookmark card → opens the question; click a case bookmark card → opens the case
 
 ## Non-Goals
 
-- No highlight color picker (yellow only)
-- No persistent visual highlight in the rendered HTML (the annotation is stored and shown in the side panel; no DOM mutation of the section HTML — too fragile given DOMPurify sanitization)
-- No annotation sharing between users
-- No full-text search within notes
+- No changes to bookmark backend
+- No changes to how bookmarks are added/removed
 
 ## Technical Considerations
 
-- The highlight-in-HTML approach (question 3 answer A) was scoped down to "no DOM mutation" in Non-Goals because DOMPurify sanitizes injected `<mark>` tags and the section HTML is re-rendered on every section change, wiping any DOM changes. The side-panel approach gives the same value without fragility.
-- `annotations` collection index: `db.annotations.create_index([("user_id", 1), ("chapter_id", 1)])` — add in the POST handler or startup
-- The notes sidebar in ChaptersPage must not interfere with the existing `contentRef` used for text-selection detection — add the sidebar outside the `contentRef` div
+- `annotationsApi.ts` is at `frontend/src/api/annotationsApi.ts`
+- `BookmarksPage.tsx` is at `frontend/src/pages/BookmarksPage.tsx`
+- The `<Link>` wrapper approach: wrap the entire row div in `<Link to={linkTo} className="block">` and give it `relative` positioning; put the remove button inside with `relative z-10` and an `onClick` that calls `e.preventDefault(); e.stopPropagation(); handleRemove(...)`
