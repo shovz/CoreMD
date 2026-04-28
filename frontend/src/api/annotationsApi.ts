@@ -21,13 +21,13 @@ export const createAnnotation = (data: CreateAnnotationData) =>
   api.post<Annotation>("/annotations", data);
 
 export const getAnnotationsByChapter = (chapterId: string) =>
-  api.get<Annotation[]>(`/annotations/chapter/${chapterId}`);
+  api.get<Annotation[]>(`/annotations?chapter_id=${chapterId}`);
 
 export const getAllAnnotations = () =>
-  api.get<Annotation[]>("/annotations");
+  api.get<Annotation[]>("/annotations/all");
 
 export const updateAnnotation = (id: string, noteText: string) =>
-  api.put<Annotation>(`/annotations/${id}`, { note_text: noteText });
+  api.patch<Annotation>(`/annotations/${id}`, { note_text: noteText });
 
 export const deleteAnnotation = (id: string) =>
   api.delete<{ deleted: boolean }>(`/annotations/${id}`);
