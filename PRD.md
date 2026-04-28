@@ -29,12 +29,12 @@ The History page currently only allows resetting all question attempts at once a
 **Description:** As a developer, I need case attempts to be persisted and queryable so the History page can show a cases tab.
 
 **Acceptance Criteria:**
-- [ ] `backend/app/api/v1/routes/cases.py` case attempt submission (`POST /cases/{case_id}/questions/{question_id}/attempt`) saves to a `case_attempts` collection: `{user_id: ObjectId, case_id: str, question_id: str, selected_option: str, correct_option: str, is_correct: bool, case_title: str, created_at: datetime}`
-- [ ] `GET /cases/history?limit=50&offset=0` endpoint added — queries `case_attempts` by `user_id`, returns list of `{attempt_id, case_id, case_title, question_id, selected_option, correct_option, is_correct, created_at}` sorted by `created_at` desc + `total` count
-- [ ] `DELETE /cases/history` endpoint — deletes all `case_attempts` for current user, returns `{"deleted_count": int}`
-- [ ] `DELETE /cases/history/selected` endpoint — body `{"case_ids": ["id1", ...]}` — deletes all attempts for those case_ids for current user, returns `{"deleted_count": int}`
-- [ ] All new endpoints use `current_user: str = Depends(get_current_user)` from `app.core.auth`
-- [ ] Typecheck passes
+- [x] `backend/app/api/v1/routes/cases.py` case attempt submission (`POST /cases/{case_id}/questions/{question_id}/attempt`) saves to a `case_attempts` collection: `{user_id: ObjectId, case_id: str, question_id: str, selected_option: str, correct_option: str, is_correct: bool, case_title: str, created_at: datetime}`
+- [x] `GET /cases/history?limit=50&offset=0` endpoint added — queries `case_attempts` by `user_id`, returns list of `{attempt_id, case_id, case_title, question_id, selected_option, correct_option, is_correct, created_at}` sorted by `created_at` desc + `total` count
+- [x] `DELETE /cases/history` endpoint — deletes all `case_attempts` for current user, returns `{"deleted_count": int}`
+- [x] `DELETE /cases/history/selected` endpoint — body `{"case_ids": ["id1", ...]}` — deletes all attempts for those case_ids for current user, returns `{"deleted_count": int}`
+- [x] All new endpoints use `current_user: str = Depends(get_current_user)` from `app.core.auth`
+- [x] Typecheck passes
 
 ### US-003: Frontend — HistoryPage questions tab with checkboxes + selective reset
 **Description:** As a resident, I want to select specific question attempts and reset only those so I can retry individual questions without losing all my history.
