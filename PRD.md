@@ -40,14 +40,14 @@ Residents studying in the chapter reader want to annotate passages — saving se
 **Description:** As a resident reading a chapter, I want to select text and add a note so I can capture my thoughts while studying.
 
 **Acceptance Criteria:**
-- [ ] `frontend/src/pages/ChaptersPage.tsx` popover is extended to show two buttons: "Ask AI" (existing) and "Add Note" (new)
-- [ ] Clicking "Add Note" closes the popover and opens a compact inline note input panel positioned near the top of the content area (fixed, not at the cursor position to avoid layout issues): a textarea (max 3 rows) with Save and Cancel buttons
-- [ ] On Save: calls `createAnnotation({chapter_id, section_id, selected_text, note_text})`; on success, adds annotation to local state and closes input panel
-- [ ] A "Notes" toggle button appears in the chapter reader header row (same row as the section heading)
-- [ ] Clicking "Notes" toggles a right-side panel (width ~280px) that slides in alongside the content; lists all annotations for the current chapter with: selected_text snippet (italic, truncated 60 chars), note_text, delete button (calls `deleteAnnotation`)
-- [ ] Annotations for the current chapter are fetched when the chapter is loaded (`handleChapterClick`)
-- [ ] Typecheck passes
-- [ ] Verify changes work in browser
+- [x] `frontend/src/pages/ChaptersPage.tsx` popover is extended to show two buttons: "Ask AI" (existing) and "Add Note" (new)
+- [x] Clicking "Add Note" closes the popover and opens a compact inline note input panel positioned near the top of the content area (fixed, not at the cursor position to avoid layout issues): a textarea (max 3 rows) with Save and Cancel buttons
+- [x] On Save: calls `createAnnotation({chapter_id, section_id, selected_text, note_text})`; on success, adds annotation to local state and closes input panel
+- [x] A "Notes" toggle button appears in the chapter reader header row (same row as the section heading)
+- [x] Clicking "Notes" toggles a right-side panel (width ~280px) that slides in alongside the content; lists all annotations for the current chapter with: selected_text snippet (italic, truncated 60 chars), note_text, delete button (calls `deleteAnnotation`)
+- [x] Annotations for the current chapter are fetched when the chapter is loaded (`handleChapterClick`)
+- [x] Typecheck passes
+- [x] Verify changes work in browser
 
 ### US-004: Frontend — NotesPage
 **Description:** As a resident, I want a single page showing all my annotations so I can review my study notes across all chapters.
