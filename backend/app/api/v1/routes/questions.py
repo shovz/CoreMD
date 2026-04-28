@@ -6,7 +6,7 @@ from pymongo.database import Database
 from bson import ObjectId
 from pydantic import BaseModel
 
-from app.core.auth import get_current_user
+from app.core.auth import get_current_user_id
 from app.schemas.question import QuestionOut, QuestionFull, Difficulty
 from app.schemas.question_attempt import QuestionAttemptCreate, AttemptResult
 from app.services.question_attempt_service import record_attempt
@@ -22,7 +22,7 @@ def _doc_to_question_out(doc: dict) -> dict:
         "stem": doc["stem"],
         "options": doc["options"],
         "topic": doc["topic"],
-        "chapter_ref": doc["chapter_ref"],
+        "chapter_id": doc.get("chapter_id") or doc.get("chapter_ref"),
         "difficulty": doc["difficulty"],
     }
 
@@ -39,17 +39,24 @@ def _build_questions_query(
     topic: Optional[str], chapter_id: Optional[str], difficulty: Optional[Difficulty], search: Optional[str]
 ) -> dict:
     query: dict = {"is_chain": {"$ne": True}}
+    and_filters: list[dict] = []
     if topic:
         query["topic"] = topic
     if chapter_id:
-        query["chapter_ref"] = chapter_id
+        and_filters.append({"$or": [{"chapter_id": chapter_id}, {"chapter_ref": chapter_id}]})
     if difficulty:
         query["difficulty"] = difficulty.value
     if search:
-        query["$or"] = [
-            {"stem": {"$regex": search, "$options": "i"}},
-            {"topic": {"$regex": search, "$options": "i"}},
-        ]
+        and_filters.append(
+            {
+                "$or": [
+                    {"stem": {"$regex": search, "$options": "i"}},
+                    {"topic": {"$regex": search, "$options": "i"}},
+                ]
+            }
+        )
+    if and_filters:
+        query["$and"] = and_filters
     return query
 
 
@@ -87,7 +94,7 @@ def get_questions(
     has_followups: Optional[bool] = Query(None),
     limit: int = Query(20, ge=1, le=100),
     offset: int = Query(0, ge=0),
-    current_user: str = Depends(get_current_user),
+    current_user: str = Depends(get_current_user_id),
     db: Database = Depends(mongo_db),
 ):
     return _list_questions(
@@ -111,7 +118,7 @@ def get_questions_with_trailing_slash(
     has_followups: Optional[bool] = Query(None),
     limit: int = Query(20, ge=1, le=100),
     offset: int = Query(0, ge=0),
-    current_user: str = Depends(get_current_user),
+    current_user: str = Depends(get_current_user_id),
     db: Database = Depends(mongo_db),
 ):
     return _list_questions(
@@ -132,7 +139,7 @@ class AnsweredCorrectlyResponse(BaseModel):
 
 @router.get("/answered-correctly", response_model=AnsweredCorrectlyResponse)
 def get_answered_correctly(
-    current_user: str = Depends(get_current_user),
+    current_user: str = Depends(get_current_user_id),
     db: Database = Depends(mongo_db),
 ):
     ids = db["question_attempts"].distinct(
@@ -144,7 +151,7 @@ def get_answered_correctly(
 
 @router.get("/topics", response_model=List[str])
 def get_question_topics(
-    current_user: str = Depends(get_current_user),
+    current_user: str = Depends(get_current_user_id),
     db: Database = Depends(mongo_db),
 ):
     topics = db["questions"].distinct("topic")
@@ -174,7 +181,7 @@ class DeleteHistoryResponse(BaseModel):
 def get_question_history(
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
-    current_user: str = Depends(get_current_user),
+    current_user: str = Depends(get_current_user_id),
     db: Database = Depends(mongo_db),
 ):
     user_oid = ObjectId(current_user)
@@ -212,17 +219,33 @@ def get_question_history(
 
 @router.delete("/history", response_model=DeleteHistoryResponse)
 def delete_question_history(
-    current_user: str = Depends(get_current_user),
+    current_user: str = Depends(get_current_user_id),
     db: Database = Depends(mongo_db),
 ):
     result = db["question_attempts"].delete_many({"user_id": ObjectId(current_user)})
     return DeleteHistoryResponse(deleted_count=result.deleted_count)
 
 
+class SelectiveDeleteRequest(BaseModel):
+    question_ids: List[str]
+
+
+@router.delete("/history/selected", response_model=DeleteHistoryResponse)
+def delete_question_history_selected(
+    body: SelectiveDeleteRequest,
+    current_user: str = Depends(get_current_user_id),
+    db: Database = Depends(mongo_db),
+):
+    result = db["question_attempts"].delete_many(
+        {"user_id": ObjectId(current_user), "question_id": {"$in": body.question_ids}}
+    )
+    return DeleteHistoryResponse(deleted_count=result.deleted_count)
+
+
 @router.get("/{question_id}", response_model=QuestionFull)
 def get_question(
     question_id: str,
-    current_user: str = Depends(get_current_user),
+    current_user: str = Depends(get_current_user_id),
     db: Database = Depends(mongo_db),
 ):
     doc = db["questions"].find_one({"question_id": question_id}, {"_id": 0})
@@ -236,7 +259,7 @@ def get_question_followups(
     question_id: str,
     trigger: str = Query("correct"),
     limit: int = Query(3, ge=1, le=10),
-    current_user: str = Depends(get_current_user),
+    current_user: str = Depends(get_current_user_id),
     db: Database = Depends(mongo_db),
 ):
     parent_exists = db["questions"].find_one({"question_id": question_id}, {"_id": 1})
@@ -281,7 +304,7 @@ def get_question_followups(
 def attempt_question(
     question_id: str,
     attempt: QuestionAttemptCreate,
-    current_user: str = Depends(get_current_user),
+    current_user: str = Depends(get_current_user_id),
     db: Database = Depends(mongo_db),
     redis: Redis = Depends(redis_client),
 ):
