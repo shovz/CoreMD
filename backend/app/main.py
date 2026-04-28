@@ -8,7 +8,7 @@ from app.db.mongo import get_db
 
 
 # Import the auth router
-from app.api.v1.routes import auth, chapters, questions, cases, ai, debug, stats, bookmarks
+from app.api.v1.routes import auth, chapters, questions, cases, ai, debug, stats, bookmarks, annotations
 
 # Database connections
 from app.db.mongo import connect_to_mongo, close_mongo_connection
@@ -64,6 +64,7 @@ app.include_router(ai.router, prefix="/api/v1")
 app.include_router(debug.router, prefix="/api/v1")
 app.include_router(stats.router, prefix="/api/v1")
 app.include_router(bookmarks.router, prefix="/api/v1")
+app.include_router(annotations.router, prefix="/api/v1")
 
 
 @app.get("/")
