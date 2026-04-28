@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useLocation } from "react-router-dom";
 import {
   getCaseById,
   getCaseQuestions,
@@ -118,6 +118,8 @@ function QuestionCard({ q, state, locked, onSelect, onSubmit }: QuestionCardProp
 
 export default function CaseDetailPage() {
   const { id } = useParams<{ id: string }>();
+  const location = useLocation();
+  const fromBookmarks = (location.state as { from?: string } | null)?.from === "bookmarks";
 
   const [caseData, setCaseData] = useState<CaseFull | null>(null);
   const [loading, setLoading] = useState(true);
@@ -194,9 +196,15 @@ export default function CaseDetailPage() {
 
   return (
     <div className="px-6 pt-6 pb-16">
-      <Link to="/cases" className="text-sm text-blue-600 hover:underline">
-        ← Back to Cases
-      </Link>
+      {fromBookmarks ? (
+        <Link to="/bookmarks" className="text-sm text-blue-600 hover:underline">
+          ← Back to Bookmarks
+        </Link>
+      ) : (
+        <Link to="/cases" className="text-sm text-blue-600 hover:underline">
+          ← Back to Cases
+        </Link>
+      )}
 
       {/* ── Two-column layout ──────────────────────────────────────────── */}
       <div className="mt-4 flex gap-6 items-start">
@@ -222,9 +230,9 @@ export default function CaseDetailPage() {
               >
                 {bookmarked ? "★" : "☆"}
               </button>
-              {caseData.chapter_ref && (
+              {caseData.chapter_id && (
                 <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
-                  📖 {caseData.chapter_ref}
+                  📖 {caseData.chapter_id}
                 </span>
               )}
             </div>
@@ -298,14 +306,14 @@ export default function CaseDetailPage() {
               </div>
             )}
 
-            {caseData.chapter_ref && (
+            {caseData.chapter_id && (
               <div className="border-t border-blue-200 pt-4">
                 <p className="mb-2 font-mono text-xs tracking-widest text-slate-400 uppercase">References</p>
                 <span className="inline-flex items-center rounded-full border border-blue-200 bg-white px-3 py-1 text-xs font-semibold text-blue-700">
                   📖{" "}
                   {caseData.chapter_title
-                    ? `${caseData.chapter_title} — ${caseData.chapter_ref}`
-                    : caseData.chapter_ref}
+                    ? `${caseData.chapter_title} — ${caseData.chapter_id}`
+                    : caseData.chapter_id}
                 </span>
               </div>
             )}
@@ -335,3 +343,4 @@ export default function CaseDetailPage() {
     </div>
   );
 }
+
