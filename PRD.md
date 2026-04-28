@@ -1,63 +1,38 @@
-# PRD: Bookmarks / Favourites
+# PRD: Bookmarks — BookmarksPage + Case Bookmark + Sidebar Nav
 
 ## Introduction
 
-Residents encounter questions and clinical cases they want to revisit but have no way to save them. A bookmark system lets them star any question or case, then review all saved items from a dedicated Bookmarks page.
+The bookmark backend and the question-session bookmark toggle are already implemented (US-001 and US-002 from the Bookmarks PRD). This PRD covers the missing piece: a BookmarksPage to browse all saved items, a bookmark button on the CaseDetailPage, and the Bookmarks nav link in the sidebar.
 
 ## Goals
 
-- Users can bookmark and un-bookmark individual questions (from the question session view) and cases (from the case detail page)
-- A Bookmarks page shows all saved questions and cases in separate tabs
-- Bookmarks persist across sessions (stored in MongoDB)
+- Users can bookmark a case from the CaseDetailPage
+- A Bookmarks page shows saved questions (tab 1) and saved cases (tab 2)
+- The sidebar has a Bookmarks nav link
 
 ## User Stories
 
-### US-001: Backend — bookmarks CRUD endpoints
-**Description:** As a developer, I need REST endpoints to add, remove, and list bookmarks so the frontend can persist them.
+### US-001: CaseDetailPage bookmark button + BookmarksPage + sidebar nav
+**Description:** As a resident, I want to bookmark a case from its detail page and review all my saved questions and cases in one place.
 
 **Acceptance Criteria:**
-- [x] New file `backend/app/api/v1/routes/bookmarks.py` created
-- [x] `POST /bookmarks` — body `{type: "question"|"case", item_id: str}` — inserts `{user_id: ObjectId, type, item_id, created_at}` into `bookmarks` collection; returns `{bookmarked: true}`; idempotent (no duplicate if already bookmarked)
-- [x] `DELETE /bookmarks/{item_id}` — removes bookmark for current user + that item_id; returns `{bookmarked: false}`
-- [x] `GET /bookmarks` — query param `type: Optional[str]` — returns list of bookmarks for current user; each item includes the full question or case document joined from the respective collection
-- [x] Router registered in `backend/app/main.py` with prefix `/api/v1/bookmarks`
-- [x] All three endpoints use `current_user: str = Depends(get_current_user)` from `app.core.auth`
+- [x] `frontend/src/pages/CaseDetailPage.tsx` has a bookmark icon button (★/☆) in the case header area; clicking calls `addBookmark("case", case_id)` or `removeBookmark(case_id)` from `bookmarksApi.ts` and toggles local icon state
+- [x] New file `frontend/src/pages/BookmarksPage.tsx` created with two tab buttons: "Questions" and "Cases" (default: Questions tab active)
+- [x] Questions tab fetches `GET /bookmarks?type=question`; Cases tab fetches `GET /bookmarks?type=case` — each fetched when its tab is first selected
+- [x] Each item row shows: stem/title truncated to 80 chars + "→" link navigating to `/questions` (questions) or `/cases/:case_id` (cases) + ✕ remove button calling `removeBookmark(item_id)`
+- [x] Empty state per tab: "No bookmarked questions yet." / "No bookmarked cases yet."
+- [x] `frontend/src/router.tsx` has a protected route `/bookmarks` → `BookmarksPage`
+- [x] `frontend/src/components/Sidebar.tsx` has a "Bookmarks" nav link added below the History link
 - [x] Typecheck passes
-
-### US-002: Frontend — bookmark toggle in Question Bank session
-**Description:** As a resident answering questions, I want to star a question mid-session so I can review it later.
-
-**Acceptance Criteria:**
-- [ ] New file `frontend/src/api/bookmarksApi.ts` with `addBookmark(type, itemId)`, `removeBookmark(itemId)`, `getBookmarks(type?)` using the authenticated apiClient
-- [ ] In `frontend/src/pages/QuestionsPage.tsx`, the `ChainCard` component gains a bookmark icon button (★/☆) in its header area
-- [ ] Clicking the icon calls `addBookmark("question", question_id)` or `removeBookmark(question_id)` and toggles the icon state
-- [ ] Bookmark state is local to the card (no pre-fetching of existing bookmarks in the session view)
-- [ ] Typecheck passes
-- [ ] Verify changes work in browser
-
-### US-003: Frontend — case bookmark + BookmarksPage
-**Description:** As a resident, I want to bookmark a case from its detail page and review all my saved items in one place.
-
-**Acceptance Criteria:**
-- [ ] `frontend/src/pages/CaseDetailPage.tsx` has a bookmark icon button in the case header (same ★/☆ pattern as US-002)
-- [ ] New file `frontend/src/pages/BookmarksPage.tsx` created
-  - Two tab buttons: "Questions" and "Cases" (default: Questions)
-  - Each tab fetches `GET /bookmarks?type=question` or `GET /bookmarks?type=case`
-  - Each item row shows: title/stem (truncated 80 chars) + "→" link to `/questions/:id` or `/cases/:id` + remove button (✕) calling `removeBookmark`
-  - Empty state per tab: "No bookmarked questions yet." / "No bookmarked cases yet."
-- [ ] `frontend/src/router.tsx` has a protected route `/bookmarks` → `BookmarksPage`
-- [ ] `frontend/src/components/Sidebar.tsx` has a "Bookmarks" nav link (added below History)
-- [ ] Typecheck passes
-- [ ] Verify changes work in browser
+- [x] Verify changes work in browser
 
 ## Non-Goals
 
-- No folder/collection organisation for bookmarks
-- No shared bookmarks between users
-- No bookmark notes or annotations (separate PRD)
-- No bookmark count badges on nav items
+- No bookmark count badge on the sidebar link
+- No folder/collection organisation
 
 ## Technical Considerations
 
-- `bookmarks` collection needs a compound index on `{user_id, item_id}` — add `db.bookmarks.create_index([("user_id", 1), ("item_id", 1)], unique=True)` in the POST endpoint or a startup script
-- The GET /bookmarks join: collect all `item_id` values, batch-fetch from `questions` or `cases` collection using `{"question_id": {"$in": ids}}` / `{"case_id": {"$in": ids}}`, merge in Python
+- `bookmarksApi.ts` already exists at `frontend/src/api/bookmarksApi.ts` — reuse `addBookmark`, `removeBookmark`, `getBookmarks`
+- The GET /bookmarks response includes a `document` field with the joined question or case data — use `document.stem` for questions, `document.title` for cases
+- `CaseDetailPage.tsx` already imports from `casesApi.ts` — check what `case_id` field is available on the case object
