@@ -76,7 +76,11 @@ export default function NotesPage() {
                     <p className="mb-1 text-sm italic text-[var(--ink-dim)]">
                       &ldquo;{ann.selected_text}&rdquo;
                     </p>
-                    <p className="mb-2 text-sm text-[var(--ink)]">{ann.note_text}</p>
+                    {ann.note_text === "" ? (
+                      <p className="mb-2 text-sm font-medium text-amber-600">🔖 Highlight</p>
+                    ) : (
+                      <p className="mb-2 text-sm text-[var(--ink)]">{ann.note_text}</p>
+                    )}
                     <div className="flex items-center justify-between">
                       <span className="text-xs text-[var(--ink-dim)]">
                         {new Date(ann.created_at).toLocaleDateString(undefined, {
