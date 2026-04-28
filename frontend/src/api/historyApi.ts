@@ -28,3 +28,9 @@ export const getHistory = (limit = 50, offset = 0) => {
 export const deleteHistory = () => {
   return api.delete<DeleteHistoryResponse>("/questions/history");
 };
+
+export const deleteSelectedHistory = (questionIds: string[]) => {
+  return api.delete<DeleteHistoryResponse>("/questions/history/selected", {
+    data: { question_ids: questionIds },
+  });
+};
