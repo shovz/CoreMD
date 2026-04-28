@@ -30,27 +30,31 @@ function BookmarkRow({
   };
 
   return (
-    <div className="flex items-center justify-between gap-4 rounded-lg border border-slate-200 bg-white px-4 py-3">
-      <span className="min-w-0 flex-1 text-sm text-slate-700">
-        {truncate(displayText)}
-      </span>
-      <div className="flex flex-shrink-0 items-center gap-2">
-        <Link
-          to={linkTo}
-          className="text-sm text-blue-600 hover:underline"
-        >
-          →
-        </Link>
-        <button
-          onClick={handleRemove}
-          disabled={removing}
-          className="text-slate-400 transition hover:text-rose-500 disabled:opacity-40"
-          title="Remove bookmark"
-        >
-          ✕
-        </button>
+    <Link
+      to={linkTo}
+      className="relative block rounded-lg border border-slate-200 bg-white px-4 py-3 hover:border-blue-300 hover:bg-blue-50 transition-colors"
+    >
+      <div className="flex items-center justify-between gap-4">
+        <span className="min-w-0 flex-1 text-sm text-slate-700">
+          {truncate(displayText)}
+        </span>
+        <div className="relative z-10 flex flex-shrink-0 items-center gap-2">
+          <span className="text-sm text-blue-600">→</span>
+          <button
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              handleRemove();
+            }}
+            disabled={removing}
+            className="text-slate-400 transition hover:text-rose-500 disabled:opacity-40"
+            title="Remove bookmark"
+          >
+            ✕
+          </button>
+        </div>
       </div>
-    </div>
+    </Link>
   );
 }
 
@@ -136,7 +140,7 @@ export default function BookmarksPage() {
                 ? (doc?.stem ?? item.item_id)
                 : (doc?.title ?? item.item_id);
               const linkTo = activeTab === "question"
-                ? "/questions"
+                ? `/questions/${item.item_id}`
                 : `/cases/${item.item_id}`;
               return (
                 <BookmarkRow
