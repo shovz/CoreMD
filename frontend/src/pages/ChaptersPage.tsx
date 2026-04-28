@@ -14,11 +14,7 @@ interface Popover {
   x: number;
   y: number;
   text: string;
-}
-
-interface NotePanel {
-  selectedText: string;
-  sectionId: string;
+  mode: "buttons" | "note";
 }
 
 function highlight(text: string, query: string): ReactNode {
@@ -59,7 +55,6 @@ export default function ChaptersPage() {
 
   // Annotations
   const [annotations, setAnnotations] = useState<Annotation[]>([]);
-  const [notePanel, setNotePanel] = useState<NotePanel | null>(null);
   const [noteText, setNoteText] = useState("");
   const [showNotesPanel, setShowNotesPanel] = useState(false);
 
@@ -133,7 +128,6 @@ export default function ChaptersPage() {
   async function handleChapterClick(chapterId: string) {
     setSectionLoading(true);
     setSectionContent(null);
-    setNotePanel(null);
     setNoteText("");
     getAnnotationsByChapter(chapterId)
       .then((r) => setAnnotations(r.data))
@@ -185,7 +179,7 @@ export default function ChaptersPage() {
         return;
       }
       const rect = range.getBoundingClientRect();
-      setPopover({ x: rect.left + rect.width / 2, y: rect.top, text });
+      setPopover({ x: rect.left + rect.width / 2, y: rect.top, text, mode: "buttons" });
     }
 
     function handleSelectionChange() {
@@ -212,27 +206,17 @@ export default function ChaptersPage() {
     openWithText(`${context}"${text}"`);
   }
 
-  function handleAddNote() {
-    if (!popover || !sectionContent) return;
-    const selectedText = popover.text;
-    const sectionId = sectionContent.section_id;
-    setPopover(null);
-    window.getSelection()?.removeAllRanges();
-    setNotePanel({ selectedText, sectionId });
-    setNoteText("");
-  }
-
   async function handleSaveNote() {
-    if (!notePanel || !currentChapter) return;
+    if (!popover || !currentChapter || !sectionContent) return;
     try {
       const res = await createAnnotation({
         chapter_id: currentChapter.id,
-        section_id: notePanel.sectionId,
-        selected_text: notePanel.selectedText,
+        section_id: sectionContent.section_id,
+        selected_text: popover.text,
         note_text: noteText,
       });
       setAnnotations((prev) => [...prev, res.data]);
-      setNotePanel(null);
+      setPopover(null);
       setNoteText("");
     } catch {
       // ignore
@@ -277,22 +261,52 @@ export default function ChaptersPage() {
             zIndex: 60,
           }}
         >
-          <div className="flex gap-1 rounded-lg bg-slate-800 px-1 py-1 shadow-lg">
-            <button
-              onMouseDown={(e) => e.preventDefault()}
-              onClick={handleAskAi}
-              className="whitespace-nowrap rounded-md bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-blue-700"
-            >
-              Ask AI
-            </button>
-            <button
-              onMouseDown={(e) => e.preventDefault()}
-              onClick={handleAddNote}
-              className="whitespace-nowrap rounded-md bg-slate-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-slate-500"
-            >
-              Add Note
-            </button>
-          </div>
+          {popover.mode === "buttons" ? (
+            <div className="flex gap-1 rounded-lg bg-slate-800 px-1 py-1 shadow-lg">
+              <button
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={handleAskAi}
+                className="whitespace-nowrap rounded-md bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-blue-700"
+              >
+                Ask AI
+              </button>
+              <button
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => setPopover((prev) => prev ? { ...prev, mode: "note" } : null)}
+                className="whitespace-nowrap rounded-md bg-slate-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-slate-500"
+              >
+                Add Note
+              </button>
+            </div>
+          ) : (
+            <div className="w-64 rounded-lg bg-slate-800 p-2 shadow-lg">
+              <textarea
+                autoFocus
+                rows={3}
+                value={noteText}
+                onChange={(e) => setNoteText(e.target.value)}
+                placeholder="Your note…"
+                className="w-full resize-none rounded-md border border-slate-600 bg-slate-700 px-2 py-1.5 text-xs text-white placeholder-slate-400 outline-none focus:border-blue-400"
+              />
+              <div className="mt-1.5 flex gap-1.5">
+                <button
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={handleSaveNote}
+                  disabled={!noteText.trim()}
+                  className="rounded-md bg-amber-500 px-3 py-1 text-xs font-semibold text-white transition hover:bg-amber-600 disabled:opacity-40"
+                >
+                  Save
+                </button>
+                <button
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => { setPopover((prev) => prev ? { ...prev, mode: "buttons" } : null); setNoteText(""); }}
+                  className="rounded-md border border-slate-600 px-3 py-1 text-xs font-medium text-slate-300 transition hover:bg-slate-700"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -426,42 +440,6 @@ export default function ChaptersPage() {
                   )}
                 </button>
               </div>
-
-              {/* Note input panel */}
-              {notePanel && (
-                <div className="mt-4 flex-shrink-0 rounded-lg border border-amber-300 bg-amber-50 p-3 shadow-sm">
-                  <p className="mb-2 text-xs text-slate-500">
-                    Note for:{" "}
-                    <em className="text-slate-700">
-                      &ldquo;{notePanel.selectedText.slice(0, 80)}
-                      {notePanel.selectedText.length > 80 ? "…" : ""}&rdquo;
-                    </em>
-                  </p>
-                  <textarea
-                    autoFocus
-                    rows={3}
-                    value={noteText}
-                    onChange={(e) => setNoteText(e.target.value)}
-                    placeholder="Your note…"
-                    className="w-full resize-none rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100"
-                  />
-                  <div className="mt-2 flex gap-2">
-                    <button
-                      onClick={handleSaveNote}
-                      disabled={!noteText.trim()}
-                      className="rounded-md bg-amber-500 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-amber-600 disabled:opacity-40"
-                    >
-                      Save
-                    </button>
-                    <button
-                      onClick={() => { setNotePanel(null); setNoteText(""); }}
-                      className="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:bg-slate-100"
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                </div>
-              )}
 
               {/* Scrollable section content */}
               <div className="mt-6 flex-1 overflow-y-auto" ref={contentRef}>

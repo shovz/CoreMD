@@ -1,67 +1,49 @@
-# PRD: Chapter Reader Tooltip Enhancements — Ask AI Context, Inline Note Input, Highlight
+# PRD: Tooltip — Inline Note Input + Highlight Button
 
 ## Introduction
 
-The text-selection tooltip in the chapter reader has three improvements: (1) "Ask AI" should send the selected text with the chapter/section context so the RAG answer is grounded in the right passage; (2) "Add Note" should open an inline textarea inside the tooltip itself (not a separate panel below the content); (3) A third "Highlight" button lets users mark a passage without writing a note.
+US-001 (Ask AI context) is already done. This PRD implements the two remaining tooltip improvements: the note input moving into the floating tooltip itself, and a Highlight button as a third tooltip option.
 
 ## Goals
 
-- Ask AI sends selected text with chapter + section title as context so answers stay relevant
-- The note input appears directly above/inside the floating tooltip, not as a separate bottom panel
-- Users can highlight text (saved as an annotation with empty note) for later review
+- Clicking "Add Note" expands the tooltip in-place to show a textarea — no separate panel below the content
+- A "Highlight" button saves the selection as an annotation with empty note text
 
 ## User Stories
 
-### US-001: Ask AI — include chapter/section context in the prompt
-**Description:** As a resident, I want the AI to answer about the specific passage I selected, grounded in the correct chapter and section, so I don't get generic or unrelated responses.
+### US-001: Inline note textarea in the tooltip popover
+**Description:** As a resident, I want the note input to appear in the floating tooltip so I don't have to scroll down.
 
 **Acceptance Criteria:**
-- [x] In `frontend/src/pages/ChaptersPage.tsx`, `handleAskAi()` builds a context-aware prompt before calling `openWithText`:
-  ```
-  const context = sectionContent
-    ? `In "${sectionContent.chapter_title} › ${sectionContent.section_title}", the following text appears: `
-    : "";
-  openWithText(`${context}"${popover.text}"`);
-  ```
-- [x] If `sectionContent` is null, falls back to just the selected text (no context prefix)
-- [x] `AiContext.openWithText` is unchanged — it still prefixes `Regarding: "..." — ` as it does today; the context string is prepended by the call site
-- [x] Only `frontend/src/pages/ChaptersPage.tsx` is modified
+- [x] Popover state type in `frontend/src/pages/ChaptersPage.tsx` is extended: `{ x: number; y: number; text: string; mode: "buttons" | "note" }`
+- [x] Clicking "Add Note" sets `popover.mode = "note"` using `setPopover(prev => prev ? { ...prev, mode: "note" } : null)` — does NOT close the popover
+- [x] When `popover.mode === "note"`, the tooltip div renders: a `<textarea>` (rows=3, autoFocus, bound to `noteText` state) + "Save" and "Cancel" buttons
+- [x] "Cancel" resets mode back to `"buttons"` and clears `noteText`
+- [x] "Save" (disabled when noteText is empty) calls `createAnnotation({ chapter_id: currentChapter!.id, section_id: sectionContent!.section_id, selected_text: popover.text, note_text: noteText })`, on success adds annotation to local state and closes popover
+- [x] The old `notePanel` state, `handleAddNote`, `handleSaveNote`, and the amber bottom-panel JSX block (`{notePanel && ...}`) are removed
+- [x] The tooltip container div removes `whitespace-nowrap` when `mode === "note"` so the textarea can wrap
 - [x] Typecheck passes
-- [ ] Verify changes work in browser: select text → Ask AI → chat shows the enriched prompt and AI response references the chapter content
+- [ ] Verify changes work in browser: select text → Add Note → textarea appears in floating tooltip
 
-### US-002: Add Note — inline textarea inside the tooltip popover
-**Description:** As a resident, I want the note input to appear directly in the floating tooltip so I don't have to scroll down to find it.
-
-**Acceptance Criteria:**
-- [ ] The `notePanel` state and the bottom-of-page note panel JSX (the amber `mt-4 flex-shrink-0` div) are removed from `ChaptersPage.tsx`
-- [ ] The popover instead has two states: `mode: "buttons"` (default — shows Ask AI / Add Note / Highlight) and `mode: "note"` (shows an inline textarea + Save/Cancel)
-- [ ] Popover state type becomes: `{ x: number; y: number; text: string; mode: "buttons" | "note" }`
-- [ ] Clicking "Add Note" sets `popover.mode = "note"` (keeps x/y/text, just changes mode) and does NOT close the popover
-- [ ] In `mode: "note"`, the tooltip renders a `<textarea>` (3 rows, autoFocus) + Save and Cancel buttons; Cancel resets mode to "buttons"; Save calls `createAnnotation` and closes the popover
-- [ ] The `noteText` local state and `handleSaveNote` function are updated to work with the new inline flow
-- [ ] Typecheck passes
-- [ ] Verify changes work in browser: select text → Add Note → textarea appears in tooltip → type note → Save → note appears in sidebar
-
-### US-003: Highlight button — save annotation without note text
-**Description:** As a resident, I want to highlight a text passage with one click so I can mark important content without writing a note.
+### US-002: Highlight button
+**Description:** As a resident, I want to highlight a passage with one click, without writing a note.
 
 **Acceptance Criteria:**
-- [ ] The tooltip `mode: "buttons"` shows three buttons: "Ask AI", "Add Note", "Highlight" (in that order)
-- [ ] Clicking "Highlight" calls `createAnnotation({ chapter_id, section_id, selected_text, note_text: "" })` immediately (no text input), closes the popover, and adds the annotation to local state
-- [ ] `backend/app/api/v1/routes/annotations.py` `POST /annotations` accepts `note_text` as optional (default `""`): change `note_text: str` to `note_text: str = ""` in the Pydantic request body model
-- [ ] In the Notes sidebar and NotesPage, annotations with empty `note_text` are displayed as highlights: show a `🔖` or yellow-background label "Highlighted" instead of the note text
+- [ ] `backend/app/api/v1/routes/annotations.py` — in the POST /annotations request body, `note_text` is optional with default `""` (change `note_text: str` → `note_text: str = ""` in the Pydantic model)
+- [ ] `frontend/src/api/annotationsApi.ts` — `CreateAnnotationData.note_text` is optional: `note_text?: string`
+- [ ] The tooltip `mode: "buttons"` shows three buttons in a row: "Ask AI", "Add Note", "Highlight"
+- [ ] Clicking "Highlight": calls `createAnnotation({ chapter_id: currentChapter!.id, section_id: sectionContent!.section_id, selected_text: popover.text, note_text: "" })`, adds result to local annotations state, closes popover
+- [ ] In the notes sidebar in ChaptersPage and in `frontend/src/pages/NotesPage.tsx`, annotations with empty `note_text` display a "🔖 Highlight" label styled with `text-amber-600` instead of the note text
 - [ ] Typecheck passes
-- [ ] Verify changes work in browser: select text → Highlight → annotation appears in notes sidebar with "Highlighted" label
+- [ ] Verify changes work in browser: select text → Highlight → annotation appears in sidebar with 🔖 label
 
 ## Non-Goals
 
-- No DOM mutation to apply yellow background to the section HTML (DOMPurify sanitizes it)
+- No visual highlight on the section HTML (DOMPurify constraint)
 - No highlight color picker
-- No edit for highlights (user must delete and re-highlight)
 
 ## Technical Considerations
 
-- Backend annotation schema — find the Pydantic model for POST /annotations in `backend/app/api/v1/routes/annotations.py` and make `note_text` optional with default `""`
-- The popover div must grow to fit the textarea — remove `whitespace-nowrap` when in `mode: "note"`
-- Popover state update for "Add Note": `setPopover(prev => prev ? { ...prev, mode: "note" } : null)`
-- `noteText` state can remain at component level; resetting it to `""` on popover close is sufficient
+- `noteText` useState remains at component level — reuse for the inline textarea
+- The popover div style needs `min-w-[240px]` when in note mode so the textarea is usable
+- For the Highlight button, `currentChapter` and `sectionContent` must be non-null; the button should be disabled (or hidden) if they are null
