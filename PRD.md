@@ -22,7 +22,7 @@ The inline note textarea is done. This PRD implements only the Highlight button:
 - [x] In the ChaptersPage notes sidebar, entries where `annotation.note_text === ""` display `🔖 Highlight` (amber text) instead of the note body
 - [x] In `frontend/src/pages/NotesPage.tsx`, same: entries with empty `note_text` show `🔖 Highlight` label in amber
 - [x] Typecheck passes
-- [ ] Verify changes work in browser: select text → Highlight → sidebar shows 🔖 entry
+- [x] Verify changes work in browser: select text → Highlight → sidebar shows 🔖 entry
 
 ## Non-Goals
 
