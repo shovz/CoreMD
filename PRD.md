@@ -23,7 +23,7 @@ US-001 (Ask AI context) is already done. This PRD implements the two remaining t
 - [x] The old `notePanel` state, `handleAddNote`, `handleSaveNote`, and the amber bottom-panel JSX block (`{notePanel && ...}`) are removed
 - [x] The tooltip container div removes `whitespace-nowrap` when `mode === "note"` so the textarea can wrap
 - [x] Typecheck passes
-- [ ] Verify changes work in browser: select text → Add Note → textarea appears in floating tooltip
+- [x] Verify changes work in browser: select text → Add Note → textarea appears in floating tooltip
 
 ### US-002: Highlight button
 **Description:** As a resident, I want to highlight a passage with one click, without writing a note.
