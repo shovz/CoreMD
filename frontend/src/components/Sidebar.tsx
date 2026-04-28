@@ -43,12 +43,21 @@ function HistoryIcon() {
   );
 }
 
+function BookmarksIcon() {
+  return (
+    <svg className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+    </svg>
+  );
+}
+
 const navItems = [
   { to: "/dashboard", label: "Dashboard", icon: <DashboardIcon />, end: true },
   { to: "/chapters", label: "Chapters", icon: <ChaptersIcon />, end: false },
   { to: "/questions", label: "Question Bank", icon: <QuestionsIcon />, end: false },
   { to: "/cases", label: "Cases", icon: <CasesIcon />, end: false },
   { to: "/history", label: "History", icon: <HistoryIcon />, end: false },
+  { to: "/bookmarks", label: "Bookmarks", icon: <BookmarksIcon />, end: false },
 ];
 
 function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
