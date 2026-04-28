@@ -203,10 +203,13 @@ export default function ChaptersPage() {
 
   function handleAskAi() {
     if (!popover) return;
+    const context = sectionContent
+      ? `In "${sectionContent.chapter_title} › ${sectionContent.section_title}", the following text appears: `
+      : "";
     const text = popover.text;
     setPopover(null);
     window.getSelection()?.removeAllRanges();
-    openWithText(text);
+    openWithText(`${context}"${text}"`);
   }
 
   function handleAddNote() {
