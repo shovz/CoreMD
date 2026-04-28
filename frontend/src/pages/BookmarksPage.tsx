@@ -9,11 +9,13 @@ function truncate(text: string, max = 80): string {
 function BookmarkRow({
   item,
   linkTo,
+  linkState,
   displayText,
   onRemove,
 }: {
   item: Bookmark;
   linkTo: string;
+  linkState?: Record<string, string>;
   displayText: string;
   onRemove: (id: string) => void;
 }) {
@@ -32,6 +34,7 @@ function BookmarkRow({
   return (
     <Link
       to={linkTo}
+      state={linkState}
       className="relative block rounded-lg border border-slate-200 bg-white px-4 py-3 hover:border-blue-300 hover:bg-blue-50 transition-colors"
     >
       <div className="flex items-center justify-between gap-4">
@@ -39,7 +42,6 @@ function BookmarkRow({
           {truncate(displayText)}
         </span>
         <div className="relative z-10 flex flex-shrink-0 items-center gap-2">
-          <span className="text-sm text-blue-600">→</span>
           <button
             onClick={(e) => {
               e.preventDefault();
@@ -147,6 +149,7 @@ export default function BookmarksPage() {
                   key={item.item_id}
                   item={item}
                   linkTo={linkTo}
+                  linkState={{ from: "bookmarks" }}
                   displayText={displayText}
                   onRemove={handleRemove}
                 />

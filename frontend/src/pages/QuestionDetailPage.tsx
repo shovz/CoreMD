@@ -13,6 +13,7 @@ interface LocationState {
   questionIds?: string[];
   currentIndex?: number;
   topic?: string | null;
+  from?: string;
 }
 
 type FollowUpState = { question: QuestionFull; result: AttemptResult | null };
@@ -81,7 +82,7 @@ function QuestionCard({ question, result, onResult, onError }: QuestionCardProps
           {question.topic}
         </span>
         <span className="rounded-full bg-violet-100 px-3 py-0.5 text-xs font-semibold text-violet-700">
-          {question.chapter_ref}
+          {question.chapter_id}
         </span>
         <span
           className={`rounded-full px-3 py-0.5 text-xs font-semibold capitalize ${DIFF_BADGE[question.difficulty]}`}
@@ -288,12 +289,15 @@ export default function QuestionDetailPage() {
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
-      <Link
-        to="/questions"
-        className="text-sm text-blue-600 hover:underline"
-      >
-        {"<- Back to Questions"}
-      </Link>
+      {state.from === "bookmarks" ? (
+        <Link to="/bookmarks" className="text-sm text-blue-600 hover:underline">
+          {"<- Back to Bookmarks"}
+        </Link>
+      ) : (
+        <Link to="/questions" className="text-sm text-blue-600 hover:underline">
+          {"<- Back to Questions"}
+        </Link>
+      )}
 
       <QuestionCard
         question={question}
