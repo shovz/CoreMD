@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 from pymongo.database import Database
 
-from app.core.auth import get_current_user
+from app.core.auth import get_current_user_id
 from app.db.deps import mongo_db
 
 router = APIRouter(prefix="/annotations", tags=["annotations"])
@@ -16,7 +16,7 @@ class AnnotationCreate(BaseModel):
     chapter_id: str
     section_id: str
     selected_text: str
-    note_text: str
+    note_text: str = ""
 
 
 class AnnotationUpdate(BaseModel):
@@ -37,7 +37,7 @@ def _serialize(doc: dict) -> dict:
 @router.post("")
 def create_annotation(
     body: AnnotationCreate,
-    current_user: str = Depends(get_current_user),
+    current_user: str = Depends(get_current_user_id),
     db: Database = Depends(mongo_db),
 ):
     doc = {
@@ -55,7 +55,7 @@ def create_annotation(
 
 @router.get("/all")
 def get_all_annotations(
-    current_user: str = Depends(get_current_user),
+    current_user: str = Depends(get_current_user_id),
     db: Database = Depends(mongo_db),
 ):
     docs = list(
@@ -78,7 +78,7 @@ def get_all_annotations(
 @router.get("")
 def get_annotations(
     chapter_id: str = Query(...),
-    current_user: str = Depends(get_current_user),
+    current_user: str = Depends(get_current_user_id),
     db: Database = Depends(mongo_db),
 ):
     docs = list(
@@ -93,7 +93,7 @@ def get_annotations(
 def update_annotation(
     annotation_id: str,
     body: AnnotationUpdate,
-    current_user: str = Depends(get_current_user),
+    current_user: str = Depends(get_current_user_id),
     db: Database = Depends(mongo_db),
 ):
     try:
@@ -115,7 +115,7 @@ def update_annotation(
 @router.delete("/{annotation_id}")
 def delete_annotation(
     annotation_id: str,
-    current_user: str = Depends(get_current_user),
+    current_user: str = Depends(get_current_user_id),
     db: Database = Depends(mongo_db),
 ):
     try:

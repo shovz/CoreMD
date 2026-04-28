@@ -277,6 +277,29 @@ export default function ChaptersPage() {
               >
                 Add Note
               </button>
+              <button
+                onMouseDown={(e) => e.preventDefault()}
+                disabled={!currentChapter || !sectionContent}
+                onClick={async () => {
+                  if (!popover || !currentChapter || !sectionContent) return;
+                  try {
+                    const res = await createAnnotation({
+                      chapter_id: currentChapter.id,
+                      section_id: sectionContent.section_id,
+                      selected_text: popover.text,
+                      note_text: "",
+                    });
+                    setAnnotations((prev) => [...prev, res.data]);
+                    setPopover(null);
+                    window.getSelection()?.removeAllRanges();
+                  } catch {
+                    // ignore
+                  }
+                }}
+                className="whitespace-nowrap rounded-md bg-amber-500 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-amber-600 disabled:opacity-40"
+              >
+                Highlight
+              </button>
             </div>
           ) : (
             <div className="w-64 rounded-lg bg-slate-800 p-2 shadow-lg">
@@ -510,7 +533,11 @@ export default function ChaptersPage() {
                         <p className="mb-1.5 text-xs italic text-slate-500 line-clamp-2">
                           &ldquo;{ann.selected_text.slice(0, 60)}{ann.selected_text.length > 60 ? "…" : ""}&rdquo;
                         </p>
-                        <p className="text-sm text-slate-800">{ann.note_text}</p>
+                        {ann.note_text === "" ? (
+                          <p className="text-sm font-medium text-amber-600">🔖 Highlight</p>
+                        ) : (
+                          <p className="text-sm text-slate-800">{ann.note_text}</p>
+                        )}
                         <button
                           onClick={() => handleDeleteAnnotation(ann.id)}
                           className="mt-2 text-xs text-red-500 hover:text-red-700 transition"

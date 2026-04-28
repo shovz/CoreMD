@@ -14,7 +14,7 @@ export interface CreateAnnotationData {
   chapter_id: string;
   section_id: string;
   selected_text: string;
-  note_text: string;
+  note_text?: string;
 }
 
 export const createAnnotation = (data: CreateAnnotationData) =>

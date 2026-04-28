@@ -1,49 +1,34 @@
-# PRD: Tooltip — Inline Note Input + Highlight Button
+# PRD: Tooltip — Highlight Button
 
 ## Introduction
 
-US-001 (Ask AI context) is already done. This PRD implements the two remaining tooltip improvements: the note input moving into the floating tooltip itself, and a Highlight button as a third tooltip option.
+The inline note textarea is done. This PRD implements only the Highlight button: a one-click way to save a text selection as an annotation without a note.
 
 ## Goals
 
-- Clicking "Add Note" expands the tooltip in-place to show a textarea — no separate panel below the content
-- A "Highlight" button saves the selection as an annotation with empty note text
+- A third "Highlight" button appears in the tooltip alongside Ask AI and Add Note
+- Clicking it saves the selection instantly and shows a 🔖 label in the notes sidebar / Notes page
 
 ## User Stories
 
-### US-001: Inline note textarea in the tooltip popover
-**Description:** As a resident, I want the note input to appear in the floating tooltip so I don't have to scroll down.
+### US-001: Highlight button — backend + frontend
+**Description:** As a resident, I want to highlight a passage with one click so I can mark important text without writing a note.
 
 **Acceptance Criteria:**
-- [x] Popover state type in `frontend/src/pages/ChaptersPage.tsx` is extended: `{ x: number; y: number; text: string; mode: "buttons" | "note" }`
-- [x] Clicking "Add Note" sets `popover.mode = "note"` using `setPopover(prev => prev ? { ...prev, mode: "note" } : null)` — does NOT close the popover
-- [x] When `popover.mode === "note"`, the tooltip div renders: a `<textarea>` (rows=3, autoFocus, bound to `noteText` state) + "Save" and "Cancel" buttons
-- [x] "Cancel" resets mode back to `"buttons"` and clears `noteText`
-- [x] "Save" (disabled when noteText is empty) calls `createAnnotation({ chapter_id: currentChapter!.id, section_id: sectionContent!.section_id, selected_text: popover.text, note_text: noteText })`, on success adds annotation to local state and closes popover
-- [x] The old `notePanel` state, `handleAddNote`, `handleSaveNote`, and the amber bottom-panel JSX block (`{notePanel && ...}`) are removed
-- [x] The tooltip container div removes `whitespace-nowrap` when `mode === "note"` so the textarea can wrap
+- [x] In `backend/app/api/v1/routes/annotations.py`, find the Pydantic request body class for `POST /annotations` and change `note_text: str` to `note_text: str = ""`
+- [x] In `frontend/src/api/annotationsApi.ts`, change `CreateAnnotationData.note_text` from `string` to `string | undefined` (or `note_text?: string`)
+- [x] In `frontend/src/pages/ChaptersPage.tsx`, add a "Highlight" button as the third button in the `mode === "buttons"` tooltip row
+- [x] Clicking "Highlight" (only enabled when `currentChapter` and `sectionContent` are non-null): calls `createAnnotation({ chapter_id: currentChapter.id, section_id: sectionContent.section_id, selected_text: popover.text, note_text: "" })`, on success pushes result to local annotations state and closes the popover
+- [x] In the ChaptersPage notes sidebar, entries where `annotation.note_text === ""` display `🔖 Highlight` (amber text) instead of the note body
+- [x] In `frontend/src/pages/NotesPage.tsx`, same: entries with empty `note_text` show `🔖 Highlight` label in amber
 - [x] Typecheck passes
-- [x] Verify changes work in browser: select text → Add Note → textarea appears in floating tooltip
-
-### US-002: Highlight button
-**Description:** As a resident, I want to highlight a passage with one click, without writing a note.
-
-**Acceptance Criteria:**
-- [ ] `backend/app/api/v1/routes/annotations.py` — in the POST /annotations request body, `note_text` is optional with default `""` (change `note_text: str` → `note_text: str = ""` in the Pydantic model)
-- [ ] `frontend/src/api/annotationsApi.ts` — `CreateAnnotationData.note_text` is optional: `note_text?: string`
-- [ ] The tooltip `mode: "buttons"` shows three buttons in a row: "Ask AI", "Add Note", "Highlight"
-- [ ] Clicking "Highlight": calls `createAnnotation({ chapter_id: currentChapter!.id, section_id: sectionContent!.section_id, selected_text: popover.text, note_text: "" })`, adds result to local annotations state, closes popover
-- [ ] In the notes sidebar in ChaptersPage and in `frontend/src/pages/NotesPage.tsx`, annotations with empty `note_text` display a "🔖 Highlight" label styled with `text-amber-600` instead of the note text
-- [ ] Typecheck passes
-- [ ] Verify changes work in browser: select text → Highlight → annotation appears in sidebar with 🔖 label
+- [ ] Verify changes work in browser: select text → Highlight → sidebar shows 🔖 entry
 
 ## Non-Goals
 
-- No visual highlight on the section HTML (DOMPurify constraint)
-- No highlight color picker
+- No DOM-level yellow highlight in the section HTML
 
 ## Technical Considerations
 
-- `noteText` useState remains at component level — reuse for the inline textarea
-- The popover div style needs `min-w-[240px]` when in note mode so the textarea is usable
-- For the Highlight button, `currentChapter` and `sectionContent` must be non-null; the button should be disabled (or hidden) if they are null
+- The backend Pydantic model for the POST body is likely defined inline in `annotations.py` as a `class AnnotationCreate(BaseModel)` — change the `note_text` field default there
+- The Highlight button style: `bg-amber-500 hover:bg-amber-600 text-white` to visually distinguish it from the other two buttons
