@@ -53,16 +53,16 @@ Residents studying in the chapter reader want to annotate passages — saving se
 **Description:** As a resident, I want a single page showing all my annotations so I can review my study notes across all chapters.
 
 **Acceptance Criteria:**
-- [ ] New file `frontend/src/pages/NotesPage.tsx` created
-- [ ] Fetches `getAllAnnotations()` on mount
-- [ ] Groups annotations by chapter (using `chapter_title` or `chapter_id`)
-- [ ] Each group shows: chapter title as section header, then each annotation as a card with selected_text (italic), note_text, formatted date, delete button
-- [ ] Clicking the chapter title navigates to `/chapters` (the chapter reader — no deep-link needed for MVP)
-- [ ] Empty state: "No notes yet. Select text in a chapter and click 'Add Note' to get started."
-- [ ] `frontend/src/router.tsx` has a protected route `/notes` → `NotesPage`
-- [ ] `frontend/src/components/Sidebar.tsx` has a "Notes" nav link (added below Bookmarks)
-- [ ] Typecheck passes
-- [ ] Verify changes work in browser
+- [x] New file `frontend/src/pages/NotesPage.tsx` created
+- [x] Fetches `getAllAnnotations()` on mount
+- [x] Groups annotations by chapter (using `chapter_title` or `chapter_id`)
+- [x] Each group shows: chapter title as section header, then each annotation as a card with selected_text (italic), note_text, formatted date, delete button
+- [x] Clicking the chapter title navigates to `/chapters` (the chapter reader — no deep-link needed for MVP)
+- [x] Empty state: "No notes yet. Select text in a chapter and click 'Add Note' to get started."
+- [x] `frontend/src/router.tsx` has a protected route `/notes` → `NotesPage`
+- [x] `frontend/src/components/Sidebar.tsx` has a "Notes" nav link (added below Bookmarks)
+- [x] Typecheck passes
+- [x] Verify changes work in browser
 
 ## Non-Goals
 
