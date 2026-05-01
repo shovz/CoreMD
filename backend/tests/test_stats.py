@@ -8,7 +8,7 @@ QUESTION_EASY = {
     "stem": "Easy stats test question",
     "options": ["Option A", "Option B", "Option C", "Option D"],
     "topic": "Cardiology",
-    "chapter_ref": "ch-stats-001",
+    "chapter_id": "ch-stats-001",
     "chapter_id": "ch-stats-001",
     "difficulty": "easy",
     "correct_option": 0,
@@ -20,7 +20,7 @@ QUESTION_MEDIUM = {
     "stem": "Medium stats test question",
     "options": ["Option A", "Option B", "Option C", "Option D"],
     "topic": "Cardiology",
-    "chapter_ref": "ch-stats-001",
+    "chapter_id": "ch-stats-001",
     "chapter_id": "ch-stats-001",
     "difficulty": "medium",
     "correct_option": 0,
@@ -112,3 +112,4 @@ class TestQuestionStats:
         body = resp.json()
         assert body["by_difficulty"] == {}
         assert body["by_topic"] == []
+

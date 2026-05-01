@@ -13,7 +13,7 @@ TEST_CASE = {
     "discussion": "Inferior STEMI requiring emergent reperfusion.",
     "diagnosis": "Acute inferior ST-elevation myocardial infarction.",
     "management": "Emergent PCI, dual antiplatelet therapy, heparin.",
-    "chapter_ref": "ch-001",
+    "chapter_id": "ch-001",
 }
 
 TEST_CHAPTER = {
@@ -56,7 +56,7 @@ class TestGetCase:
         for field in (
             "case_id", "title", "specialty", "presentation", "history",
             "physical_exam", "labs", "imaging", "discussion", "diagnosis",
-            "management", "chapter_ref",
+            "management", "chapter_id",
         ):
             assert field in data, f"Missing field: {field}"
         assert data["case_id"] == TEST_CASE["case_id"]
@@ -65,3 +65,4 @@ class TestGetCase:
     def test_nonexistent_id_returns_404(self, client: TestClient, auth_headers):
         resp = client.get("/api/v1/cases/nonexistent-case-xyz", headers=auth_headers)
         assert resp.status_code == 404
+

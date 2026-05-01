@@ -57,21 +57,37 @@ IMAGES_DIR: Path = Path(__file__).parent.parent / "static" / "images"
 # ---------------------------------------------------------------------------
 
 _HEADING_RE = re.compile(r"<h[23]>(.*?)</h[23]>", re.IGNORECASE | re.DOTALL)
+_PARA_RE = re.compile(r"<p>(.*?)</p>", re.IGNORECASE | re.DOTALL)
 _TAG_RE = re.compile(r"<[^>]+>")
+_BULLET_RE = re.compile(r"^[■•▪▸→\-–—\s]+")
+_WS_RE = re.compile(r"\s+")
 
 
 def _strip_tags(text: str) -> str:
     return _TAG_RE.sub("", text).strip()
 
 
+def _normalize_title(text: str) -> str:
+    """Normalize a section title or heading for comparison.
+
+    Strips leading bullet/dash chars (■ • ▪ ▸ → - – —), collapses whitespace,
+    and uppercases. Applied to both stored titles and extracted heading text so
+    that mismatches caused by bullets or extra spaces don't break the split.
+    """
+    text = _BULLET_RE.sub("", _strip_tags(text)).strip()
+    return _WS_RE.sub(" ", text).upper()
+
+
 def split_html_into_sections(
     html_content: str,
     sections: list[dict[str, str]],
 ) -> dict[str, str]:
-    """Split chapter HTML into per-section HTML using section titles as heading markers.
+    """Split chapter HTML into per-section HTML using section titles as boundaries.
 
-    Matches <h2>/<h3> heading text against the stored section titles (case-insensitive,
-    tags stripped). Returns a dict mapping section_id → html_content string.
+    Matches <h2>/<h3> OR <p> line text against stored section titles (normalized:
+    bullets stripped, whitespace collapsed, uppercased). Falls back to <p> matching
+    because pdf_service.py often renders section headings as <p> tags when the
+    font-size heuristic doesn't trigger.
     """
     if not sections:
         return {}
@@ -79,9 +95,9 @@ def split_html_into_sections(
     if len(sections) == 1:
         return {sections[0]["id"]: html_content}
 
-    # Normalized title (upper, tags stripped) → section_id
+    # normalized title → section_id
     title_map: dict[str, str] = {
-        _strip_tags(sec["title"]).upper(): sec["id"]
+        _normalize_title(sec["title"]): sec["id"]
         for sec in sections
     }
 
@@ -91,11 +107,21 @@ def split_html_into_sections(
 
     for line in lines:
         stripped = line.strip()
-        match = _HEADING_RE.fullmatch(stripped)
+        # Try heading tags first, then plain <p> blocks as fallback
+        heading_match = _HEADING_RE.fullmatch(stripped)
+        match = heading_match or _PARA_RE.fullmatch(stripped)
         if match:
-            heading_text = _strip_tags(match.group(1)).upper()
+            heading_text = _normalize_title(match.group(1))
             if heading_text in title_map:
                 current_id = title_map[heading_text]
+            elif heading_match:
+                # Endswith fallback: stored title may be a suffix of the full
+                # heading (e.g. stored "PATIENT SAFETY ISSUE" vs extracted
+                # "EMERGENCE OF DIAGNOSIS ERROR AS AN IMPORTANT PATIENT SAFETY ISSUE")
+                for stored_norm, sec_id in title_map.items():
+                    if len(stored_norm.split()) >= 2 and heading_text.endswith(stored_norm):
+                        current_id = sec_id
+                        break
 
         buffers[current_id].append(line)
 
@@ -149,6 +175,11 @@ def main() -> None:
         default=PDF_FULL_PATH,
         help=f"Path to the full Harrison's PDF (default: {PDF_FULL_PATH})",
     )
+    parser.add_argument(
+        "--chapter-id",
+        default=None,
+        help="Process only this chapter_id (e.g. ch9). Omit to process all.",
+    )
     args = parser.parse_args()
 
     IMAGES_DIR.mkdir(parents=True, exist_ok=True)
@@ -157,6 +188,8 @@ def main() -> None:
     print(f"Mongo URI  : {MONGO_URI}")
     print(f"Images dir : {IMAGES_DIR}")
     print(f"Dry run    : {args.dry_run}")
+    if args.chapter_id:
+        print(f"Chapter    : {args.chapter_id} (single-chapter mode)")
     print()
 
     mongo_client: MongoClient[dict[str, Any]] = MongoClient(MONGO_URI)
@@ -189,6 +222,8 @@ def main() -> None:
 
         for chapter in chapters:
             chapter_id: str = chapter["chapter_id"]
+            if args.chapter_id and chapter_id != args.chapter_id:
+                continue
             part_num: int = chapter.get("part_number", 0)
             page_start: int = chapter.get("page_start", 0)
             page_end: int = chapter.get("page_end", 0)

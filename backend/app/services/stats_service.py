@@ -78,7 +78,7 @@ def get_overview_stats(db: Database, user_id: str) -> Dict:
                     }
                 },
                 "chapters": {
-                    "$addToSet": "$question.chapter_id"
+                    "$addToSet": {"$ifNull": ["$question.chapter_id", "$question.chapter_ref"]}
                 }
             }
         },
@@ -250,13 +250,13 @@ def get_dashboard_stats(db: Database, user_id: str) -> Dict:
         q = attempt.get("question")
         if q:
             last_question = {"id": attempt["question_id"], "topic": q.get("topic", "")}
-            chapter_ref = q.get("chapter_ref")
-            if chapter_ref:
+            chapter_id = q.get("chapter_id") or q.get("chapter_ref")
+            if chapter_id:
                 ch_doc = db.chapters.find_one(
-                    {"chapter_id": chapter_ref}, {"_id": 0, "title": 1}
+                    {"chapter_id": chapter_id}, {"_id": 0, "title": 1}
                 )
                 if ch_doc:
-                    last_chapter = {"id": chapter_ref, "title": ch_doc["title"]}
+                    last_chapter = {"id": chapter_id, "title": ch_doc["title"]}
 
     weak_topics_agg = list(db.question_attempts.aggregate([
         {"$match": {"user_id": oid}},
@@ -315,7 +315,7 @@ def get_chapter_stats(db: Database, user_id: str) -> List[Dict]:
         {"$unwind": "$question"},
         {
             "$group": {
-                "_id": "$question.chapter_id",
+                "_id": {"$ifNull": ["$question.chapter_id", "$question.chapter_ref"]},
                 "attempted": {"$sum": 1},
                 "correct": {
                     "$sum": {

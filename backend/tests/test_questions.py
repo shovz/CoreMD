@@ -8,7 +8,7 @@ SAMPLE_QUESTIONS = [
         "stem": "Which ion is primarily responsible for the resting membrane potential?",
         "options": ["Sodium", "Potassium", "Calcium", "Chloride"],
         "topic": "Physiology",
-        "chapter_ref": "ch-001",
+        "chapter_id": "ch-001",
         "difficulty": "easy",
         "correct_option": 1,
         "explanation": "Potassium leak channels maintain the resting potential near -70 mV.",
@@ -18,7 +18,7 @@ SAMPLE_QUESTIONS = [
         "stem": "What is the first-line treatment for community-acquired pneumonia in outpatients?",
         "options": ["Vancomycin", "Amoxicillin", "Ciprofloxacin", "Metronidazole"],
         "topic": "Infectious Disease",
-        "chapter_ref": "ch-002",
+        "chapter_id": "ch-002",
         "difficulty": "medium",
         "correct_option": 1,
         "explanation": "Amoxicillin covers typical organisms and is recommended by IDSA guidelines.",
@@ -28,7 +28,7 @@ SAMPLE_QUESTIONS = [
         "stem": "Which organism is the most common cause of lobar pneumonia?",
         "options": ["S. pneumoniae", "Legionella", "Pseudomonas", "Mycoplasma"],
         "topic": "Infectious Disease",
-        "chapter_ref": "ch-002",
+        "chapter_id": "ch-002",
         "difficulty": "medium",
         "correct_option": 0,
         "explanation": "Streptococcus pneumoniae is the most common cause.",
@@ -38,7 +38,7 @@ SAMPLE_QUESTIONS = [
         "stem": "What is the preferred outpatient regimen for atypical pneumonia?",
         "options": ["Azithromycin", "Cefepime", "Meropenem", "Linezolid"],
         "topic": "Infectious Disease",
-        "chapter_ref": "ch-002",
+        "chapter_id": "ch-002",
         "difficulty": "hard",
         "correct_option": 0,
         "explanation": "A macrolide is commonly used for atypical coverage.",
@@ -204,3 +204,4 @@ class TestAttemptQuestion:
         assert record is not None
         assert record["question_id"] == "q-test-002"
         assert record["is_correct"] is True
+
