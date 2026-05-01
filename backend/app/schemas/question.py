@@ -14,7 +14,7 @@ class QuestionOut(BaseModel):
     stem: str
     options: List[str]
     topic: str
-    chapter_ref: Optional[str] = None
+    chapter_id: Optional[str] = None
     difficulty: Difficulty
 
     class Config:

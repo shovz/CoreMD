@@ -8,7 +8,7 @@ from app.db.mongo import get_db
 
 
 # Import the auth router
-from app.api.v1.routes import auth, chapters, questions, cases, ai, debug, stats, bookmarks, annotations
+from app.api.v1.routes import auth, chapters, questions, cases, ai, stats, bookmarks, annotations
 
 # Database connections
 from app.db.mongo import connect_to_mongo, close_mongo_connection
@@ -61,7 +61,6 @@ app.include_router(chapters.router, prefix="/api/v1")
 app.include_router(questions.router, prefix="/api/v1")
 app.include_router(cases.router, prefix="/api/v1")
 app.include_router(ai.router, prefix="/api/v1")
-app.include_router(debug.router, prefix="/api/v1")
 app.include_router(stats.router, prefix="/api/v1")
 app.include_router(bookmarks.router, prefix="/api/v1")
 app.include_router(annotations.router, prefix="/api/v1")
@@ -74,11 +73,7 @@ def read_root():
 
 @app.get("/health")
 def health_check():
-    return {
-        "status": "ok",
-        "mongo_uri": settings.MONGO_URI,
-        "redis_url": settings.REDIS_URL,
-    }
+    return {"status": "ok"}
 
 
 # Shoval, how to run the server:

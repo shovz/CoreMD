@@ -2,10 +2,10 @@ from fastapi import APIRouter, HTTPException, Depends, status
 from pymongo.database import Database
 from pymongo.errors import DuplicateKeyError
 
-from app.schemas.user import UserCreate, UserOut
+from app.schemas.user import UserCreate, UserLogin, UserOut
 from app.services.auth_service import register_user, login_user
 from app.db.deps import mongo_db
-from app.api.deps.auth import get_current_user
+from app.core.auth import get_current_user
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -38,7 +38,7 @@ def register(
 
 @router.post("/login")
 def login(
-    user: UserCreate,
+    user: UserLogin,
     db: Database = Depends(mongo_db),
 ):
     try:

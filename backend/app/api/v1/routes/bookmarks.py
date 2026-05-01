@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 from pymongo.database import Database
 
-from app.core.auth import get_current_user
+from app.core.auth import get_current_user_id
 from app.db.deps import mongo_db
 
 router = APIRouter(prefix="/bookmarks", tags=["bookmarks"])
@@ -20,7 +20,7 @@ class BookmarkCreate(BaseModel):
 @router.post("")
 def add_bookmark(
     body: BookmarkCreate,
-    current_user: str = Depends(get_current_user),
+    current_user: str = Depends(get_current_user_id),
     db: Database = Depends(mongo_db),
 ):
     if body.type not in ("question", "case"):
@@ -44,7 +44,7 @@ def add_bookmark(
 @router.delete("/{item_id}")
 def remove_bookmark(
     item_id: str,
-    current_user: str = Depends(get_current_user),
+    current_user: str = Depends(get_current_user_id),
     db: Database = Depends(mongo_db),
 ):
     db["bookmarks"].delete_one({"user_id": ObjectId(current_user), "item_id": item_id})
@@ -54,7 +54,7 @@ def remove_bookmark(
 @router.get("")
 def list_bookmarks(
     type: Optional[str] = Query(None),
-    current_user: str = Depends(get_current_user),
+    current_user: str = Depends(get_current_user_id),
     db: Database = Depends(mongo_db),
 ):
     query: dict = {"user_id": ObjectId(current_user)}

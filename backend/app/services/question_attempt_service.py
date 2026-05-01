@@ -28,5 +28,6 @@ def record_attempt(
 
     redis.delete(f"stats:overview:{user_id}")
     redis.delete(f"stats:questions:{user_id}")
+    redis.delete(f"stats:dashboard:{user_id}")
     redis.delete(f"stats:chapters:{user_id}")
     return attempt

@@ -10,7 +10,7 @@ from app.schemas.chapter import (
     SectionContentOut,
     ChapterSearchResult,
 )
-from app.core.auth import get_current_user
+from app.core.auth import get_current_user_id
 
 router = APIRouter(prefix="/chapters", tags=["chapters"])
 
@@ -36,14 +36,14 @@ def _list_chapters(db: Database) -> List[dict]:
 
 @router.get("", response_model=List[ChapterOut])
 def get_chapters(
-    current_user: str = Depends(get_current_user), db: Database = Depends(mongo_db)
+    current_user: str = Depends(get_current_user_id), db: Database = Depends(mongo_db)
 ):
     return _list_chapters(db)
 
 
 @router.get("/", response_model=List[ChapterOut], include_in_schema=False)
 def get_chapters_with_trailing_slash(
-    current_user: str = Depends(get_current_user), db: Database = Depends(mongo_db)
+    current_user: str = Depends(get_current_user_id), db: Database = Depends(mongo_db)
 ):
     return _list_chapters(db)
 
@@ -51,7 +51,7 @@ def get_chapters_with_trailing_slash(
 @router.get("/search", response_model=List[ChapterSearchResult])
 def search_chapters(
     q: str = Query(..., min_length=1, max_length=120),
-    current_user: str = Depends(get_current_user),
+    current_user: str = Depends(get_current_user_id),
     db: Database = Depends(mongo_db),
 ):
     escaped = re.escape(q.strip())
@@ -127,7 +127,7 @@ def search_chapters(
 @router.get("/{chapter_id}", response_model=ChapterOut)
 def get_chapter_by_id(
     chapter_id: str,
-    current_user: str = Depends(get_current_user),
+    current_user: str = Depends(get_current_user_id),
     db: Database = Depends(mongo_db),
 ):
     doc = db["chapters"].find_one({"chapter_id": chapter_id}, {"_id": 0})
@@ -140,7 +140,7 @@ def get_chapter_by_id(
 def get_section_by_id(
     chapter_id: str,
     section_id: str,
-    current_user: str = Depends(get_current_user),
+    current_user: str = Depends(get_current_user_id),
     db: Database = Depends(mongo_db),
 ):
     chapter_doc = db["chapters"].find_one({"chapter_id": chapter_id}, {"_id": 0})
@@ -183,7 +183,7 @@ def get_section_by_id(
 @router.post("", response_model=ChapterOut)
 def create_chapter(
     chapter: ChapterCreate,
-    current_user: str = Depends(get_current_user),
+    current_user: str = Depends(get_current_user_id),
     db: Database = Depends(mongo_db),
 ):
     # Fake insert for now
