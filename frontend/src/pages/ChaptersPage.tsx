@@ -262,10 +262,14 @@ export default function ChaptersPage() {
 
   const displayHtml = useMemo(() => {
     if (!sanitizedHtml) return null;
+    const currentSectionId = sectionContent?.section_id;
     const highlights = annotations.filter(
-      (a) => a.note_text === "" && a.section_id === sectionContent?.section_id
+      (a) => a.note_text === "" && a.section_id === currentSectionId
     );
-    if (highlights.length === 0) return sanitizedHtml;
+    const notes = annotations.filter(
+      (a) => a.note_text !== "" && a.section_id === currentSectionId
+    );
+    if (highlights.length === 0 && notes.length === 0) return sanitizedHtml;
     let html = sanitizedHtml;
     for (const ann of highlights) {
       const escaped = ann.selected_text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -278,6 +282,17 @@ export default function ChaptersPage() {
         // skip if selected_text produces an invalid regex
       }
     }
+    notes.forEach((ann, i) => {
+      const escaped = ann.selected_text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      try {
+        html = html.replace(
+          new RegExp(escaped, "g"),
+          `<span class="annotation-note" data-note-id="${ann.id}" data-note-num="${i + 1}">$&</span>`
+        );
+      } catch {
+        // skip if selected_text produces an invalid regex
+      }
+    });
     return html;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sanitizedHtml, annotations]);

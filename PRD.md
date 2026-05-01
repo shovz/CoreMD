@@ -1,76 +1,67 @@
-# PRD: Quick Fixes — Questions, History, Notes Navigation + Selection Highlight
+# PRD: Chapter Reader — Note Bubbles + Refs Modal
 
 ## Introduction
 
-Four UX issues found after the annotation feature shipped: (1) selected text loses its blue highlight while the tooltip is visible; (2) the Question Bank lets users click Next without answering, Previous clears their previous answer, and the score increments on every re-attempt; (3) the Notes page navigates to the top of the chapters page instead of the specific section where the note lives; (4) the History page rows are not clickable — users cannot preview the question stem or case presentation without leaving the page.
+Two enhancements to make the chapter reader and case study pages more useful: (1) annotated text in the chapter reader should show a small numbered badge above the first word so readers can find their notes without opening the sidebar — hovering the annotated span underlines it and the sidebar notes should be numbered and scroll-to the annotation on click; (2) the References badge on a case study page should open an in-page modal with a section browser for the linked Harrison's chapter, so users can read the reference without leaving the case.
 
 ## Goals
 
-- Selected text stays highlighted (blue) while the tooltip popover is shown
-- Question Bank Previous/Next behaves correctly: Previous restores the stored answer + feedback, Next is blocked until an answer is submitted, score counts only the first attempt per question
-- Clicking a note card or chapter title on the Notes page opens the Chapters reader at the exact chapter and section
-- Clicking a History row shows a lightweight modal with the question stem (no answer options) or the case Presentation
+- Annotated text (notes) shows a floating numbered bubble above the selected text; hovering underlines it
+- The sidebar notes panel shows matching numbers and clicking a note scrolls the reader to that annotation
+- The References badge on CaseDetailPage opens a modal with the referenced chapter's sections browsable inline
+- No page navigation required to read a reference
 
 ## User Stories
 
-### US-001: Keep browser selection highlighted while tooltip is visible
-**Description:** As a resident, when I select text and the tooltip appears, I want the blue selection highlight to remain visible so I know which text I am about to act on.
+### US-001: Chapter reader — numbered note bubbles + hover style + CSS
+**Description:** As a resident, I want to see small numbered markers above text I have annotated with notes, so I can locate my notes while reading without opening the sidebar.
 
 **Acceptance Criteria:**
-- [x] `frontend/src/index.css` — add `.section-content ::selection { background: #93c5fd; }` so the selection colour stays visible on the warm-paper background
-- [x] No JavaScript changes required
+- [x] `frontend/src/index.css` — add `.annotation-note` ruleset: `position: relative; text-decoration: underline dotted #92400e; cursor: pointer;` with a `::before` pseudo-element using `content: attr(data-note-num)` positioned `top: -18px; left: 0` with amber-brown background, white text, 10px font, border-radius 4px
+- [x] `.annotation-note:hover` — add `background-color: #fef3c7; border-radius: 2px`
+- [x] `frontend/src/pages/ChaptersPage.tsx` — extend `displayHtml` useMemo to also process notes (annotations where `note_text !== ""` and `section_id` matches current section): wrap each match in `<span class="annotation-note" data-note-id="${ann.id}" data-note-num="${i+1}">$&</span>` where `i` is the 0-based index of that note among all notes in this section (so `data-note-num` starts at 1)
+- [x] Highlights (note_text === "") continue to use `<mark class="annotation-highlight">` unchanged
 - [x] Typecheck passes
-- [x] Verify in browser: select text → tooltip appears → selected text still shows blue background
+- [x] Verify in browser: add a note → annotated text shows small amber number badge above it; hover the span → text underlines
 
-### US-002: Question Bank — correct Prev/Next + first-attempt scoring
-**Description:** As a resident, I want Previous to restore my earlier answer and feedback, Next to be blocked until I have answered, and my score to reflect each question's first attempt only.
+### US-002: Chapter reader — sidebar notes numbered + scroll-to-annotation
+**Description:** As a resident, I want the notes sidebar to show each note's number (matching the in-text badge) and clicking a sidebar note should scroll that annotation into view in the reading pane.
 
 **Acceptance Criteria:**
-- [x] `frontend/src/pages/QuestionsPage.tsx` — add `answeredMapRef = useRef<Map<string, { selectedOption: number; result: AttemptResult }>>(new Map())` (standard mode player only)
-- [x] `handleStart` clears the map: `answeredMapRef.current.clear()`
-- [x] Question-change `useEffect` checks the map first; if an entry exists, restores `selectedOption` and `attemptResult` from it instead of resetting to null
-- [x] `handleOptionClick` — checks `isFirstAttempt = !answeredMapRef.current.has(currentQuestion.question_id)` before incrementing `sessionAnswered` / `sessionCorrect`; stores `{ selectedOption: optionIdx, result: res.data }` in the map after every submission
-- [x] Next button `disabled` condition adds `|| !attemptResult`
-- [x] Previous button behaviour unchanged except that returning to a previously answered question now shows the stored answer + feedback
-- [x] Multi-step mode is not affected (ChainCard has its own local state)
-- [x] Typecheck passes
-- [x] Verify in browser: answer Q1 → Next → answer Q2 → Previous → Q1 shows previous answer+feedback → score stays 1/1 not 2/2
+- [ ] `frontend/src/pages/ChaptersPage.tsx` — in the notes sidebar panel, derive `sectionNotes` (annotations with `note_text !== ""` and `section_id === sectionContent?.section_id`)
+- [ ] Each note card in the sidebar shows a small circular number badge (matching the in-text `data-note-num`) before the selected_text snippet
+- [ ] Clicking a note card calls `document.querySelector('[data-note-id="${ann.id}"]')?.scrollIntoView({ behavior: "smooth", block: "center" })`
+- [ ] Highlights (note_text === "") in the sidebar still display as "🔖 Highlight" with no number badge and no scroll behaviour
+- [ ] Sidebar shows ALL annotations (highlights + notes) in insertion order; only notes get number badges and click-to-scroll
+- [ ] Typecheck passes
+- [ ] Verify in browser: sidebar note card shows number → click → reader pane scrolls to the annotated text
 
-### US-003: Notes page — navigate to specific chapter + section
-**Description:** As a resident, I want clicking a note card or its chapter heading on the Notes page to open the Chapters reader at the exact section where the note was created.
+### US-003: CaseDetailPage — refs modal with section browser
+**Description:** As a resident studying a case, I want to click the References badge and read the linked Harrison's chapter section in a modal — without leaving the case page or losing my place in the questions.
 
 **Acceptance Criteria:**
-- [x] `frontend/src/pages/NotesPage.tsx` — chapter title button navigates with `navigate("/chapters", { state: { chapterId: items[0]?.chapter_id } })` (opens that chapter, first section)
-- [x] Each annotation card becomes clickable (add `onClick`, `cursor-pointer`, hover style) and navigates with `navigate("/chapters", { state: { chapterId: ann.chapter_id, sectionId: ann.section_id } })`
-- [x] The Delete button inside the card still works — its `onClick` must call `e.stopPropagation()` to prevent triggering navigation
-- [x] `ChaptersPage.tsx` reads `location.state` (import `useLocation` from `react-router-dom`); in the initial chapters `useEffect`, if `navState.chapterId` is present call `handleChapterClick(navState.chapterId, navState.sectionId)` and expand that chapter's part; otherwise fall back to the first sorted chapter as before
-- [x] `handleChapterClick(chapterId, targetSectionId?)` — after loading the chapter, finds the section index matching `targetSectionId` (if provided) and loads that section instead of always index 0
-- [x] Typecheck passes
-- [x] Verify in browser: Notes page card click → Chapters page opens with correct chapter expanded and correct section content displayed
-
-### US-004: History page — question and case preview modals
-**Description:** As a resident, I want to click a row in my History to see the question stem or case Presentation in a modal without leaving the page.
-
-**Acceptance Criteria:**
-- [x] `frontend/src/pages/HistoryPage.tsx` — add states `previewQuestion: { stem: string } | null` and `previewCase: { title: string; presentation: string } | null` and `casePreviewLoading: boolean`
-- [x] Import `getCaseById` from `../api/casesApi`
-- [x] Questions table rows: add `onClick={() => setPreviewQuestion({ stem: item.stem })}` and `cursor-pointer` class; checkbox `onChange` calls `e.stopPropagation()` to avoid conflict
-- [x] Cases table rows: add `onClick={() => handleCaseRowClick(item)}` and `cursor-pointer`; `handleCaseRowClick` calls `getCaseById(item.case_id)` and stores `{ title, presentation }` in `previewCase`; while loading sets `casePreviewLoading = true`
-- [x] Question preview modal: fixed overlay, shows stem text, closed by clicking × or backdrop
-- [x] Case preview modal: fixed overlay, shows case title + Presentation text, closed by clicking × or backdrop; shows "Loading…" while fetching
-- [x] Checkbox `onChange` on case rows also calls `e.stopPropagation()`
-- [x] Typecheck passes
-- [x] Verify in browser: click question row → modal with stem; click case row → fetches + shows Presentation
+- [ ] `frontend/src/pages/CaseDetailPage.tsx` — add imports: `getChapterById, type Chapter` from `../api/chaptersApi`, `getSectionById, type SectionResponse` from `../api/sectionApi`, `DOMPurify` from `dompurify`
+- [ ] Add state: `showRefModal` (boolean), `refChapter` (Chapter | null), `refSectionIdx` (number, default 0), `refSectionContent` (SectionResponse | null), `refLoading` (boolean)
+- [ ] `handleOpenRef()` — sets `showRefModal = true`, calls `getChapterById(caseData.chapter_id)`, stores result in `refChapter`, then loads first section content into `refSectionContent`
+- [ ] `handleRefSectionChange(idx)` — calls `getSectionById(chapter_id, sections[idx].id)` and updates `refSectionContent` and `refSectionIdx`
+- [ ] The static `<span>` references badge (inside the Discussion panel, bottom) becomes a `<button onClick={handleOpenRef}>` with hover styles
+- [ ] The small `<span>` chapter badge in the header area (top right) also becomes a `<button onClick={handleOpenRef}>` for discoverability
+- [ ] Modal: fixed inset-0 overlay (z-50, semi-transparent black backdrop), inner panel max-w-4xl h-[75vh], two-pane layout: left nav (section list, ~200px wide) + right content (scrollable, `section-content` class for styling); header row with chapter title + × close button
+- [ ] Clicking × or the backdrop closes the modal (`setShowRefModal(false)`)
+- [ ] Section content rendered via `dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(refSectionContent.html_content) }}`
+- [ ] Modal only renders when `showRefModal` is true
+- [ ] Typecheck passes
+- [ ] Verify in browser: open a case → click refs badge → modal opens with chapter sections list → click a section → content loads → × closes modal
 
 ## Non-Goals
 
-- No answer options shown in the question preview (stem only)
-- No navigation from the preview modal to the question or case page
-- No changes to the scoring display format
+- No annotation or note-taking within the refs modal
+- No search within the refs modal
+- Only one referenced chapter per case is supported (current data model has a single `chapter_id` per case)
 
 ## Technical Considerations
 
-- `answeredMapRef` is a `useRef` (not `useState`) so map mutations do not trigger re-renders
-- `location.state` from `useLocation()` is `unknown` — cast as `{ chapterId?: string; sectionId?: string } | null`
-- `ChaptersPage.handleChapterClick` is a declared function (hoisted) so it can be called inside the `useEffect` that runs on mount
-- `CaseHistoryItem` does not include `presentation` — a `getCaseById` fetch is required on each case row click
+- `caseData.chapter_id` is a MongoDB ObjectId string, compatible with `getChapterById(id)`
+- `getSectionById` is at `frontend/src/api/sectionApi.ts` — already used in `ChaptersPage.tsx`
+- `DOMPurify` is already a project dependency (used in `ChaptersPage.tsx`)
+- The refs modal is rendered inside the page's JSX return, after the main content `</div>`; it uses `fixed` positioning so it overlays correctly regardless of scroll position

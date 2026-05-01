@@ -137,3 +137,28 @@ body {
   border-radius: 2px;
   padding: 0 1px;
 }
+
+.annotation-note {
+  position: relative;
+  text-decoration: underline dotted #92400e;
+  cursor: pointer;
+}
+
+.annotation-note::before {
+  content: attr(data-note-num);
+  position: absolute;
+  top: -18px;
+  left: 0;
+  background-color: #92400e;
+  color: white;
+  font-size: 10px;
+  border-radius: 4px;
+  padding: 0 3px;
+  line-height: 1.4;
+  pointer-events: none;
+}
+
+.annotation-note:hover {
+  background-color: #fef3c7;
+  border-radius: 2px;
+}
