@@ -1,10 +1,12 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import type { AxiosError } from "axios";
-import { login } from "../api/authApi";
+import { getMe, login } from "../api/authApi";
+import { useAuthContext } from "../context/AuthContext";
 
 export default function LoginPage() {
   const navigate = useNavigate();
+  const { setUser } = useAuthContext();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -18,6 +20,8 @@ export default function LoginPage() {
     try {
       const response = await login({ email, password });
       localStorage.setItem("access_token", response.data.access_token);
+      const me = await getMe();
+      setUser(me);
       navigate("/dashboard", { replace: true });
     } catch (err: unknown) {
       const axiosErr = err as AxiosError<{ detail?: string }>;

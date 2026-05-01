@@ -1,10 +1,11 @@
 import { Outlet, useLocation } from "react-router-dom";
 import Sidebar from "./Sidebar";
 import AiChatLauncher from "./AiChatLauncher";
+import { useAuthContext } from "../context/AuthContext";
 
 export default function AppShell() {
   const location = useLocation();
-  const isAuthenticated = Boolean(localStorage.getItem("access_token"));
+  const { isAuthenticated } = useAuthContext();
 
   const isAuthPage = ["/login", "/register"].includes(location.pathname);
   const showSidebar = isAuthenticated && !isAuthPage;
