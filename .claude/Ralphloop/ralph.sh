@@ -11,7 +11,7 @@ export PYTHONUTF8=1
 # Always run from project root regardless of where script is invoked from
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
-cd "$PROJECT_ROOT"yes 
+cd "$PROJECT_ROOT"
 
 # Resolve claude binary — works on Mac/Linux (npm global) and Windows (VS Code extension)
 if ! command -v claude &>/dev/null; then
@@ -27,7 +27,7 @@ if ! command -v claude &>/dev/null; then
 fi
 
 # Derive the explanation file path from the PRD title at startup
-# Reads the first H1 heading from PRD.md, slugifies it, and maps to prds/<slug>-explained.md
+# Reads the first H1 heading from PRD.md, slugifies it, and maps to docs/prds/implemented/<slug>-explained.md
 get_explanation_path() {
     python -c "
 import re, sys
@@ -36,9 +36,24 @@ try:
     m = re.search(r'^#\s+PRD:\s*(.+)', text, re.MULTILINE)
     title = m.group(1).strip() if m else 'unknown'
     slug = re.sub(r'[^a-z0-9]+', '-', title.lower()).strip('-')
-    print(f'prds/{slug}-explained.md')
+    print(f'docs/prds/implemented/{slug}-explained.md')
 except Exception as e:
-    print('prds/unknown-explained.md')
+    print('docs/prds/implemented/unknown-explained.md')
+"
+}
+
+# Get the PRD slug for archiving
+get_prd_slug() {
+    python -c "
+import re
+try:
+    text = open('PRD.md', encoding='utf-8').read()
+    m = re.search(r'^#\s+PRD:\s*(.+)', text, re.MULTILINE)
+    title = m.group(1).strip() if m else 'unknown'
+    slug = re.sub(r'[^a-z0-9]+', '-', title.lower()).strip('-')
+    print(slug)
+except Exception:
+    print('unknown')
 "
 }
 
@@ -59,6 +74,27 @@ The file should explain:
 
 Write clearly for a developer who wasn't involved. Be concise but complete.
 Only update the explanation file — do not touch PRD.md, progress.txt, or any source files." || true
+}
+
+archive_and_promote() {
+    local slug
+    slug=$(get_prd_slug)
+
+    echo ""
+    echo "Archiving completed PRD: $slug"
+    mv PRD.md "docs/prds/implemented/${slug}-prd.md" || true
+    mv progress.txt "docs/prds/implemented/${slug}-progress.txt" || true
+
+    # Promote next upcoming PRD to root
+    NEXT_PRD=$(ls docs/prds/upcoming/*.md 2>/dev/null | sort | head -1)
+    if [ -n "$NEXT_PRD" ]; then
+        cp "$NEXT_PRD" PRD.md
+        rm "$NEXT_PRD"
+        printf "# Progress Log\n\n## Learnings\n(Patterns discovered during implementation)\n\n---\n" > progress.txt
+        echo "Promoted: $NEXT_PRD → PRD.md"
+    else
+        echo "No more upcoming PRDs. All done!"
+    fi
 }
 
 EXPLANATION_FILE=$(get_explanation_path)
@@ -91,6 +127,7 @@ for s in sections:
         echo "  All tasks complete!"
         echo "==========================================="
         update_explanation "$CURRENT_EXPLANATION"
+        archive_and_promote
         exit 0
     fi
 
@@ -133,6 +170,7 @@ DONE_SIGNAL_COREMD") || true
         echo "  All tasks complete after $i iterations!"
         echo "==========================================="
         update_explanation "$CURRENT_EXPLANATION"
+        archive_and_promote
         exit 0
     fi
 

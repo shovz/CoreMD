@@ -1,0 +1,6 @@
+# Progress Log
+
+## Learnings
+- For history-style pages, keep the reset confirmation inline (no modal) using local `confirmReset` boolean state — avoids z-index/overlay complexity.
+
+---

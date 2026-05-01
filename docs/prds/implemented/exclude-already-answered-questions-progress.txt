@@ -1,0 +1,6 @@
+# Progress Log
+
+## Learnings
+- Client-side "exclude answered" filtering: fetch answered IDs in the pool-loading useEffect after building the shuffled collection, before slicing to sessionLength. Set a dedicated `allFilteredByExclude` flag (not just empty-pool check) to show a specific "all answered" message distinct from "no questions match filters".
+
+---
