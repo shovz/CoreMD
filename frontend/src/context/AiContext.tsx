@@ -15,7 +15,7 @@ export function AiContextProvider({ children }: { children: ReactNode }) {
   const [prefillText, setPrefillText] = useState("");
 
   function openWithText(text: string) {
-    setPrefillText(`Regarding: "${text}" — `);
+    setPrefillText(text);
     setOpen(true);
   }
 
