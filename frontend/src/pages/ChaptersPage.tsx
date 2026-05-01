@@ -1,5 +1,6 @@
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import DOMPurify from "dompurify";
+import Mark from "mark.js";
 import { useLocation } from "react-router-dom";
 import { getChapters, getChapterById, type Chapter } from "../api/chaptersApi";
 import { getSectionById, type SectionResponse } from "../api/sectionApi";
@@ -271,25 +272,11 @@ export default function ChaptersPage() {
   const displayHtml = useMemo(() => {
     if (!sanitizedHtml) return null;
     const currentSectionId = sectionContent?.section_id;
-    const highlights = annotations.filter(
-      (a) => a.note_text === "" && a.section_id === currentSectionId
-    );
     const notes = annotations.filter(
       (a) => a.note_text !== "" && a.section_id === currentSectionId
     );
-    if (highlights.length === 0 && notes.length === 0) return sanitizedHtml;
+    if (notes.length === 0) return sanitizedHtml;
     let html = sanitizedHtml;
-    for (const ann of highlights) {
-      const escaped = ann.selected_text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-      try {
-        html = html.replace(
-          new RegExp(escaped, "g"),
-          `<mark class="annotation-highlight">$&</mark>`
-        );
-      } catch {
-        // skip if selected_text produces an invalid regex
-      }
-    }
     notes.forEach((ann, i) => {
       const escaped = ann.selected_text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
       try {
@@ -302,8 +289,29 @@ export default function ChaptersPage() {
       }
     });
     return html;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sanitizedHtml, annotations]);
+  }, [sanitizedHtml, annotations, sectionContent?.section_id]);
+
+  // Apply highlights via mark.js after DOM renders — handles cross-paragraph selections
+  useEffect(() => {
+    if (!contentRef.current) return;
+    const instance = new Mark(contentRef.current);
+    instance.unmark({
+      className: "annotation-highlight",
+      done: () => {
+        const currentHighlights = annotations.filter(
+          (a) => a.note_text === "" && a.section_id === sectionContent?.section_id
+        );
+        currentHighlights.forEach((ann) => {
+          instance.mark(ann.selected_text, {
+            className: "annotation-highlight",
+            accuracy: "exactly",
+            separateWordSearch: false,
+            acrossElements: true,
+          });
+        });
+      },
+    });
+  }, [displayHtml, annotations, sectionContent?.section_id]);
 
   if (loading) return <p className="p-6 text-slate-600">Loading chapters...</p>;
   if (error) return <p className="p-6 text-red-600">{error}</p>;
@@ -573,7 +581,7 @@ export default function ChaptersPage() {
               <div className="w-[280px] flex-shrink-0 border-l border-slate-200 flex flex-col overflow-hidden bg-slate-50">
                 <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
                   <h2 className="text-sm font-semibold text-slate-800">
-                    Notes ({annotations.length})
+                    Notes  ({annotations.length})
                   </h2>
                   <button
                     onClick={() => setShowNotesPanel(false)}

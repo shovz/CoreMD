@@ -5,8 +5,6 @@ import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import DashboardPage from "./pages/DashboardPage";
 import ChaptersPage from "./pages/ChaptersPage";
-import ChapterDetailPage from "./pages/ChapterDetailPage";
-import SectionDetailPage from "./pages/SectionDetailPage";
 import QuestionsPage from "./pages/QuestionsPage";
 import QuestionDetailPage from "./pages/QuestionDetailPage";
 import CasesPage from "./pages/CasesPage";
@@ -58,11 +56,6 @@ export default function AppRouter() {
           <Route element={<ProtectedRoute />}>
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/chapters" element={<ChaptersPage />} />
-            <Route path="/chapters/:chapterId" element={<ChapterDetailPage />} />
-            <Route
-              path="/chapters/:chapterId/sections/:sectionId"
-              element={<SectionDetailPage />}
-            />
             <Route path="/questions" element={<QuestionsPage />} />
             <Route path="/questions/:id" element={<QuestionDetailPage />} />
             <Route path="/cases" element={<CasesPage />} />

@@ -22,7 +22,7 @@ export default function AiChatLauncher() {
     <>
       <button
         onClick={() => setOpen(!open)}
-        className="fixed bottom-5 right-5 z-30 rounded-full bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-lg transition hover:bg-blue-700"
+        className="fixed bottom-6 right-5 z-30 rounded-full bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-lg transition hover:bg-blue-700"
         aria-label="Toggle AI Assistant"
       >
         Ask AI
