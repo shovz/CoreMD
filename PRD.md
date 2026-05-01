@@ -20,21 +20,21 @@ Four UX issues found after the annotation feature shipped: (1) selected text los
 - [x] `frontend/src/index.css` — add `.section-content ::selection { background: #93c5fd; }` so the selection colour stays visible on the warm-paper background
 - [x] No JavaScript changes required
 - [x] Typecheck passes
-- [ ] Verify in browser: select text → tooltip appears → selected text still shows blue background
+- [x] Verify in browser: select text → tooltip appears → selected text still shows blue background
 
 ### US-002: Question Bank — correct Prev/Next + first-attempt scoring
 **Description:** As a resident, I want Previous to restore my earlier answer and feedback, Next to be blocked until I have answered, and my score to reflect each question's first attempt only.
 
 **Acceptance Criteria:**
-- [ ] `frontend/src/pages/QuestionsPage.tsx` — add `answeredMapRef = useRef<Map<string, { selectedOption: number; result: AttemptResult }>>(new Map())` (standard mode player only)
-- [ ] `handleStart` clears the map: `answeredMapRef.current.clear()`
-- [ ] Question-change `useEffect` checks the map first; if an entry exists, restores `selectedOption` and `attemptResult` from it instead of resetting to null
-- [ ] `handleOptionClick` — checks `isFirstAttempt = !answeredMapRef.current.has(currentQuestion.question_id)` before incrementing `sessionAnswered` / `sessionCorrect`; stores `{ selectedOption: optionIdx, result: res.data }` in the map after every submission
-- [ ] Next button `disabled` condition adds `|| !attemptResult`
-- [ ] Previous button behaviour unchanged except that returning to a previously answered question now shows the stored answer + feedback
-- [ ] Multi-step mode is not affected (ChainCard has its own local state)
-- [ ] Typecheck passes
-- [ ] Verify in browser: answer Q1 → Next → answer Q2 → Previous → Q1 shows previous answer+feedback → score stays 1/1 not 2/2
+- [x] `frontend/src/pages/QuestionsPage.tsx` — add `answeredMapRef = useRef<Map<string, { selectedOption: number; result: AttemptResult }>>(new Map())` (standard mode player only)
+- [x] `handleStart` clears the map: `answeredMapRef.current.clear()`
+- [x] Question-change `useEffect` checks the map first; if an entry exists, restores `selectedOption` and `attemptResult` from it instead of resetting to null
+- [x] `handleOptionClick` — checks `isFirstAttempt = !answeredMapRef.current.has(currentQuestion.question_id)` before incrementing `sessionAnswered` / `sessionCorrect`; stores `{ selectedOption: optionIdx, result: res.data }` in the map after every submission
+- [x] Next button `disabled` condition adds `|| !attemptResult`
+- [x] Previous button behaviour unchanged except that returning to a previously answered question now shows the stored answer + feedback
+- [x] Multi-step mode is not affected (ChainCard has its own local state)
+- [x] Typecheck passes
+- [x] Verify in browser: answer Q1 → Next → answer Q2 → Previous → Q1 shows previous answer+feedback → score stays 1/1 not 2/2
 
 ### US-003: Notes page — navigate to specific chapter + section
 **Description:** As a resident, I want clicking a note card or its chapter heading on the Notes page to open the Chapters reader at the exact section where the note was created.

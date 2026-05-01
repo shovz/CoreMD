@@ -504,6 +504,9 @@ export default function QuestionsPage() {
   const [timeLeft, setTimeLeft] = useState(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  // Answered map for standard mode — persists answer+result across Prev/Next
+  const answeredMapRef = useRef<Map<string, { selectedOption: number; result: AttemptResult }>>(new Map());
+
   // Session score
   const [sessionCorrect, setSessionCorrect] = useState(0);
   const [sessionAnswered, setSessionAnswered] = useState(0);
@@ -623,11 +626,17 @@ export default function QuestionsPage() {
     }
   }, [msPool, msLoadingChain]);
 
-  // Reset per-question state when question changes
+  // Reset per-question state when question changes (restore from map if previously answered)
   const currentQuestion = questionPool[playerIndex] ?? null;
   useEffect(() => {
-    setSelectedOption(null);
-    setAttemptResult(null);
+    const stored = answeredMapRef.current.get(currentQuestion?.question_id ?? "");
+    if (stored) {
+      setSelectedOption(stored.selectedOption);
+      setAttemptResult(stored.result);
+    } else {
+      setSelectedOption(null);
+      setAttemptResult(null);
+    }
     setSubmittingAttempt(false);
   }, [currentQuestion?.question_id]);
 
@@ -746,13 +755,17 @@ export default function QuestionsPage() {
   const handleOptionClick = async (optionIdx: number) => {
     if (!currentQuestion || submittingAttempt || attemptResult) return;
     if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
+    const isFirstAttempt = !answeredMapRef.current.has(currentQuestion.question_id);
     setSelectedOption(optionIdx);
     setSubmittingAttempt(true);
     try {
       const res = await submitAttempt(currentQuestion.question_id, optionIdx);
       setAttemptResult(res.data);
-      setSessionAnswered((n) => n + 1);
-      if (res.data.correct) setSessionCorrect((n) => n + 1);
+      if (isFirstAttempt) {
+        setSessionAnswered((n) => n + 1);
+        if (res.data.correct) setSessionCorrect((n) => n + 1);
+      }
+      answeredMapRef.current.set(currentQuestion.question_id, { selectedOption: optionIdx, result: res.data });
       setError(null);
     } catch {
       setError("Failed to submit attempt");
@@ -799,6 +812,7 @@ export default function QuestionsPage() {
     setBookmarkedIds(new Set());
     setAllFilteredByExclude(false);
     setError(null);
+    answeredMapRef.current.clear();
   };
 
   const handleChangeSettings = () => {
@@ -993,7 +1007,7 @@ export default function QuestionsPage() {
                   </span>
                   <button
                     onClick={() => setPlayerIndex((prev) => Math.min(questionPool.length - 1, prev + 1))}
-                    disabled={playerIndex >= questionPool.length - 1}
+                    disabled={playerIndex >= questionPool.length - 1 || !attemptResult}
                     className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     Next →
