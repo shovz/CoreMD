@@ -40,27 +40,27 @@ Four UX issues found after the annotation feature shipped: (1) selected text los
 **Description:** As a resident, I want clicking a note card or its chapter heading on the Notes page to open the Chapters reader at the exact section where the note was created.
 
 **Acceptance Criteria:**
-- [ ] `frontend/src/pages/NotesPage.tsx` — chapter title button navigates with `navigate("/chapters", { state: { chapterId: items[0]?.chapter_id } })` (opens that chapter, first section)
-- [ ] Each annotation card becomes clickable (add `onClick`, `cursor-pointer`, hover style) and navigates with `navigate("/chapters", { state: { chapterId: ann.chapter_id, sectionId: ann.section_id } })`
-- [ ] The Delete button inside the card still works — its `onClick` must call `e.stopPropagation()` to prevent triggering navigation
-- [ ] `ChaptersPage.tsx` reads `location.state` (import `useLocation` from `react-router-dom`); in the initial chapters `useEffect`, if `navState.chapterId` is present call `handleChapterClick(navState.chapterId, navState.sectionId)` and expand that chapter's part; otherwise fall back to the first sorted chapter as before
-- [ ] `handleChapterClick(chapterId, targetSectionId?)` — after loading the chapter, finds the section index matching `targetSectionId` (if provided) and loads that section instead of always index 0
-- [ ] Typecheck passes
-- [ ] Verify in browser: Notes page card click → Chapters page opens with correct chapter expanded and correct section content displayed
+- [x] `frontend/src/pages/NotesPage.tsx` — chapter title button navigates with `navigate("/chapters", { state: { chapterId: items[0]?.chapter_id } })` (opens that chapter, first section)
+- [x] Each annotation card becomes clickable (add `onClick`, `cursor-pointer`, hover style) and navigates with `navigate("/chapters", { state: { chapterId: ann.chapter_id, sectionId: ann.section_id } })`
+- [x] The Delete button inside the card still works — its `onClick` must call `e.stopPropagation()` to prevent triggering navigation
+- [x] `ChaptersPage.tsx` reads `location.state` (import `useLocation` from `react-router-dom`); in the initial chapters `useEffect`, if `navState.chapterId` is present call `handleChapterClick(navState.chapterId, navState.sectionId)` and expand that chapter's part; otherwise fall back to the first sorted chapter as before
+- [x] `handleChapterClick(chapterId, targetSectionId?)` — after loading the chapter, finds the section index matching `targetSectionId` (if provided) and loads that section instead of always index 0
+- [x] Typecheck passes
+- [x] Verify in browser: Notes page card click → Chapters page opens with correct chapter expanded and correct section content displayed
 
 ### US-004: History page — question and case preview modals
 **Description:** As a resident, I want to click a row in my History to see the question stem or case Presentation in a modal without leaving the page.
 
 **Acceptance Criteria:**
-- [ ] `frontend/src/pages/HistoryPage.tsx` — add states `previewQuestion: { stem: string } | null` and `previewCase: { title: string; presentation: string } | null` and `casePreviewLoading: boolean`
-- [ ] Import `getCaseById` from `../api/casesApi`
-- [ ] Questions table rows: add `onClick={() => setPreviewQuestion({ stem: item.stem })}` and `cursor-pointer` class; checkbox `onChange` calls `e.stopPropagation()` to avoid conflict
-- [ ] Cases table rows: add `onClick={() => handleCaseRowClick(item)}` and `cursor-pointer`; `handleCaseRowClick` calls `getCaseById(item.case_id)` and stores `{ title, presentation }` in `previewCase`; while loading sets `casePreviewLoading = true`
-- [ ] Question preview modal: fixed overlay, shows stem text, closed by clicking × or backdrop
-- [ ] Case preview modal: fixed overlay, shows case title + Presentation text, closed by clicking × or backdrop; shows "Loading…" while fetching
-- [ ] Checkbox `onChange` on case rows also calls `e.stopPropagation()`
-- [ ] Typecheck passes
-- [ ] Verify in browser: click question row → modal with stem; click case row → fetches + shows Presentation
+- [x] `frontend/src/pages/HistoryPage.tsx` — add states `previewQuestion: { stem: string } | null` and `previewCase: { title: string; presentation: string } | null` and `casePreviewLoading: boolean`
+- [x] Import `getCaseById` from `../api/casesApi`
+- [x] Questions table rows: add `onClick={() => setPreviewQuestion({ stem: item.stem })}` and `cursor-pointer` class; checkbox `onChange` calls `e.stopPropagation()` to avoid conflict
+- [x] Cases table rows: add `onClick={() => handleCaseRowClick(item)}` and `cursor-pointer`; `handleCaseRowClick` calls `getCaseById(item.case_id)` and stores `{ title, presentation }` in `previewCase`; while loading sets `casePreviewLoading = true`
+- [x] Question preview modal: fixed overlay, shows stem text, closed by clicking × or backdrop
+- [x] Case preview modal: fixed overlay, shows case title + Presentation text, closed by clicking × or backdrop; shows "Loading…" while fetching
+- [x] Checkbox `onChange` on case rows also calls `e.stopPropagation()`
+- [x] Typecheck passes
+- [x] Verify in browser: click question row → modal with stem; click case row → fetches + shows Presentation
 
 ## Non-Goals
 

@@ -9,6 +9,7 @@ import {
   type AttemptHistoryItem,
   type CaseHistoryItem,
 } from "../api/historyApi";
+import { getCaseById } from "../api/casesApi";
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString("en-US", {
@@ -33,6 +34,11 @@ export default function HistoryPage() {
   const [confirmResetSelected, setConfirmResetSelected] = useState(false);
   const [resetMessage, setResetMessage] = useState<string | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+
+  // --- Preview modal state ---
+  const [previewQuestion, setPreviewQuestion] = useState<{ stem: string } | null>(null);
+  const [previewCase, setPreviewCase] = useState<{ title: string; presentation: string } | null>(null);
+  const [casePreviewLoading, setCasePreviewLoading] = useState(false);
 
   // --- Cases tab state ---
   const [cItems, setCItems] = useState<CaseHistoryItem[]>([]);
@@ -164,6 +170,14 @@ export default function HistoryPage() {
       });
   };
 
+  const handleCaseRowClick = (item: CaseHistoryItem) => {
+    setCasePreviewLoading(true);
+    setPreviewCase(null);
+    getCaseById(item.case_id)
+      .then((res) => setPreviewCase({ title: res.data.title, presentation: res.data.presentation }))
+      .finally(() => setCasePreviewLoading(false));
+  };
+
   return (
     <div className="px-6 py-8 space-y-6">
       <h1 className="text-3xl font-bold text-slate-900">History</h1>
@@ -282,13 +296,14 @@ export default function HistoryPage() {
                   {items.map((item) => (
                     <tr
                       key={item.attempt_id}
-                      className={`hover:bg-slate-50 ${selected.has(item.question_id) ? "bg-blue-50" : ""}`}
+                      onClick={() => setPreviewQuestion({ stem: item.stem })}
+                      className={`cursor-pointer hover:bg-slate-50 ${selected.has(item.question_id) ? "bg-blue-50" : ""}`}
                     >
                       <td className="px-4 py-3">
                         <input
                           type="checkbox"
                           checked={selected.has(item.question_id)}
-                          onChange={() => toggleRow(item.question_id)}
+                          onChange={(e) => { e.stopPropagation(); toggleRow(item.question_id); }}
                           className="h-4 w-4 cursor-pointer rounded border-slate-300 accent-blue-600"
                           aria-label="Select row"
                         />
@@ -399,13 +414,14 @@ export default function HistoryPage() {
                   {cItems.map((item) => (
                     <tr
                       key={item.attempt_id}
-                      className={`hover:bg-slate-50 ${cSelected.has(item.case_id) ? "bg-blue-50" : ""}`}
+                      onClick={() => handleCaseRowClick(item)}
+                      className={`cursor-pointer hover:bg-slate-50 ${cSelected.has(item.case_id) ? "bg-blue-50" : ""}`}
                     >
                       <td className="px-4 py-3">
                         <input
                           type="checkbox"
                           checked={cSelected.has(item.case_id)}
-                          onChange={() => toggleCRow(item.case_id)}
+                          onChange={(e) => { e.stopPropagation(); toggleCRow(item.case_id); }}
                           className="h-4 w-4 cursor-pointer rounded border-slate-300 accent-blue-600"
                           aria-label="Select row"
                         />
@@ -426,6 +442,55 @@ export default function HistoryPage() {
             </div>
           )}
         </>
+      )}
+      {/* Question preview modal */}
+      {previewQuestion && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+          onClick={() => setPreviewQuestion(null)}
+        >
+          <div
+            className="relative w-full max-w-lg rounded-xl bg-white p-6 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setPreviewQuestion(null)}
+              className="absolute right-4 top-4 text-slate-400 hover:text-slate-700 text-lg font-bold"
+            >
+              ×
+            </button>
+            <h2 className="mb-4 text-lg font-semibold text-slate-900">Question Stem</h2>
+            <p className="text-slate-700 leading-relaxed whitespace-pre-wrap">{previewQuestion.stem}</p>
+          </div>
+        </div>
+      )}
+
+      {/* Case preview modal */}
+      {(casePreviewLoading || previewCase) && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+          onClick={() => { setPreviewCase(null); setCasePreviewLoading(false); }}
+        >
+          <div
+            className="relative w-full max-w-lg rounded-xl bg-white p-6 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => { setPreviewCase(null); setCasePreviewLoading(false); }}
+              className="absolute right-4 top-4 text-slate-400 hover:text-slate-700 text-lg font-bold"
+            >
+              ×
+            </button>
+            {casePreviewLoading ? (
+              <p className="text-slate-500">Loading…</p>
+            ) : previewCase ? (
+              <>
+                <h2 className="mb-4 text-lg font-semibold text-slate-900">{previewCase.title}</h2>
+                <p className="text-slate-700 leading-relaxed whitespace-pre-wrap">{previewCase.presentation}</p>
+              </>
+            ) : null}
+          </div>
+        </div>
       )}
     </div>
   );
