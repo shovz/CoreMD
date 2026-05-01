@@ -1,0 +1,7 @@
+# Progress Log
+
+## Learnings
+- Bookmark toggle state is kept local per card/session (Set<string> for standard player, useState bool for ChainCard). No prefetch needed — AC explicitly forbids it for session view.
+- bookmarksApi.ts follows the same axios-based pattern as other api modules: import apiClient, export typed functions.
+
+---

@@ -337,3 +337,39 @@ explicit peer dep with `--legacy-peer-deps` due to React 19 compatibility.
 | Chat history | Frontend session only | Redis TTL cache → MongoDB |
 | Deployment | Local Docker Compose | AWS (ECS + Atlas + CloudFront) |
 | Charts | Recharts | Tremor (if more components needed) |
+
+---
+
+## 12. Deferred Features
+
+These features were evaluated during the MVP build and intentionally excluded. They are good candidates for a future iteration once the core platform is stable with real users.
+
+### Global Search
+Full-text search across chapters, questions, and cases from a single search bar. Requires a dedicated search index (MongoDB Atlas Search or Elasticsearch). Current per-page search (chapter sidebar, question filters) is sufficient for MVP.
+
+- **Effort:** ~2 days (index setup + unified search API + frontend search UI)
+- **Trigger:** When users report difficulty finding specific content across content types
+
+### Progress History & Trends
+Time-series charts of accuracy, questions answered per day, and topic mastery over time (GitHub-style heatmap). Requires persisting daily aggregate snapshots or running aggregation queries over `question_attempts` with date bucketing.
+
+- **Effort:** ~1 day (aggregation pipeline + chart components)
+- **Trigger:** When retention metrics show users want to track improvement over time
+
+### Password Reset
+Email-based password reset flow: "Forgot password" → email with time-limited token → reset form. Requires an email sending service (SendGrid, SES, or Resend).
+
+- **Effort:** ~4 hours (token model + email service + reset endpoints + frontend form)
+- **Trigger:** When real users (not just internal testers) register and need account recovery
+
+### Admin / Content Management UI
+A protected admin panel for managing questions, cases, and chapters without direct database access. Includes add/edit/delete UI for MCQs and cases, bulk-import from JSON/CSV, and a content moderation queue.
+
+- **Effort:** ~3 days (admin role gate + CRUD pages per content type)
+- **Trigger:** When a content editor or attending physician needs to update questions without developer involvement
+
+### Spaced Repetition System (SRS)
+Algorithmically schedule question reviews using SM-2 or FSRS algorithm — questions due today are surfaced first; correct answers push the next review date further out. Requires per-question review state per user (next_review_date, interval, ease_factor).
+
+- **Effort:** ~2 days (SRS state model + scheduling endpoint + "Review Due" session mode in Question Bank)
+- **Trigger:** When residents want active recall practice, not just random sessions
