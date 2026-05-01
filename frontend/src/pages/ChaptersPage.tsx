@@ -1,5 +1,6 @@
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import DOMPurify from "dompurify";
+import { useLocation } from "react-router-dom";
 import { getChapters, getChapterById, type Chapter } from "../api/chaptersApi";
 import { getSectionById, type SectionResponse } from "../api/sectionApi";
 import { useAiContext } from "../context/AiContext";
@@ -60,6 +61,8 @@ export default function ChaptersPage() {
   const [showNotesPanel, setShowNotesPanel] = useState(false);
 
   const { openWithText } = useAiContext();
+  const location = useLocation();
+  const navState = (location.state ?? {}) as { chapterId?: string; sectionId?: string };
 
   useEffect(() => {
     getChapters()
@@ -70,6 +73,14 @@ export default function ChaptersPage() {
           const pd = (a.part_number ?? 0) - (b.part_number ?? 0);
           return pd !== 0 ? pd : (a.chapter_number ?? 0) - (b.chapter_number ?? 0);
         });
+        if (navState.chapterId) {
+          const target = res.data.find((ch) => ch.id === navState.chapterId);
+          if (target) {
+            setExpandedPart(target.part_number ?? 1);
+            handleChapterClick(navState.chapterId, navState.sectionId);
+            return;
+          }
+        }
         const first = sorted[0];
         if (first) {
           setExpandedPart(first.part_number ?? 1);
@@ -126,7 +137,7 @@ export default function ChaptersPage() {
     setExpandedPart((prev) => (prev === partNum ? null : partNum));
   }
 
-  async function handleChapterClick(chapterId: string) {
+  async function handleChapterClick(chapterId: string, targetSectionId?: string) {
     setSectionLoading(true);
     setSectionContent(null);
     setNoteText("");
@@ -137,9 +148,12 @@ export default function ChaptersPage() {
       const chapterRes = await getChapterById(chapterId);
       const fullChapter = chapterRes.data;
       setCurrentChapter(fullChapter);
-      setCurrentSectionIndex(0);
+      const sectionIndex = targetSectionId
+        ? Math.max(0, fullChapter.sections.findIndex((s) => s.id === targetSectionId))
+        : 0;
+      setCurrentSectionIndex(sectionIndex);
       if (fullChapter.sections.length > 0) {
-        const sectionRes = await getSectionById(chapterId, fullChapter.sections[0].id);
+        const sectionRes = await getSectionById(chapterId, fullChapter.sections[sectionIndex].id);
         setSectionContent(sectionRes.data);
       }
     } finally {
@@ -510,7 +524,7 @@ export default function ChaptersPage() {
               </div>
 
               {/* Prev / Next */}
-              <div className="mt-4 flex-shrink-0 flex items-center justify-between border-t border-slate-200 pt-4">
+              <div className=" mr-20 mt-4 flex-shrink-0 flex items-center justify-between border-t border-slate-200 pt-4">
                 <button
                   onClick={() => goToSection(currentSectionIndex - 1)}
                   disabled={currentSectionIndex === 0}

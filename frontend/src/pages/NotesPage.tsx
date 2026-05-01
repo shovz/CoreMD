@@ -61,7 +61,9 @@ export default function NotesPage() {
           {grouped.map(({ title, items }) => (
             <section key={title}>
               <button
-                onClick={() => navigate("/chapters")}
+                onClick={() =>
+                  navigate("/chapters", { state: { chapterId: items[0]?.chapter_id } })
+                }
                 className="mb-3 text-left text-lg font-semibold text-blue-600 hover:underline"
               >
                 {title}
@@ -70,7 +72,12 @@ export default function NotesPage() {
                 {items.map((ann) => (
                   <div
                     key={ann.id}
-                    className="rounded-lg border bg-[var(--paper-2)] p-4"
+                    onClick={() =>
+                      navigate("/chapters", {
+                        state: { chapterId: ann.chapter_id, sectionId: ann.section_id },
+                      })
+                    }
+                    className="cursor-pointer rounded-lg border bg-[var(--paper-2)] p-4 hover:border-blue-300 hover:shadow-sm transition"
                     style={{ borderColor: "var(--ink-4)" }}
                   >
                     <p className="mb-1 text-sm italic text-[var(--ink-dim)]">
@@ -90,7 +97,10 @@ export default function NotesPage() {
                         })}
                       </span>
                       <button
-                        onClick={() => handleDelete(ann.id)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDelete(ann.id);
+                        }}
                         className="text-xs text-red-500 hover:text-red-700"
                       >
                         Delete
