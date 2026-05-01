@@ -6,7 +6,7 @@ from openai import OpenAI
 from pymongo.database import Database
 from redis import Redis
 
-from app.api.deps.auth import get_current_user
+from app.core.auth import get_current_user
 from app.core.config import settings
 from app.db.deps import mongo_db, redis_client
 from app.schemas.ai import AskRequest, AskResponse, Citation

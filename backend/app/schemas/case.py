@@ -14,7 +14,7 @@ class CaseOut(BaseModel):
     discussion: str
     diagnosis: str
     management: str
-    chapter_ref: str
+    chapter_id: str
     chapter_title: Optional[str] = None
 
     class Config:

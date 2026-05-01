@@ -6,7 +6,7 @@ import json
 
 from app.db.deps import mongo_db, redis_client
 
-from app.core.auth import get_current_user
+from app.core.auth import get_current_user_id
 from app.services import stats_service
 from app.schemas.stats import (
     OverviewStatsOut,
@@ -23,7 +23,7 @@ router = APIRouter(prefix="/stats", tags=["stats"])
 def overview_stats(
     db: Database = Depends(mongo_db),
     redis: Redis = Depends(redis_client),
-    user_id: str = Depends(get_current_user),
+    user_id: str = Depends(get_current_user_id),
 ):
     cache_key = f"stats:overview:{user_id}"
 
@@ -40,7 +40,7 @@ def overview_stats(
 def question_stats(
     db: Database = Depends(mongo_db),
     redis: Redis = Depends(redis_client),
-    user_id: str = Depends(get_current_user),
+    user_id: str = Depends(get_current_user_id),
 ):
     cache_key = f"stats:questions:{user_id}"
 
@@ -56,7 +56,7 @@ def question_stats(
 def dashboard_stats(
     db: Database = Depends(mongo_db),
     redis: Redis = Depends(redis_client),
-    user_id: str = Depends(get_current_user),
+    user_id: str = Depends(get_current_user_id),
 ):
     cache_key = f"stats:dashboard:{user_id}"
 
@@ -73,7 +73,7 @@ def dashboard_stats(
 def chapter_stats(
     db: Database = Depends(mongo_db),
     redis: Redis = Depends(redis_client),
-    user_id: str = Depends(get_current_user),
+    user_id: str = Depends(get_current_user_id),
 ):
     cache_key = f"stats:chapters:{user_id}"
 
