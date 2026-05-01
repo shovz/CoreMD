@@ -8,8 +8,13 @@ export interface LoginRequest {
 export interface LoginResponse {
   access_token: string;
   token_type: string;
+}
+
+export interface UserMe {
+  id: string;
+  email: string;
+  role: string;
   full_name?: string;
-  email?: string;
 }
 
 export interface RegisterRequest {
@@ -33,6 +38,6 @@ export const register = (data: RegisterRequest) => {
   return api.post<RegisterResponse>("/auth/register", data);
 };
 
-export const getMe = (): Promise<LoginResponse> => {
-  return api.get<LoginResponse>("/auth/me").then((r) => r.data);
+export const getMe = (): Promise<UserMe> => {
+  return api.get<UserMe>("/auth/me").then((r) => r.data);
 };

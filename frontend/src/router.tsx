@@ -16,12 +16,16 @@ import BookmarksPage from "./pages/BookmarksPage";
 import NotesPage from "./pages/NotesPage";
 import AppShell from "./components/AppShell";
 import { AiContextProvider } from "./context/AiContext";
-import { AuthProvider } from "./context/AuthContext";
+import { AuthProvider, useAuthContext } from "./context/AuthContext";
 
 function ProtectedRoute() {
-  const token = localStorage.getItem("access_token");
+  const { isAuthenticated, isInitializing } = useAuthContext();
 
-  if (!token) {
+  if (isInitializing) {
+    return null;
+  }
+
+  if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
 
@@ -29,7 +33,11 @@ function ProtectedRoute() {
 }
 
 function RootRoute() {
-  return localStorage.getItem("access_token") ? (
+  const { isAuthenticated, isInitializing } = useAuthContext();
+  if (isInitializing) {
+    return null;
+  }
+  return isAuthenticated ? (
     <Navigate to="/dashboard" replace />
   ) : (
     <Home />
