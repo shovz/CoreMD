@@ -128,6 +128,10 @@ body {
   font-size: 0.875em;
 }
 
+.section-content ::selection {
+  background: #93c5fd;
+}
+
 .annotation-highlight {
   background-color: #fef08a;
   border-radius: 2px;
