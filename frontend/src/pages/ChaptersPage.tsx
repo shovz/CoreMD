@@ -51,6 +51,7 @@ export default function ChaptersPage() {
   // Text-selection popover
   const [popover, setPopover] = useState<Popover | null>(null);
   const contentRef = useRef<HTMLDivElement>(null);
+  const popoverRef = useRef<HTMLDivElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Annotations
@@ -162,7 +163,9 @@ export default function ChaptersPage() {
   }
 
   useEffect(() => {
-    function handleMouseUp() {
+    function handleMouseUp(e: MouseEvent) {
+      // Ignore mouseup originating from inside the popover toolbar itself
+      if (popoverRef.current?.contains(e.target as Node)) return;
       const selection = window.getSelection();
       if (!selection || selection.isCollapsed || !contentRef.current) {
         setPopover(null);
@@ -184,7 +187,10 @@ export default function ChaptersPage() {
 
     function handleSelectionChange() {
       const selection = window.getSelection();
-      if (!selection || selection.isCollapsed) setPopover(null);
+      if (!selection || selection.isCollapsed) {
+        // Preserve the popover while the note textarea has focus
+        setPopover((prev) => (prev?.mode === "note" ? prev : null));
+      }
     }
 
     document.addEventListener("mouseup", handleMouseUp);
@@ -197,13 +203,10 @@ export default function ChaptersPage() {
 
   function handleAskAi() {
     if (!popover) return;
-    const context = sectionContent
-      ? `In "${sectionContent.chapter_title} › ${sectionContent.section_title}", the following text appears: `
-      : "";
     const text = popover.text;
     setPopover(null);
     window.getSelection()?.removeAllRanges();
-    openWithText(`${context}"${text}"`);
+    openWithText(text);
   }
 
   async function handleSaveNote() {
@@ -243,6 +246,28 @@ export default function ChaptersPage() {
       )
     : null;
 
+  const displayHtml = useMemo(() => {
+    if (!sanitizedHtml) return null;
+    const highlights = annotations.filter(
+      (a) => a.note_text === "" && a.section_id === sectionContent?.section_id
+    );
+    if (highlights.length === 0) return sanitizedHtml;
+    let html = sanitizedHtml;
+    for (const ann of highlights) {
+      const escaped = ann.selected_text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      try {
+        html = html.replace(
+          new RegExp(escaped, "g"),
+          `<mark class="annotation-highlight">$&</mark>`
+        );
+      } catch {
+        // skip if selected_text produces an invalid regex
+      }
+    }
+    return html;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sanitizedHtml, annotations]);
+
   if (loading) return <p className="p-6 text-slate-600">Loading chapters...</p>;
   if (error) return <p className="p-6 text-red-600">{error}</p>;
 
@@ -253,6 +278,7 @@ export default function ChaptersPage() {
       {/* Floating selection popover */}
       {popover && (
         <div
+          ref={popoverRef}
           style={{
             position: "fixed",
             left: popover.x,
@@ -260,6 +286,7 @@ export default function ChaptersPage() {
             transform: "translate(-50%, calc(-100% - 8px))",
             zIndex: 60,
           }}
+          onPointerDown={(e) => e.preventDefault()}
         >
           {popover.mode === "buttons" ? (
             <div className="flex gap-1 rounded-lg bg-slate-800 px-1 py-1 shadow-lg">
@@ -466,10 +493,10 @@ export default function ChaptersPage() {
 
               {/* Scrollable section content */}
               <div className="mt-6 flex-1 overflow-y-auto" ref={contentRef}>
-                {sanitizedHtml ? (
+                {displayHtml ? (
                   <div
                     className="section-content"
-                    dangerouslySetInnerHTML={{ __html: sanitizedHtml }}
+                    dangerouslySetInnerHTML={{ __html: displayHtml }}
                   />
                 ) : sectionContent ? (
                   <div className="space-y-4 text-[15px] leading-7 text-slate-800">

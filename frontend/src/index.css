@@ -127,3 +127,9 @@ body {
   border-radius: 3px;
   font-size: 0.875em;
 }
+
+.annotation-highlight {
+  background-color: #fef08a;
+  border-radius: 2px;
+  padding: 0 1px;
+}
