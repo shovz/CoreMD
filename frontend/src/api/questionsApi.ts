@@ -7,7 +7,7 @@ export interface QuestionOut {
   stem: string;
   options: string[];
   topic: string;
-  chapter_ref: string | null;
+  chapter_id: string | null;
   difficulty: Difficulty;
 }
 

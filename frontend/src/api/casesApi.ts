@@ -16,7 +16,7 @@ export interface CaseFull extends CaseListItem {
   discussion: string;
   diagnosis: string;
   management: string;
-  chapter_ref: string;
+  chapter_id: string;
   chapter_title: string | null;
 }
 
