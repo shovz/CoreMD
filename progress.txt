@@ -1,0 +1,6 @@
+# Progress Log
+
+## Learnings
+- Refs modal pattern: load chapter metadata (sections list) on modal open, then lazy-load each section's HTML content on selection. Use `e.stopPropagation()` on the inner panel and a backdrop `onClick` to close — avoids a separate close-button-only approach.
+
+---

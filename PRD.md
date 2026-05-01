@@ -28,30 +28,30 @@ Two enhancements to make the chapter reader and case study pages more useful: (1
 **Description:** As a resident, I want the notes sidebar to show each note's number (matching the in-text badge) and clicking a sidebar note should scroll that annotation into view in the reading pane.
 
 **Acceptance Criteria:**
-- [ ] `frontend/src/pages/ChaptersPage.tsx` — in the notes sidebar panel, derive `sectionNotes` (annotations with `note_text !== ""` and `section_id === sectionContent?.section_id`)
-- [ ] Each note card in the sidebar shows a small circular number badge (matching the in-text `data-note-num`) before the selected_text snippet
-- [ ] Clicking a note card calls `document.querySelector('[data-note-id="${ann.id}"]')?.scrollIntoView({ behavior: "smooth", block: "center" })`
-- [ ] Highlights (note_text === "") in the sidebar still display as "🔖 Highlight" with no number badge and no scroll behaviour
-- [ ] Sidebar shows ALL annotations (highlights + notes) in insertion order; only notes get number badges and click-to-scroll
-- [ ] Typecheck passes
-- [ ] Verify in browser: sidebar note card shows number → click → reader pane scrolls to the annotated text
+- [x] `frontend/src/pages/ChaptersPage.tsx` — in the notes sidebar panel, derive `sectionNotes` (annotations with `note_text !== ""` and `section_id === sectionContent?.section_id`)
+- [x] Each note card in the sidebar shows a small circular number badge (matching the in-text `data-note-num`) before the selected_text snippet
+- [x] Clicking a note card calls `document.querySelector('[data-note-id="${ann.id}"]')?.scrollIntoView({ behavior: "smooth", block: "center" })`
+- [x] Highlights (note_text === "") in the sidebar still display as "🔖 Highlight" with no number badge and no scroll behaviour
+- [x] Sidebar shows ALL annotations (highlights + notes) in insertion order; only notes get number badges and click-to-scroll
+- [x] Typecheck passes
+- [x] Verify in browser: sidebar note card shows number → click → reader pane scrolls to the annotated text
 
 ### US-003: CaseDetailPage — refs modal with section browser
 **Description:** As a resident studying a case, I want to click the References badge and read the linked Harrison's chapter section in a modal — without leaving the case page or losing my place in the questions.
 
 **Acceptance Criteria:**
-- [ ] `frontend/src/pages/CaseDetailPage.tsx` — add imports: `getChapterById, type Chapter` from `../api/chaptersApi`, `getSectionById, type SectionResponse` from `../api/sectionApi`, `DOMPurify` from `dompurify`
-- [ ] Add state: `showRefModal` (boolean), `refChapter` (Chapter | null), `refSectionIdx` (number, default 0), `refSectionContent` (SectionResponse | null), `refLoading` (boolean)
-- [ ] `handleOpenRef()` — sets `showRefModal = true`, calls `getChapterById(caseData.chapter_id)`, stores result in `refChapter`, then loads first section content into `refSectionContent`
-- [ ] `handleRefSectionChange(idx)` — calls `getSectionById(chapter_id, sections[idx].id)` and updates `refSectionContent` and `refSectionIdx`
-- [ ] The static `<span>` references badge (inside the Discussion panel, bottom) becomes a `<button onClick={handleOpenRef}>` with hover styles
-- [ ] The small `<span>` chapter badge in the header area (top right) also becomes a `<button onClick={handleOpenRef}>` for discoverability
-- [ ] Modal: fixed inset-0 overlay (z-50, semi-transparent black backdrop), inner panel max-w-4xl h-[75vh], two-pane layout: left nav (section list, ~200px wide) + right content (scrollable, `section-content` class for styling); header row with chapter title + × close button
-- [ ] Clicking × or the backdrop closes the modal (`setShowRefModal(false)`)
-- [ ] Section content rendered via `dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(refSectionContent.html_content) }}`
-- [ ] Modal only renders when `showRefModal` is true
-- [ ] Typecheck passes
-- [ ] Verify in browser: open a case → click refs badge → modal opens with chapter sections list → click a section → content loads → × closes modal
+- [x] `frontend/src/pages/CaseDetailPage.tsx` — add imports: `getChapterById, type Chapter` from `../api/chaptersApi`, `getSectionById, type SectionResponse` from `../api/sectionApi`, `DOMPurify` from `dompurify`
+- [x] Add state: `showRefModal` (boolean), `refChapter` (Chapter | null), `refSectionIdx` (number, default 0), `refSectionContent` (SectionResponse | null), `refLoading` (boolean)
+- [x] `handleOpenRef()` — sets `showRefModal = true`, calls `getChapterById(caseData.chapter_id)`, stores result in `refChapter`, then loads first section content into `refSectionContent`
+- [x] `handleRefSectionChange(idx)` — calls `getSectionById(chapter_id, sections[idx].id)` and updates `refSectionContent` and `refSectionIdx`
+- [x] The static `<span>` references badge (inside the Discussion panel, bottom) becomes a `<button onClick={handleOpenRef}>` with hover styles
+- [x] The small `<span>` chapter badge in the header area (top right) also becomes a `<button onClick={handleOpenRef}>` for discoverability
+- [x] Modal: fixed inset-0 overlay (z-50, semi-transparent black backdrop), inner panel max-w-4xl h-[75vh], two-pane layout: left nav (section list, ~200px wide) + right content (scrollable, `section-content` class for styling); header row with chapter title + × close button
+- [x] Clicking × or the backdrop closes the modal (`setShowRefModal(false)`)
+- [x] Section content rendered via `dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(refSectionContent.html_content) }}`
+- [x] Modal only renders when `showRefModal` is true
+- [x] Typecheck passes
+- [x] Verify in browser: open a case → click refs badge → modal opens with chapter sections list → click a section → content loads → × closes modal
 
 ## Non-Goals
 

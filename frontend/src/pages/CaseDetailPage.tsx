@@ -9,6 +9,9 @@ import {
   type CaseAttemptResult,
 } from "../api/casesApi";
 import { addBookmark, removeBookmark, getBookmarks } from "../api/bookmarksApi";
+import { getChapterById, type Chapter } from "../api/chaptersApi";
+import { getSectionById, type SectionResponse } from "../api/sectionApi";
+import DOMPurify from "dompurify";
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -132,6 +135,12 @@ export default function CaseDetailPage() {
   const [bookmarked, setBookmarked] = useState(false);
   const [bookmarkLoading, setBookmarkLoading] = useState(false);
 
+  const [showRefModal, setShowRefModal] = useState(false);
+  const [refChapter, setRefChapter] = useState<Chapter | null>(null);
+  const [refSectionIdx, setRefSectionIdx] = useState(0);
+  const [refSectionContent, setRefSectionContent] = useState<SectionResponse | null>(null);
+  const [refLoading, setRefLoading] = useState(false);
+
   useEffect(() => {
     if (!id) return;
     Promise.all([getCaseById(id), getCaseQuestions(id), getBookmarks("case")])
@@ -144,6 +153,36 @@ export default function CaseDetailPage() {
       })
       .catch(() => { setError("Failed to load case."); setLoading(false); });
   }, [id]);
+
+  const handleOpenRef = async () => {
+    if (!caseData?.chapter_id) return;
+    setShowRefModal(true);
+    setRefLoading(true);
+    try {
+      const chRes = await getChapterById(caseData.chapter_id);
+      const chapter = chRes.data;
+      setRefChapter(chapter);
+      setRefSectionIdx(0);
+      if (chapter.sections.length > 0) {
+        const secRes = await getSectionById(chapter.id, chapter.sections[0].id);
+        setRefSectionContent(secRes.data);
+      }
+    } finally {
+      setRefLoading(false);
+    }
+  };
+
+  const handleRefSectionChange = async (idx: number) => {
+    if (!refChapter) return;
+    setRefSectionIdx(idx);
+    setRefLoading(true);
+    try {
+      const secRes = await getSectionById(refChapter.id, refChapter.sections[idx].id);
+      setRefSectionContent(secRes.data);
+    } finally {
+      setRefLoading(false);
+    }
+  };
 
   const handleBookmark = async () => {
     if (!id || bookmarkLoading) return;
@@ -231,9 +270,12 @@ export default function CaseDetailPage() {
                 {bookmarked ? "★" : "☆"}
               </button>
               {caseData.chapter_id && (
-                <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
+                <button
+                  onClick={handleOpenRef}
+                  className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-200 transition-colors cursor-pointer"
+                >
                   📖 {caseData.chapter_id}
-                </span>
+                </button>
               )}
             </div>
           </div>
@@ -309,12 +351,15 @@ export default function CaseDetailPage() {
             {caseData.chapter_id && (
               <div className="border-t border-blue-200 pt-4">
                 <p className="mb-2 font-mono text-xs tracking-widest text-slate-400 uppercase">References</p>
-                <span className="inline-flex items-center rounded-full border border-blue-200 bg-white px-3 py-1 text-xs font-semibold text-blue-700">
+                <button
+                  onClick={handleOpenRef}
+                  className="inline-flex items-center rounded-full border border-blue-200 bg-white px-3 py-1 text-xs font-semibold text-blue-700 hover:bg-blue-50 hover:border-blue-400 transition-colors cursor-pointer"
+                >
                   📖{" "}
                   {caseData.chapter_title
                     ? `${caseData.chapter_title} — ${caseData.chapter_id}`
                     : caseData.chapter_id}
-                </span>
+                </button>
               </div>
             )}
           </div>
@@ -340,6 +385,69 @@ export default function CaseDetailPage() {
           </div>
         )}
       </div>
+
+      {/* ── References Modal ──────────────────────────────────────────────── */}
+      {showRefModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          onClick={() => setShowRefModal(false)}
+        >
+          <div
+            className="relative flex w-full max-w-4xl flex-col rounded-xl bg-white shadow-2xl"
+            style={{ height: "75vh" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-slate-200 px-5 py-3">
+              <p className="text-sm font-semibold text-slate-800 truncate">
+                {refChapter ? refChapter.title : "Loading…"}
+              </p>
+              <button
+                onClick={() => setShowRefModal(false)}
+                className="ml-4 flex-shrink-0 rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="flex min-h-0 flex-1">
+              {/* Section nav */}
+              <div className="w-48 flex-shrink-0 overflow-y-auto border-r border-slate-200 py-2">
+                {refChapter?.sections.map((sec, idx) => (
+                  <button
+                    key={sec.id}
+                    onClick={() => handleRefSectionChange(idx)}
+                    className={`w-full px-4 py-2 text-left text-xs leading-snug transition-colors ${
+                      idx === refSectionIdx
+                        ? "bg-blue-50 text-blue-700 font-semibold"
+                        : "text-slate-600 hover:bg-slate-50"
+                    }`}
+                  >
+                    {sec.title}
+                  </button>
+                ))}
+              </div>
+
+              {/* Content */}
+              <div className="flex-1 overflow-y-auto px-6 py-5">
+                {refLoading ? (
+                  <p className="text-sm text-slate-400">Loading…</p>
+                ) : refSectionContent?.html_content ? (
+                  <div
+                    className="section-content prose prose-sm max-w-none text-slate-800"
+                    dangerouslySetInnerHTML={{
+                      __html: DOMPurify.sanitize(refSectionContent.html_content),
+                    }}
+                  />
+                ) : refSectionContent ? (
+                  <p className="text-sm leading-relaxed text-slate-800">{refSectionContent.content}</p>
+                ) : null}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
