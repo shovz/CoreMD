@@ -1,4 +1,5 @@
 from pydantic import BaseModel
+from pydantic import Field
 from typing import List
 
 
@@ -9,7 +10,7 @@ class HistoryMessage(BaseModel):
 
 class AskRequest(BaseModel):
     question: str
-    history: List[HistoryMessage] = []
+    history: List[HistoryMessage] = Field(default_factory=list)
 
 
 class Citation(BaseModel):
