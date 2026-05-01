@@ -249,6 +249,14 @@ export default function ChaptersPage() {
     }
   }
 
+  const sectionNotes = useMemo(
+    () =>
+      annotations.filter(
+        (a) => a.note_text !== "" && a.section_id === sectionContent?.section_id
+      ),
+    [annotations, sectionContent?.section_id]
+  );
+
   const apiBase = (import.meta.env.VITE_API_URL ?? "http://localhost:8000/api/v1").replace(
     "/api/v1",
     ""
@@ -581,27 +589,53 @@ export default function ChaptersPage() {
                       No notes yet. Select text and click "Add Note".
                     </p>
                   ) : (
-                    annotations.map((ann) => (
-                      <div
-                        key={ann.id}
-                        className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm"
-                      >
-                        <p className="mb-1.5 text-xs italic text-slate-500 line-clamp-2">
-                          &ldquo;{ann.selected_text.slice(0, 60)}{ann.selected_text.length > 60 ? "…" : ""}&rdquo;
-                        </p>
-                        {ann.note_text === "" ? (
-                          <p className="text-sm font-medium text-amber-600">🔖 Highlight</p>
-                        ) : (
-                          <p className="text-sm text-slate-800">{ann.note_text}</p>
-                        )}
-                        <button
-                          onClick={() => handleDeleteAnnotation(ann.id)}
-                          className="mt-2 text-xs text-red-500 hover:text-red-700 transition"
+                    annotations.map((ann) => {
+                      const noteIndex = sectionNotes.indexOf(ann);
+                      const isCurrentSectionNote = noteIndex !== -1;
+                      return (
+                        <div
+                          key={ann.id}
+                          onClick={
+                            isCurrentSectionNote
+                              ? () =>
+                                  document
+                                    .querySelector(`[data-note-id="${ann.id}"]`)
+                                    ?.scrollIntoView({ behavior: "smooth", block: "center" })
+                              : undefined
+                          }
+                          className={`rounded-lg border border-slate-200 bg-white p-3 shadow-sm ${
+                            isCurrentSectionNote
+                              ? "cursor-pointer hover:border-amber-300 hover:shadow-md transition-shadow"
+                              : ""
+                          }`}
                         >
-                          Delete
-                        </button>
-                      </div>
-                    ))
+                          <div className="mb-1.5 flex items-center gap-1.5">
+                            {isCurrentSectionNote && (
+                              <span className="inline-flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-amber-500 text-[10px] font-bold text-white">
+                                {noteIndex + 1}
+                              </span>
+                            )}
+                            <p className="text-xs italic text-slate-500 line-clamp-2">
+                              &ldquo;{ann.selected_text.slice(0, 60)}{ann.selected_text.length > 60 ? "…" : ""}&rdquo;
+                            </p>
+                          </div>
+                          {ann.note_text === "" ? (
+                            <p className="text-sm font-medium text-amber-600">🔖 Highlight</p>
+                          ) : (
+                            <p className="text-sm text-slate-800">{ann.note_text}</p>
+                          )}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteAnnotation(ann.id);
+                            }}
+                            className="mt-2 text-xs text-red-500 hover:text-red-700 transition"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      );
+                    })
                   )}
                 </div>
               </div>
