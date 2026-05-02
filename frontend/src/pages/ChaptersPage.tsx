@@ -304,7 +304,6 @@ export default function ChaptersPage() {
         currentHighlights.forEach((ann) => {
           instance.mark(ann.selected_text, {
             className: "annotation-highlight",
-            accuracy: "exactly",
             separateWordSearch: false,
             acrossElements: true,
           });

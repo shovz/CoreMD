@@ -129,7 +129,8 @@ body {
 }
 
 .section-content ::selection {
-  background: #93c5fd;
+  background-color: #93c5fd;
+  color: #1e293b;
 }
 
 .annotation-highlight {
