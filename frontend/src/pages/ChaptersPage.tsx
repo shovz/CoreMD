@@ -278,28 +278,88 @@ export default function ChaptersPage() {
       (a) => a.note_text !== "" && a.section_id === currentSectionId
     );
     if (highlights.length === 0 && notes.length === 0) return sanitizedHtml;
+    const escapeRegex = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const SEPARATOR = "(?:<[^>]+>|\\s)*?";
+    const replaceByGroups = (
+      source: string,
+      pattern: string,
+      groupCount: number,
+      wrap: (segment: string, isFirst: boolean) => string
+    ) => {
+      try {
+        const regex = new RegExp(pattern, "g");
+        return source.replace(regex, (...args) => {
+          const fullMatch: string = args[0];
+          const groups = args.slice(1, 1 + groupCount) as string[];
+          let cursor = 0;
+          let out = "";
+          groups.forEach((seg, i) => {
+            const idx = fullMatch.indexOf(seg, cursor);
+            if (idx > cursor) out += fullMatch.slice(cursor, idx);
+            out += wrap(seg, i === 0);
+            cursor = idx + seg.length;
+          });
+          if (cursor < fullMatch.length) out += fullMatch.slice(cursor);
+          return out;
+        });
+      } catch {
+        return source;
+      }
+    };
+    const wrapAcrossBlocks = (
+      source: string,
+      selectedText: string,
+      wrap: (segment: string, isFirst: boolean) => string
+    ) => {
+      const segments = selectedText
+        .split(/\r?\n/)
+        .map((s) => s.trim())
+        .filter((s) => s.length > 0);
+      if (segments.length === 0) return source;
+      // Tier 1: per-block segment matching (continuous wrap when no tags interfere)
+      try {
+        if (segments.length === 1) {
+          const simple = new RegExp(escapeRegex(segments[0]));
+          if (simple.test(source)) {
+            return source.replace(
+              new RegExp(escapeRegex(segments[0]), "g"),
+              (m) => wrap(m, true)
+            );
+          }
+        } else {
+          const segPattern = segments
+            .map((s) => `(${escapeRegex(s)})`)
+            .join(SEPARATOR);
+          if (new RegExp(segPattern).test(source)) {
+            return replaceByGroups(source, segPattern, segments.length, wrap);
+          }
+        }
+      } catch {
+        /* fall through to per-word */
+      }
+      // Tier 2: per-word permissive fallback (handles overlap with previous wraps)
+      const tokens = selectedText.split(/\s+/).filter((t) => t.length > 0);
+      if (tokens.length === 0) return source;
+      const wordPattern = tokens.map((t) => `(${escapeRegex(t)})`).join(SEPARATOR);
+      return replaceByGroups(source, wordPattern, tokens.length, wrap);
+    };
     let html = sanitizedHtml;
     for (const ann of highlights) {
-      const escaped = ann.selected_text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-      try {
-        html = html.replace(
-          new RegExp(escaped, "g"),
-          `<mark class="annotation-highlight">$&</mark>`
-        );
-      } catch {
-        // skip if selected_text produces an invalid regex
-      }
+      html = wrapAcrossBlocks(
+        html,
+        ann.selected_text,
+        (seg) => `<mark class="annotation-highlight">${seg}</mark>`
+      );
     }
     notes.forEach((ann, i) => {
-      const escaped = ann.selected_text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-      try {
-        html = html.replace(
-          new RegExp(escaped, "g"),
-          `<span class="annotation-note" data-note-id="${ann.id}" data-note-num="${i + 1}">$&</span>`
-        );
-      } catch {
-        // skip if selected_text produces an invalid regex
-      }
+      html = wrapAcrossBlocks(
+        html,
+        ann.selected_text,
+        (seg, isFirst) =>
+          isFirst
+            ? `<span class="annotation-note" data-note-id="${ann.id}" data-note-num="${i + 1}">${seg}</span>`
+            : `<span class="annotation-note" data-note-id="${ann.id}">${seg}</span>`
+      );
     });
     return html;
     // eslint-disable-next-line react-hooks/exhaustive-deps

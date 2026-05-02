@@ -138,3 +138,7 @@ backend/static/images/*.jpg
 !infra/env/**
 
 .claude/settings.local.json
+.claude/settings.json
+.claude/statusline-command.sh
+
+docs/generated questions/*

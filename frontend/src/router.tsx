@@ -12,9 +12,11 @@ import CaseDetailPage from "./pages/CaseDetailPage";
 import HistoryPage from "./pages/HistoryPage";
 import BookmarksPage from "./pages/BookmarksPage";
 import NotesPage from "./pages/NotesPage";
+import ExamsPage from "./pages/ExamsPage";
 import AppShell from "./components/AppShell";
 import { AiContextProvider } from "./context/AiContext";
 import { AuthProvider, useAuthContext } from "./context/AuthContext";
+import { ExamGuardProvider } from "./context/ExamGuardContext";
 
 function ProtectedRoute() {
   const { isAuthenticated, isInitializing } = useAuthContext();
@@ -46,6 +48,7 @@ export default function AppRouter() {
   return (
     <AuthProvider>
     <AiContextProvider>
+    <ExamGuardProvider>
     <BrowserRouter>
       <Routes>
         <Route element={<AppShell />}>
@@ -57,6 +60,7 @@ export default function AppRouter() {
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/chapters" element={<ChaptersPage />} />
             <Route path="/questions" element={<QuestionsPage />} />
+            <Route path="/exams" element={<ExamsPage />} />
             <Route path="/questions/:id" element={<QuestionDetailPage />} />
             <Route path="/cases" element={<CasesPage />} />
             <Route path="/cases/:id" element={<CaseDetailPage />} />
@@ -67,6 +71,7 @@ export default function AppRouter() {
         </Route>
       </Routes>
     </BrowserRouter>
+    </ExamGuardProvider>
     </AiContextProvider>
     </AuthProvider>
   );

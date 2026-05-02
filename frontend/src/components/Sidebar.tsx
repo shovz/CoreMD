@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { NavLink, useNavigate } from "react-router-dom";
-import { useAiContext } from "../context/AiContext";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useAuthContext } from "../context/AuthContext";
+import { useExamGuard } from "../context/ExamGuardContext";
 
 function DashboardIcon() {
   return (
@@ -59,10 +59,19 @@ function NotesIcon() {
   );
 }
 
+function ExamsIcon() {
+  return (
+    <svg className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9 3h6m-7 4h8m-9 4h10m-8 4h6m-7 6h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+    </svg>
+  );
+}
+
 const navItems = [
   { to: "/dashboard", label: "Dashboard", icon: <DashboardIcon />, end: true },
   { to: "/chapters", label: "Chapters", icon: <ChaptersIcon />, end: false },
   { to: "/questions", label: "Question Bank", icon: <QuestionsIcon />, end: false },
+  { to: "/exams", label: "Exams", icon: <ExamsIcon />, end: false },
   { to: "/cases", label: "Cases", icon: <CasesIcon />, end: false },
   { to: "/history", label: "History", icon: <HistoryIcon />, end: false },
   { to: "/bookmarks", label: "Bookmarks", icon: <BookmarksIcon />, end: false },
@@ -71,8 +80,9 @@ const navItems = [
 
 function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const navigate = useNavigate();
-  const { setOpen } = useAiContext();
+  const location = useLocation();
   const { user, logout } = useAuthContext();
+  const { requestNavigation, triggerExamsReload } = useExamGuard();
   const [profileOpen, setProfileOpen] = useState(false);
 
   const handleSignOut = () => {
@@ -87,6 +97,20 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
     ? "DR"
     : (user?.email?.charAt(0).toUpperCase() ?? "?");
 
+  const handleNav = (to: string) => {
+    const sameExamsRoute = to === "/exams" && location.pathname === "/exams";
+    const canNav = requestNavigation(to, sameExamsRoute ? "reload_exams" : "navigate");
+    if (!canNav) return;
+    if (sameExamsRoute) {
+      triggerExamsReload();
+      navigate("/exams", { replace: true });
+      onNavigate?.();
+      return;
+    }
+    navigate(to);
+    onNavigate?.();
+  };
+
   return (
     <div className="flex h-full flex-col">
       <div className="px-5 py-6">
@@ -96,24 +120,23 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
       </div>
 
       <nav className="flex-1 space-y-0.5 px-3">
-        {navItems.map(({ to, label, icon, end }) => (
-          <NavLink
-            key={to}
-            to={to}
-            end={end}
-            onClick={onNavigate}
-            className={({ isActive }) =>
-              `flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+        {navItems.map(({ to, label, icon, end }) => {
+          const isActive = end ? location.pathname === to : location.pathname.startsWith(to);
+          return (
+            <button
+              key={to}
+              onClick={() => handleNav(to)}
+              className={`flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
                 isActive
                   ? "bg-blue-600 text-white"
                   : "text-[var(--ink-dim)] hover:bg-[var(--ink-4)] hover:text-[var(--ink)]"
-              }`
-            }
-          >
-            {icon}
-            {label}
-          </NavLink>
-        ))}
+              }`}
+            >
+              {icon}
+              {label}
+            </button>
+          );
+        })}
       </nav>
 
       <div className="space-y-2 px-3 pb-6">
@@ -149,16 +172,6 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
             </div>
           )}
         </div>
-
-        <button
-          onClick={() => {
-            setOpen(true);
-            onNavigate?.();
-          }}
-          className="w-full rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-blue-700"
-        >
-          Ask AI
-        </button>
       </div>
     </div>
   );
