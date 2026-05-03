@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from typing import List, Optional
 from datetime import datetime, timedelta, timezone
+import re
 import random
 import uuid
 from redis import Redis
@@ -308,11 +309,14 @@ def _build_questions_query(
     if difficulty:
         query["difficulty"] = difficulty.value
     if search:
+        escaped_search = re.escape(search.strip())
+        if not escaped_search:
+            return query
         and_filters.append(
             {
                 "$or": [
-                    {"stem": {"$regex": search, "$options": "i"}},
-                    {"topic": {"$regex": search, "$options": "i"}},
+                    {"stem": {"$regex": escaped_search, "$options": "i"}},
+                    {"topic": {"$regex": escaped_search, "$options": "i"}},
                 ]
             }
         )
@@ -351,7 +355,7 @@ def get_questions(
     topic: Optional[str] = Query(None),
     chapter_id: Optional[str] = Query(None),
     difficulty: Optional[Difficulty] = Query(None),
-    search: Optional[str] = Query(None),
+    search: Optional[str] = Query(None, max_length=120),
     has_followups: Optional[bool] = Query(None),
     limit: int = Query(20, ge=1, le=100),
     offset: int = Query(0, ge=0),
@@ -375,7 +379,7 @@ def get_questions_with_trailing_slash(
     topic: Optional[str] = Query(None),
     chapter_id: Optional[str] = Query(None),
     difficulty: Optional[Difficulty] = Query(None),
-    search: Optional[str] = Query(None),
+    search: Optional[str] = Query(None, max_length=120),
     has_followups: Optional[bool] = Query(None),
     limit: int = Query(20, ge=1, le=100),
     offset: int = Query(0, ge=0),

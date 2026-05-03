@@ -188,8 +188,6 @@ def get_case_questions(
             "step": doc["step"],
             "stem": doc["stem"],
             "options": doc["options"],
-            "correct_option": doc["correct_option"],
-            "explanation": doc["explanation"],
         }
         for doc in docs
     ]

@@ -9,5 +9,5 @@ COPY app/ app/
 COPY scripts/ scripts/
 COPY static/ static/
 
-HEALTHCHECK CMD curl -f http://localhost:8000/health || exit 1
+HEALTHCHECK CMD ["python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=5).read()"]
 CMD ["gunicorn", "-w", "2", "-k", "uvicorn.workers.UvicornWorker", "app.main:app", "--bind", "0.0.0.0:8000"]

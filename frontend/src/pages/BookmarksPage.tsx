@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { getBookmarks, removeBookmark, type Bookmark, type BookmarkType } from "../api/bookmarksApi";
 
@@ -69,7 +69,7 @@ export default function BookmarksPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchTab = async (tab: Tab) => {
+  const fetchTab = useCallback(async (tab: Tab) => {
     setLoading(true);
     setError(null);
     try {
@@ -81,18 +81,17 @@ export default function BookmarksPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    void fetchTab("question");
+  }, [fetchTab]);
 
   const handleTabClick = (tab: Tab) => {
     setActiveTab(tab);
     const alreadyLoaded = tab === "question" ? questionItems !== null : caseItems !== null;
-    if (!alreadyLoaded) fetchTab(tab);
+    if (!alreadyLoaded) void fetchTab(tab);
   };
-
-  // Fetch Questions tab on first render
-  if (questionItems === null && !loading && !error) {
-    fetchTab("question");
-  }
 
   const items = activeTab === "question" ? questionItems : caseItems;
 

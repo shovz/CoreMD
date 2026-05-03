@@ -26,8 +26,6 @@ export interface CaseQuestion {
   step: number;
   stem: string;
   options: string[];
-  correct_option: number;
-  explanation: string;
 }
 
 export interface CaseAttemptResult {

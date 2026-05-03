@@ -1,16 +1,16 @@
 from pydantic import BaseModel
 from pydantic import Field
-from typing import List
+from typing import List, Literal
 
 
 class HistoryMessage(BaseModel):
-    role: str  # "user" or "assistant"
-    content: str
+    role: Literal["user", "assistant"]
+    content: str = Field(..., min_length=1, max_length=4000)
 
 
 class AskRequest(BaseModel):
-    question: str
-    history: List[HistoryMessage] = Field(default_factory=list)
+    question: str = Field(..., min_length=1, max_length=1000)
+    history: List[HistoryMessage] = Field(default_factory=list, max_length=20)
 
 
 class Citation(BaseModel):

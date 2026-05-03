@@ -6,7 +6,6 @@ from pymongo.database import Database
 from app.db.deps import mongo_db
 from app.schemas.chapter import (
     ChapterOut,
-    ChapterCreate,
     SectionContentOut,
     ChapterSearchResult,
 )
@@ -178,13 +177,3 @@ def get_section_by_id(
         content=content,
         html_content=html_content,
     )
-
-
-@router.post("", response_model=ChapterOut)
-def create_chapter(
-    chapter: ChapterCreate,
-    current_user: str = Depends(get_current_user_id),
-    db: Database = Depends(mongo_db),
-):
-    # Fake insert for now
-    return {"id": "fake_id", "title": chapter.title, "specialty": chapter.specialty}

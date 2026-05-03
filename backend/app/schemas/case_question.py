@@ -8,8 +8,6 @@ class CaseQuestionOut(BaseModel):
     step: int = Field(ge=1)
     stem: str
     options: List[str]
-    correct_option: int
-    explanation: str
 
     class Config:
         orm_mode = True

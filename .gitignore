@@ -137,8 +137,21 @@ backend/static/images/*.jpg
 !infra/env/
 !infra/env/**
 
+# Claude 
 .claude/settings.local.json
 .claude/settings.json
 .claude/statusline-command.sh
 
+# Gemini
+.gemini/
+GEMINI.md
+
 docs/generated questions/*
+docs/scripts/
+docs/test coverage
+
+graphify-out/*
+
+# Local Codex agent artifacts
+.agents/
+skills-lock.json
