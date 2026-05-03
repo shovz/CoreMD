@@ -26,11 +26,22 @@ TEST_CHAPTER = {
     "sections": [],
 }
 
+TEST_CASE_QUESTION = {
+    "case_question_id": "case-q-test-001",
+    "case_id": TEST_CASE["case_id"],
+    "step": 1,
+    "stem": "What is the most likely diagnosis?",
+    "options": ["GERD", "Inferior STEMI", "Aortic stenosis", "Pneumonia"],
+    "correct_option": 1,
+    "explanation": "The ECG and elevated troponin support inferior STEMI.",
+}
+
 
 @pytest.fixture(autouse=True)
 def seed_cases(test_db):
     test_db["cases"].insert_one({**TEST_CASE})
     test_db["chapters"].insert_one({**TEST_CHAPTER})
+    test_db["case_questions"].insert_one({**TEST_CASE_QUESTION})
     yield
 
 
@@ -65,4 +76,27 @@ class TestGetCase:
     def test_nonexistent_id_returns_404(self, client: TestClient, auth_headers):
         resp = client.get("/api/v1/cases/nonexistent-case-xyz", headers=auth_headers)
         assert resp.status_code == 404
+
+
+class TestCaseQuestions:
+    def test_list_hides_answer_fields(self, client: TestClient, auth_headers):
+        resp = client.get(
+            f"/api/v1/cases/{TEST_CASE['case_id']}/questions",
+            headers=auth_headers,
+        )
+        assert resp.status_code == 200
+        body = resp.json()
+        assert len(body) == 1
+        assert "correct_option" not in body[0]
+        assert "explanation" not in body[0]
+
+    def test_attempt_returns_answer_feedback(self, client: TestClient, auth_headers):
+        resp = client.post(
+            f"/api/v1/cases/{TEST_CASE['case_id']}/questions/{TEST_CASE_QUESTION['case_question_id']}/attempt",
+            json={"selected_option": 1},
+            headers=auth_headers,
+        )
+        assert resp.status_code == 200
+        assert resp.json()["correct"] is True
+        assert resp.json()["correct_option"] == TEST_CASE_QUESTION["correct_option"]
 

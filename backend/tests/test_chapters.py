@@ -84,6 +84,14 @@ class TestGetChapter:
         resp = client.get("/api/v1/chapters/nonexistent-chapter-xyz", headers=auth_headers)
         assert resp.status_code == 404
 
+    def test_create_endpoint_is_not_exposed(self, client: TestClient, auth_headers):
+        resp = client.post(
+            "/api/v1/chapters",
+            json={"title": "New Chapter", "specialty": "Cardiology"},
+            headers=auth_headers,
+        )
+        assert resp.status_code == 405
+
 
 class TestSearchChapters:
     def test_requires_auth(self, client: TestClient):

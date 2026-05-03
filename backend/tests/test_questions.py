@@ -112,6 +112,23 @@ class TestListQuestions:
         assert len(body) == 1
         assert body[0]["question_id"] == "q-test-001"
 
+    def test_search_treats_regex_metacharacters_as_literal(self, client: TestClient, auth_headers):
+        resp = client.get(
+            "/api/v1/questions",
+            params={"search": "."},
+            headers=auth_headers,
+        )
+        assert resp.status_code == 200
+        assert resp.json() == []
+
+    def test_search_rejects_overly_long_input(self, client: TestClient, auth_headers):
+        resp = client.get(
+            "/api/v1/questions",
+            params={"search": "x" * 121},
+            headers=auth_headers,
+        )
+        assert resp.status_code == 422
+
     def test_has_followups_filter_returns_only_parent_questions(self, client: TestClient, auth_headers):
         resp = client.get(
             "/api/v1/questions",

@@ -1,53 +1,25 @@
-import { test } from '@playwright/test';
+import { test, expect } from "@playwright/test";
+import { registerUser } from "./helpers/auth";
 
-test('login with exact user credentials', async ({ page }) => {
-  const apiResponses: { status: number; url: string; body: string }[] = [];
+test("shows error on wrong password", async ({ page }) => {
+  const { email } = await registerUser(page);
 
-  page.on('response', async (res) => {
-    if (res.url().includes('/auth/')) {
-      let body = '';
-      try {
-        body = await res.text();
-      } catch {
-        body = '';
-      }
-      apiResponses.push({ status: res.status(), url: res.url(), body });
-    }
-  });
-
-  await page.goto('http://localhost:5173/login');
-  await page.fill('input[type="email"]', 'test@gmail.com');
-  await page.fill('input[type="password"]', 'test1234');
+  await page.goto("/login");
+  await page.fill('input[type="email"]', email);
+  await page.fill('input[type="password"]', "wrong-password");
   await page.click('button[type="submit"]');
-  await page.waitForTimeout(2000);
 
-  console.log('URL after submit:', page.url());
-  console.log('API responses:', JSON.stringify(apiResponses, null, 2));
-  console.log('Body text:', await page.textContent('body'));
+  await expect(page.locator(".text-red-700")).toBeVisible({ timeout: 3000 });
 });
 
-test('register with exact user credentials', async ({ page }) => {
-  const apiResponses: { status: number; url: string; body: string }[] = [];
+test("redirects to /dashboard on valid login", async ({ page }) => {
+  const { email, password } = await registerUser(page);
 
-  page.on('response', async (res) => {
-    if (res.url().includes('/auth/')) {
-      let body = '';
-      try {
-        body = await res.text();
-      } catch {
-        body = '';
-      }
-      apiResponses.push({ status: res.status(), url: res.url(), body });
-    }
-  });
-
-  await page.goto('http://localhost:5173/register');
-  await page.fill('input[type="email"]', `fresh_${Date.now()}@gmail.com`);
-  await page.fill('input[type="password"]', 'test1234');
+  await page.goto("/login");
+  await page.fill('input[type="email"]', email);
+  await page.fill('input[type="password"]', password);
   await page.click('button[type="submit"]');
-  await page.waitForTimeout(2000);
 
-  console.log('Register URL after submit:', page.url());
-  console.log('Register API responses:', JSON.stringify(apiResponses, null, 2));
-  console.log('Register body:', await page.textContent('body'));
+  await page.waitForURL("**/dashboard", { timeout: 5000 });
+  expect(page.url()).toContain("/dashboard");
 });
