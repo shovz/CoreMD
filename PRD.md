@@ -32,12 +32,12 @@ CoreMD simulates this experience: GPT-4o generates a complete rolling case scena
 **Description:** As a developer, I need TTS and STT functions so questions are delivered as audio and voice recordings are transcribed.
 
 **Acceptance Criteria:**
-- [ ] New file `backend/app/services/audio_service.py`
-- [ ] `get_or_generate_tts(client, redis, cache_key, text, voice) -> bytes` — calls `openai.audio.speech.create(model="tts-1")`, caches MP3 as base64 string in Redis (TTL 86400s); returns raw bytes on hit
-- [ ] Cache key format: `tts:{session_id}:{case_idx}:{stage_idx}`
-- [ ] Base64 encoding used because existing Redis client has `decode_responses=True`
-- [ ] `transcribe_audio(client, audio_bytes, filename) -> str` — calls Whisper (`whisper-1`); validates `len(audio_bytes) <= 25 * 1024 * 1024`; raises `HTTPException 422` if transcript empty
-- [ ] `build_stage_tts_text(stage_num, title, revelation, questions) -> str` — constructs the full spoken text for one stage
+- [x] New file `backend/app/services/audio_service.py`
+- [x] `get_or_generate_tts(client, redis, cache_key, text, voice) -> bytes` — calls `openai.audio.speech.create(model="tts-1")`, caches MP3 as base64 string in Redis (TTL 86400s); returns raw bytes on hit
+- [x] Cache key format: `tts:{session_id}:{case_idx}:{stage_idx}`
+- [x] Base64 encoding used because existing Redis client has `decode_responses=True`
+- [x] `transcribe_audio(client, audio_bytes, filename) -> str` — calls Whisper (`whisper-1`); validates `len(audio_bytes) <= 25 * 1024 * 1024`; raises `HTTPException 422` if transcript empty
+- [x] `build_stage_tts_text(stage_num, title, revelation, questions) -> str` — constructs the full spoken text for one stage
 
 ### US-003: Backend — grading service
 **Description:** As a developer, I need a grading function that evaluates a resident's oral answer against a model answer so each response receives a score and examiner feedback.
