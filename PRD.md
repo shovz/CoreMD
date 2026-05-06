@@ -43,11 +43,11 @@ CoreMD simulates this experience: GPT-4o generates a complete rolling case scena
 **Description:** As a developer, I need a grading function that evaluates a resident's oral answer against a model answer so each response receives a score and examiner feedback.
 
 **Acceptance Criteria:**
-- [ ] New file `backend/app/services/grading_service.py`
-- [ ] `grade_oral_answer(client, question_text, model_answer, key_points, student_answer) -> GradingResult`
-- [ ] `GradingResult` TypedDict: `score: int` (0–10), `passed: bool` (≥6), `feedback: str`, `key_points_covered: list[str]`, `key_points_missed: list[str]`
-- [ ] Uses `gpt-4o-mini`; system prompt instructs examiner role; returns JSON with no markdown fences
-- [ ] Retries once on parse failure; raises `HTTPException 502` on both failures
+- [x] New file `backend/app/services/grading_service.py`
+- [x] `grade_oral_answer(client, question_text, model_answer, key_points, student_answer) -> GradingResult`
+- [x] `GradingResult` TypedDict: `score: int` (0–10), `passed: bool` (≥6), `feedback: str`, `key_points_covered: list[str]`, `key_points_missed: list[str]`
+- [x] Uses `gpt-4o-mini`; system prompt instructs examiner role; returns JSON with no markdown fences
+- [x] Retries once on parse failure; raises `HTTPException 502` on both failures
 
 ### US-004: Backend — Stage B schemas
 **Description:** As a developer, I need Pydantic schemas for all Stage B request/response types.
