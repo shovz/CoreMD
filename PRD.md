@@ -53,13 +53,13 @@ CoreMD simulates this experience: GPT-4o generates a complete rolling case scena
 **Description:** As a developer, I need Pydantic schemas for all Stage B request/response types.
 
 **Acceptance Criteria:**
-- [ ] New file `backend/app/schemas/stage_b.py`
-- [ ] `StageBStartRequest`: `topics: List[str]`, `case_count: int` (1–3, default 2), `duration_minutes: int` (30–90, default 45), `difficulty: str` (easy/medium/hard), `voice: str` (default "alloy")
-- [ ] `StageBQuestion`: all question fields including grading result fields (nullable until answered); `model_answer` and `key_points` are stored server-side but excluded from session GET response
-- [ ] `StageBStage`, `StageBCase`, `StageBSessionOut` — session response with `current_case_idx`, `current_stage_idx`
-- [ ] `StageBAnswerCreate`: `student_answer: str` (max 5000), `answer_mode: str` ("text"/"audio")
-- [ ] `StageBAnswerResult`: grading result + `model_answer` (revealed after grading) + `remaining_seconds` + `all_stage_questions_answered: bool`
-- [ ] `StageBReportOut`: overall stats + per-case breakdown with full stage/question data including model answers
+- [x] New file `backend/app/schemas/stage_b.py`
+- [x] `StageBStartRequest`: `topics: List[str]`, `case_count: int` (1–3, default 2), `duration_minutes: int` (30–90, default 45), `difficulty: str` (easy/medium/hard), `voice: str` (default "alloy")
+- [x] `StageBQuestion`: all question fields including grading result fields (nullable until answered); `model_answer` and `key_points` are stored server-side but excluded from session GET response
+- [x] `StageBStage`, `StageBCase`, `StageBSessionOut` — session response with `current_case_idx`, `current_stage_idx`
+- [x] `StageBAnswerCreate`: `student_answer: str` (max 5000), `answer_mode: str` ("text"/"audio")
+- [x] `StageBAnswerResult`: grading result + `model_answer` (revealed after grading) + `remaining_seconds` + `all_stage_questions_answered: bool`
+- [x] `StageBReportOut`: overall stats + per-case breakdown with full stage/question data including model answers
 
 ### US-005: Backend — Stage B routes
 **Description:** As a developer, I need REST endpoints for the Stage B exam session lifecycle.
