@@ -93,15 +93,15 @@ CoreMD simulates this experience: GPT-4o generates a complete rolling case scena
 **Description:** As a developer, I need a hook that wraps the MediaRecorder API so recording logic is reusable.
 
 **Acceptance Criteria:**
-- [ ] New file `frontend/src/hooks/useAudioRecorder.ts`
-- [ ] Returns `{ state, audioBlob, audioUrl, durationSeconds, startRecording, stopRecording, reset, error }`
-- [ ] `state`: `"idle" | "recording" | "stopped"`
-- [ ] Uses `navigator.mediaDevices.getUserMedia({ audio: true })`
-- [ ] MIME type: `audio/webm;codecs=opus` with `MediaRecorder.isTypeSupported` check; fallback `audio/mp4` (Safari)
-- [ ] Auto-stops after `maxDurationSeconds` (default 120)
-- [ ] `audioUrl` is an object URL (`URL.createObjectURL`); previous URL revoked on each new recording
-- [ ] `reset()` clears blob, URL, reverts to `"idle"`
-- [ ] `error` set to user-readable string if `getUserMedia` is denied
+- [x] New file `frontend/src/hooks/useAudioRecorder.ts`
+- [x] Returns `{ state, audioBlob, audioUrl, durationSeconds, startRecording, stopRecording, reset, error }`
+- [x] `state`: `"idle" | "recording" | "stopped"`
+- [x] Uses `navigator.mediaDevices.getUserMedia({ audio: true })`
+- [x] MIME type: `audio/webm;codecs=opus` with `MediaRecorder.isTypeSupported` check; fallback `audio/mp4` (Safari)
+- [x] Auto-stops after `maxDurationSeconds` (default 120)
+- [x] `audioUrl` is an object URL (`URL.createObjectURL`); previous URL revoked on each new recording
+- [x] `reset()` clears blob, URL, reverts to `"idle"`
+- [x] `error` set to user-readable string if `getUserMedia` is denied
 
 ### US-008: Frontend — AudioPlayer component
 **Description:** As a resident, I need a custom audio player so I can play, pause, and replay the stage revelation without relying on the default browser audio control.
