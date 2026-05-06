@@ -13,6 +13,7 @@ pymupdf
 tiktoken
 openai
 numpy
+python-multipart
 pytest
 httpx
 pytest-asyncio

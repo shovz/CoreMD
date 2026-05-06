@@ -1,0 +1,9 @@
+# Progress Log
+
+## Learnings
+- `python-multipart` required for `UploadFile` routes — add to requirements.txt alongside FastAPI; not installed by default
+- Stage B sessions use separate `stage_b_sessions` MongoDB collection; questions store `model_answer`/`key_points` server-side and strip them in `_session_to_out` / expose only via `StageBAnswerResult` and report
+- Parallel case generation uses `ThreadPoolExecutor` (not asyncio) because `generate_rolling_case` is a sync OpenAI call; `as_completed` preserves order via `future_to_idx` mapping
+- TTS questions in DB use key `"stem"` but `build_stage_tts_text` expects `"text"` — transform with `[{"text": q["stem"]} for q in stage["questions"]]` before calling
+
+---

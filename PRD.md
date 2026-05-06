@@ -65,16 +65,16 @@ CoreMD simulates this experience: GPT-4o generates a complete rolling case scena
 **Description:** As a developer, I need REST endpoints for the Stage B exam session lifecycle.
 
 **Acceptance Criteria:**
-- [ ] New file `backend/app/api/v1/routes/stage_b.py`; registered in `backend/app/main.py` with prefix `/api/v1/stage-b`
-- [ ] `POST /sessions/start` — validates no active stage-b session; generates `case_count` cases in parallel; stores full cases (with `model_answer` + `key_points`) in `stage_b_sessions` collection; returns `StageBSessionOut` with `model_answer`/`key_points` stripped
-- [ ] `GET /sessions/active` — returns active session for current user; `model_answer`/`key_points` stripped; 404 if none
-- [ ] `POST /sessions/{id}/tts/{case_idx}/{stage_idx}` — returns `Response(content=mp3_bytes, media_type="audio/mpeg")`; uses `get_or_generate_tts`; validates session active + indices in range
-- [ ] `POST /sessions/{id}/transcribe/{case_idx}/{stage_idx}/{question_num}` — accepts `audio_file: UploadFile` (multipart); returns `{"transcription": str}`; does NOT write to DB
-- [ ] `POST /sessions/{id}/answer/{case_idx}/{stage_idx}/{question_num}` — body `StageBAnswerCreate`; rejects if question already answered; calls `grade_oral_answer`; writes result + `answered_at` to DB; returns `StageBAnswerResult`
-- [ ] `POST /sessions/{id}/advance-stage` — validates all questions in `current_stage_idx` answered; increments `current_stage_idx` (or `current_case_idx` if last stage); returns updated `StageBSessionOut`
-- [ ] `POST /sessions/{id}/finalize` — computes report; sets status `"finalized"`; returns `StageBReportOut`
-- [ ] `GET /sessions/{id}/report` — returns `StageBReportOut`; only available on finalized sessions
-- [ ] All endpoints require `current_user` dependency
+- [x] New file `backend/app/api/v1/routes/stage_b.py`; registered in `backend/app/main.py` with prefix `/api/v1/stage-b`
+- [x] `POST /sessions/start` — validates no active stage-b session; generates `case_count` cases in parallel; stores full cases (with `model_answer` + `key_points`) in `stage_b_sessions` collection; returns `StageBSessionOut` with `model_answer`/`key_points` stripped
+- [x] `GET /sessions/active` — returns active session for current user; `model_answer`/`key_points` stripped; 404 if none
+- [x] `POST /sessions/{id}/tts/{case_idx}/{stage_idx}` — returns `Response(content=mp3_bytes, media_type="audio/mpeg")`; uses `get_or_generate_tts`; validates session active + indices in range
+- [x] `POST /sessions/{id}/transcribe/{case_idx}/{stage_idx}/{question_num}` — accepts `audio_file: UploadFile` (multipart); returns `{"transcription": str}`; does NOT write to DB
+- [x] `POST /sessions/{id}/answer/{case_idx}/{stage_idx}/{question_num}` — body `StageBAnswerCreate`; rejects if question already answered; calls `grade_oral_answer`; writes result + `answered_at` to DB; returns `StageBAnswerResult`
+- [x] `POST /sessions/{id}/advance-stage` — validates all questions in `current_stage_idx` answered; increments `current_stage_idx` (or `current_case_idx` if last stage); returns updated `StageBSessionOut`
+- [x] `POST /sessions/{id}/finalize` — computes report; sets status `"finalized"`; returns `StageBReportOut`
+- [x] `GET /sessions/{id}/report` — returns `StageBReportOut`; only available on finalized sessions
+- [x] All endpoints require `current_user` dependency
 
 ### US-006: Frontend — API client
 **Description:** As a developer, I need a typed API client for all Stage B endpoints.
