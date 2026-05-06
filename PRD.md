@@ -80,14 +80,14 @@ CoreMD simulates this experience: GPT-4o generates a complete rolling case scena
 **Description:** As a developer, I need a typed API client for all Stage B endpoints.
 
 **Acceptance Criteria:**
-- [ ] New file `frontend/src/api/stageBApi.ts`
-- [ ] Full TypeScript interfaces for `StageBSession`, `StageBCase`, `StageBStage`, `StageBQuestion`, `StageBAnswerResult`, `StageBReport`
-- [ ] `startStageBSession(payload)`, `getActiveStageBSession()`, `finalizeStageBSession(id)`, `getStageBReport(id)`
-- [ ] `fetchStageBTts(sessionId, caseIdx, stageIdx) -> Promise<string>` — uses `fetch()` with `Authorization: Bearer` header (browser audio element cannot send custom headers); converts response to blob; returns `URL.createObjectURL(blob)`
-- [ ] `transcribeStageBRecording(sessionId, caseIdx, stageIdx, questionNum, audioBlob)` — sends `FormData` with `audio_file` field
-- [ ] `submitStageBAnswer(sessionId, caseIdx, stageIdx, questionNum, payload)`
-- [ ] `advanceStage(sessionId)`
-- [ ] TypeScript check passes
+- [x] New file `frontend/src/api/stageBApi.ts`
+- [x] Full TypeScript interfaces for `StageBSession`, `StageBCase`, `StageBStage`, `StageBQuestion`, `StageBAnswerResult`, `StageBReport`
+- [x] `startStageBSession(payload)`, `getActiveStageBSession()`, `finalizeStageBSession(id)`, `getStageBReport(id)`
+- [x] `fetchStageBTts(sessionId, caseIdx, stageIdx) -> Promise<string>` — uses `fetch()` with `Authorization: Bearer` header (browser audio element cannot send custom headers); converts response to blob; returns `URL.createObjectURL(blob)`
+- [x] `transcribeStageBRecording(sessionId, caseIdx, stageIdx, questionNum, audioBlob)` — sends `FormData` with `audio_file` field
+- [x] `submitStageBAnswer(sessionId, caseIdx, stageIdx, questionNum, payload)`
+- [x] `advanceStage(sessionId)`
+- [x] TypeScript check passes
 
 ### US-007: Frontend — useAudioRecorder hook
 **Description:** As a developer, I need a hook that wraps the MediaRecorder API so recording logic is reusable.
