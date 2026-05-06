@@ -5,6 +5,31 @@ from pymongo.database import Database
 from typing import Dict, List
 
 
+def calculate_streak_from_dates(activity_dates: List[date_type], today: date_type) -> int:
+    """
+    Pure streak calculation given a list of activity dates and a reference date.
+    Deduplicates and handles gaps. Streak is broken if no activity today or yesterday.
+    """
+    if not activity_dates:
+        return 0
+
+    unique_dates = sorted(set(activity_dates), reverse=True)
+
+    if unique_dates[0] < today - timedelta(days=1):
+        return 0
+
+    streak = 0
+    expected = unique_dates[0]
+    for d in unique_dates:
+        if d == expected:
+            streak += 1
+            expected = expected - timedelta(days=1)
+        else:
+            break
+
+    return streak
+
+
 def _compute_streak(db: Database, user_id: str) -> int:
     oid = ObjectId(user_id)
     pipeline = [
@@ -18,29 +43,11 @@ def _compute_streak(db: Database, user_id: str) -> int:
         }},
     ]
     docs = list(db.question_attempts.aggregate(pipeline))
-    if not docs:
-        return 0
-
-    activity_dates = sorted(
-        {date_type(d["_id"]["year"], d["_id"]["month"], d["_id"]["day"]) for d in docs},
-        reverse=True,
-    )
-
+    activity_dates = [
+        date_type(d["_id"]["year"], d["_id"]["month"], d["_id"]["day"]) for d in docs
+    ]
     today = datetime.now(timezone.utc).date()
-    # Streak is broken if most recent activity was before yesterday
-    if activity_dates[0] < today - timedelta(days=1):
-        return 0
-
-    streak = 0
-    expected = activity_dates[0]
-    for d in activity_dates:
-        if d == expected:
-            streak += 1
-            expected = expected - timedelta(days=1)
-        else:
-            break
-
-    return streak
+    return calculate_streak_from_dates(activity_dates, today)
 
 
 def get_overview_stats(db: Database, user_id: str) -> Dict:

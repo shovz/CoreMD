@@ -33,6 +33,27 @@ const MOCK_SESSION = {
 
 const MOCK_ANSWER_RESULT = { correct: true, correct_option: 0 };
 
+const MOCK_CHAPTERS = [
+  {
+    id: "chapter-good-health",
+    title: "Promoting Good Health",
+    chapter_number: 2,
+    part_number: 1,
+    part_title: "Introduction to Clinical Medicine",
+    specialty: "General Medicine",
+    sections: [],
+  },
+  {
+    id: "chapter-parkinson",
+    title: "Parkinson Disease and Other Movement Disorders",
+    chapter_number: 444,
+    part_number: 17,
+    part_title: "Neurologic Disorders",
+    specialty: "Neurology",
+    sections: [],
+  },
+];
+
 const MOCK_REPORT = {
   session_id: SESSION_ID,
   question_count: 1,
@@ -61,8 +82,8 @@ const MOCK_REPORT = {
 function setupHandlers(overrides: Parameters<typeof server.use>[0][] = []) {
   server.use(
     ...overrides,
-    http.get(`${BASE}/questions/topics`, () => HttpResponse.json(["Cardiology", "Nephrology"])),
-    http.get(`${BASE}/chapters`, () => HttpResponse.json([])),
+    http.get(`${BASE}/questions/topics`, () => HttpResponse.json(["Cardiology", "Nephrology", "Parkinson's Disease", "Pulmonary Oncology"])),
+    http.get(`${BASE}/chapters`, () => HttpResponse.json(MOCK_CHAPTERS)),
     http.get(`${BASE}/questions/exam-presets/stage-a`, () => HttpResponse.json([])),
     http.post(`${BASE}/questions/exam-sessions/stage-a/preview`, () =>
       HttpResponse.json({
@@ -115,9 +136,76 @@ describe("ExamsPage", () => {
     renderPage();
 
     await waitFor(() =>
-      expect(screen.getByRole("button", { name: "Cardiology" })).toBeInTheDocument()
+      expect(screen.getByText(/Cardiology/)).toBeInTheDocument()
     );
-    expect(screen.getByRole("button", { name: "Nephrology" })).toBeInTheDocument();
+    expect(screen.getByText(/Nephrology/)).toBeInTheDocument();
+  });
+
+  it("separates topic scope from chapter scope", async () => {
+    setupHandlers();
+    renderPage();
+
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: /By Topic/ })).toBeInTheDocument()
+    );
+
+    expect(screen.getByText("Cardiology")).toBeInTheDocument();
+    expect(screen.queryByText(/Promoting Good Health/)).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: /By Chapter/ }));
+
+    expect(screen.getByText(/Introduction to Clinical Medicine/)).toBeInTheDocument();
+    expect(screen.getByText(/Promoting Good Health/)).toBeInTheDocument();
+    expect(screen.queryByText("Cardiology")).not.toBeInTheDocument();
+  });
+
+  it("chapter mode search supports partial word matching against chapter labels", async () => {
+    setupHandlers();
+    renderPage();
+
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: /By Chapter/ })).toBeInTheDocument()
+    );
+    await userEvent.click(screen.getByRole("button", { name: /By Chapter/ }));
+    await userEvent.type(screen.getByPlaceholderText(/Search chapters/), "Good Health");
+
+    expect(screen.getByText(/Promoting Good Health/)).toBeInTheDocument();
+    expect(screen.queryByText(/Parkinson Disease/)).not.toBeInTheDocument();
+  });
+
+  it("sends only topic filters in topic mode and only chapter filters in chapter mode", async () => {
+    const payloads: unknown[] = [];
+    setupHandlers([
+      http.post(`${BASE}/questions/exam-sessions/stage-a/start`, async ({ request }) => {
+        payloads.push(await request.json());
+        return HttpResponse.json(MOCK_SESSION);
+      }),
+    ]);
+    renderPage();
+
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Start Stage A Exam" })).toBeInTheDocument()
+    );
+    await userEvent.click(screen.getByText("Parkinson's Disease"));
+    await userEvent.click(screen.getByRole("button", { name: "Start Stage A Exam" }));
+
+    await waitFor(() => expect(payloads).toHaveLength(1));
+    expect(payloads[0]).toMatchObject({
+      topics: ["Parkinson's Disease"],
+      part_numbers: [],
+      chapter_ids: [],
+    });
+
+    await userEvent.click(screen.getByRole("button", { name: "Back to Settings" }));
+    await userEvent.click(screen.getByRole("button", { name: /By Chapter/ }));
+    await userEvent.click(screen.getByText(/Promoting Good Health/));
+    await userEvent.click(screen.getByRole("button", { name: "Start Stage A Exam" }));
+
+    await waitFor(() => expect(payloads).toHaveLength(2));
+    expect(payloads[1]).toMatchObject({
+      topics: [],
+      chapter_ids: ["chapter-good-health"],
+    });
   });
 
   it("shows preview eligible pool count after load", async () => {

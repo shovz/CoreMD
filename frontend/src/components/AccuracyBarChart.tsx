@@ -12,8 +12,9 @@ import {
 
 export const WEAK_AREA_THRESHOLD = 60;
 
-const DEFAULT_BLUE = "#3b82f6";
-const WEAK_RED = "#ef4444";
+// Mirror --accent and --danger CSS tokens
+const DEFAULT_BLUE = "#2563eb";
+const WEAK_RED = "#e11d48";
 
 interface AccuracyBarChartProps {
   data: { label: string; attempted: number; accuracy: number }[];
@@ -22,10 +23,8 @@ interface AccuracyBarChartProps {
 
 export default function AccuracyBarChart({ data, title }: AccuracyBarChartProps) {
   return (
-    <div style={{ marginBottom: 32 }}>
-      <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 12, color: "#111827" }}>
-        {title}
-      </h3>
+    <div className="mb-8">
+      <h3 className="mb-3 text-base font-semibold text-slate-900">{title}</h3>
       <ResponsiveContainer width="100%" height={300}>
         <BarChart data={data} margin={{ top: 8, right: 16, left: 0, bottom: 8 }}>
           <CartesianGrid strokeDasharray="3 3" />

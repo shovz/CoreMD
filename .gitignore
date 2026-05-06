@@ -138,6 +138,7 @@ backend/static/images/*.jpg
 !infra/env/**
 
 # Claude 
+.claude/*
 .claude/settings.local.json
 .claude/settings.json
 .claude/statusline-command.sh

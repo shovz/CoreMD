@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuthContext } from "../context/AuthContext";
 import { useExamGuard } from "../context/ExamGuardContext";
+import { useTheme } from "../hooks/useTheme";
 
 function DashboardIcon() {
   return (
@@ -84,6 +85,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const { user, logout } = useAuthContext();
   const { requestNavigation, triggerExamsReload } = useExamGuard();
   const [profileOpen, setProfileOpen] = useState(false);
+  const { dark, toggle } = useTheme();
 
   const handleSignOut = () => {
     logout();
@@ -140,6 +142,24 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
       </nav>
 
       <div className="space-y-2 px-3 pb-6">
+        {/* Theme toggle */}
+        <button
+          onClick={toggle}
+          className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm text-[var(--ink-dim)] transition hover:bg-[var(--ink-4)] hover:text-[var(--ink)]"
+          aria-label={dark ? "Switch to light mode" : "Switch to dark mode"}
+        >
+          {dark ? (
+            <svg className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707M17.657 17.657l-.707-.707M6.343 6.343l-.707-.707M12 8a4 4 0 100 8 4 4 0 000-8z" />
+            </svg>
+          ) : (
+            <svg className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" />
+            </svg>
+          )}
+          {dark ? "Light mode" : "Dark mode"}
+        </button>
+
         {/* Profile widget */}
         <div className="relative">
           <button
@@ -159,10 +179,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
             </div>
           </button>
           {profileOpen && (
-            <div
-              className="absolute bottom-full left-0 right-0 mb-1 rounded-md border bg-[var(--paper-2)] py-1 shadow-md"
-              style={{ borderColor: "var(--ink-4)" }}
-            >
+            <div className="absolute bottom-full left-0 right-0 mb-1 rounded-md border border-black/8 bg-[var(--paper-2)] py-1 shadow-md">
               <button
                 onClick={handleSignOut}
                 className="w-full px-3 py-2 text-left text-sm text-[var(--ink-dim)] transition hover:bg-[var(--ink-4)] hover:text-[var(--ink)]"
@@ -183,21 +200,19 @@ export default function Sidebar() {
   return (
     <>
       {/* Desktop sidebar */}
-      <aside
-        className="hidden md:flex w-[220px] shrink-0 flex-col bg-[var(--paper-2)] h-screen sticky top-0 border-r"
-        style={{ borderRightColor: "var(--ink-4)" }}
-      >
+      <aside className="hidden md:flex w-[220px] shrink-0 flex-col bg-[var(--paper-2)] h-screen sticky top-0 border-r border-black/8">
         <SidebarContent />
       </aside>
 
       {/* Mobile: hamburger */}
       <button
-        className="fixed left-4 top-4 z-30 md:hidden rounded-md p-2 text-[var(--ink)] bg-[var(--paper-2)] border"
-        style={{ borderColor: "var(--ink-4)" }}
+        className="fixed left-4 top-4 z-30 md:hidden rounded-md p-2 text-[var(--ink)] bg-[var(--paper-2)] border border-black/8"
         onClick={() => setMobileOpen(true)}
         aria-label="Open navigation"
       >
-        ☰
+        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+        </svg>
       </button>
 
       {/* Mobile drawer */}
@@ -208,10 +223,7 @@ export default function Sidebar() {
             onClick={() => setMobileOpen(false)}
             aria-hidden="true"
           />
-          <aside
-            className="fixed inset-y-0 left-0 z-50 w-[220px] bg-[var(--paper-2)] border-r"
-            style={{ borderRightColor: "var(--ink-4)" }}
-          >
+          <aside className="fixed inset-y-0 left-0 z-50 w-[220px] bg-[var(--paper-2)] border-r border-black/8">
             <SidebarContent onNavigate={() => setMobileOpen(false)} />
           </aside>
         </>

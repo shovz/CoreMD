@@ -34,6 +34,12 @@ const DIFFICULTY_COLORS: Record<Difficulty, string> = {
   hard: "bg-rose-100 text-rose-700",
 };
 
+const DIFFICULTY_SYMBOL: Record<Difficulty, string> = {
+  easy: "○",
+  medium: "◑",
+  hard: "●",
+};
+
 const SESSION_LENGTH_OPTIONS: { value: number; label: string }[] = [
   { value: 5,  label: "5 Qs" },
   { value: 10, label: "10 Qs" },
@@ -162,7 +168,8 @@ function ChainCard({ question, result, onSubmit, timerSeconds = 0, onTimeUp }: C
           <span className="rounded-full bg-blue-100 px-3 py-0.5 text-xs font-semibold text-blue-700">
             {question.topic}
           </span>
-          <span className={`rounded-full px-3 py-0.5 text-xs font-semibold capitalize ${DIFFICULTY_COLORS[question.difficulty]}`}>
+          <span className={`inline-flex items-center gap-1 rounded-full px-3 py-0.5 text-xs font-semibold capitalize ${DIFFICULTY_COLORS[question.difficulty]}`}>
+            <span aria-hidden="true">{DIFFICULTY_SYMBOL[question.difficulty]}</span>
             {question.difficulty}
           </span>
         </div>
@@ -202,7 +209,7 @@ function ChainCard({ question, result, onSubmit, timerSeconds = 0, onTimeUp }: C
       )}
 
       {result && (
-        <div className={`rounded-xl border-l-4 p-5 ${result.correct ? "border-emerald-500 bg-emerald-50" : "border-rose-500 bg-rose-50"}`}>
+        <div className={`rounded-xl border p-5 ${result.correct ? "border-emerald-300 bg-emerald-50" : "border-rose-300 bg-rose-50"}`}>
           <p className={`mb-2 font-semibold ${result.correct ? "text-emerald-700" : "text-rose-700"}`}>
             {result.correct ? "Correct!" : "Incorrect"}
           </p>
@@ -932,7 +939,8 @@ export default function QuestionsPage() {
                   <span className="rounded-full bg-blue-100 px-2.5 py-1 text-xs font-semibold text-blue-700">
                     {currentQuestion.topic}
                   </span>
-                  <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${DIFFICULTY_COLORS[currentQuestion.difficulty]}`}>
+                  <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold capitalize ${DIFFICULTY_COLORS[currentQuestion.difficulty]}`}>
+                    <span aria-hidden="true">{DIFFICULTY_SYMBOL[currentQuestion.difficulty]}</span>
                     {currentQuestion.difficulty}
                   </span>
                 </div>
@@ -963,10 +971,10 @@ export default function QuestionsPage() {
               </div>
 
               {attemptResult && (
-                <div className={`rounded-lg border-l-4 px-4 py-3 ${
+                <div className={`rounded-lg border px-4 py-3 ${
                   attemptResult.correct
-                    ? "border-emerald-600 bg-emerald-50 text-emerald-900"
-                    : "border-rose-600 bg-rose-50 text-rose-900"
+                    ? "border-emerald-300 bg-emerald-50 text-emerald-900"
+                    : "border-rose-300 bg-rose-50 text-rose-900"
                 }`}>
                   <p className="mb-1 text-sm font-semibold">
                     {attemptResult.correct ? "Correct" : "Incorrect"}

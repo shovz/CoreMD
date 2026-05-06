@@ -2,6 +2,12 @@ import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import DOMPurify from "dompurify";
 import { useLocation } from "react-router-dom";
 import { wrapAcrossBlocks } from "../utils/annotationHtml";
+import { formatReaderHtml, stripLeadingDuplicateHeading } from "../utils/readerFormatting";
+import {
+  READER_UNIT_MAX_SECTIONS,
+  READER_UNIT_MIN_CHARS,
+  getPreviousReaderUnitStart,
+} from "../utils/readerUnits";
 import { getChapters, getChapterById, type Chapter } from "../api/chaptersApi";
 import { getSectionById, type SectionResponse } from "../api/sectionApi";
 import { useAiContext } from "../context/AiContext";
@@ -16,6 +22,7 @@ interface Popover {
   x: number;
   y: number;
   text: string;
+  sectionId: string;
   mode: "buttons" | "note";
 }
 
@@ -40,14 +47,14 @@ export default function ChaptersPage() {
   const [error, setError] = useState<string | null>(null);
 
   // Left pane
-  const [expandedPart, setExpandedPart] = useState<number | null>(1);
+  const [selectedPart, setSelectedPart] = useState<number | null>(null);
   const [searchInput, setSearchInput] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
 
   // Right pane / book reader
   const [currentChapter, setCurrentChapter] = useState<Chapter | null>(null);
   const [currentSectionIndex, setCurrentSectionIndex] = useState(0);
-  const [sectionContent, setSectionContent] = useState<SectionResponse | null>(null);
+  const [readerSections, setReaderSections] = useState<SectionResponse[]>([]);
   const [sectionLoading, setSectionLoading] = useState(false);
 
   // Text-selection popover
@@ -55,6 +62,7 @@ export default function ChaptersPage() {
   const contentRef = useRef<HTMLDivElement>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const sectionCacheRef = useRef<Map<string, SectionResponse>>(new Map());
 
   // Annotations
   const [annotations, setAnnotations] = useState<Annotation[]>([]);
@@ -77,14 +85,14 @@ export default function ChaptersPage() {
         if (navState.chapterId) {
           const target = res.data.find((ch) => ch.id === navState.chapterId);
           if (target) {
-            setExpandedPart(target.part_number ?? 1);
+            setSelectedPart(target.part_number ?? null);
             handleChapterClick(navState.chapterId, navState.sectionId);
             return;
           }
         }
         const first = sorted[0];
         if (first) {
-          setExpandedPart(first.part_number ?? 1);
+          setSelectedPart(first.part_number ?? null);
           handleChapterClick(first.id);
         }
       })
@@ -133,15 +141,53 @@ export default function ChaptersPage() {
     debounceRef.current = setTimeout(() => setSearchQuery(value.trim()), 300);
   };
 
-  function togglePart(partNum: number) {
-    if (searchQuery) return;
-    setExpandedPart((prev) => (prev === partNum ? null : partNum));
+
+  async function fetchSection(chapterId: string, sectionId: string) {
+    const cacheKey = `${chapterId}:${sectionId}`;
+    const cached = sectionCacheRef.current.get(cacheKey);
+    if (cached) return cached;
+    const res = await getSectionById(chapterId, sectionId);
+    sectionCacheRef.current.set(cacheKey, res.data);
+    return res.data;
+  }
+
+  async function buildReaderUnit(chapter: Chapter, startIndex: number) {
+    const start = Math.min(Math.max(startIndex, 0), Math.max(chapter.sections.length - 1, 0));
+    const loaded: SectionResponse[] = [];
+    let cursor = start;
+
+    while (cursor < chapter.sections.length) {
+      const section = chapter.sections[cursor];
+      const sectionRes = await fetchSection(chapter.id, section.id);
+      loaded.push(sectionRes);
+      const totalChars = loaded
+        .map((item) => item.content.replace(/\s+/g, " ").trim().length)
+        .reduce((sum, len) => sum + len, 0);
+      if (totalChars >= READER_UNIT_MIN_CHARS || loaded.length >= READER_UNIT_MAX_SECTIONS) break;
+      cursor += 1;
+    }
+
+    return loaded;
+  }
+
+  async function loadReaderUnit(chapter: Chapter, startIndex: number) {
+    setSectionLoading(true);
+    setReaderSections([]);
+    setPopover(null);
+    try {
+      const unit = await buildReaderUnit(chapter, startIndex);
+      setCurrentSectionIndex(startIndex);
+      setReaderSections(unit);
+    } finally {
+      setSectionLoading(false);
+    }
   }
 
   async function handleChapterClick(chapterId: string, targetSectionId?: string) {
     setSectionLoading(true);
-    setSectionContent(null);
+    setReaderSections([]);
     setNoteText("");
+    setPopover(null);
     getAnnotationsByChapter(chapterId)
       .then((r) => setAnnotations(r.data))
       .catch(() => setAnnotations([]));
@@ -149,35 +195,45 @@ export default function ChaptersPage() {
       const chapterRes = await getChapterById(chapterId);
       const fullChapter = chapterRes.data;
       setCurrentChapter(fullChapter);
+      setSelectedPart(fullChapter.part_number ?? null);
       const sectionIndex = targetSectionId
         ? Math.max(0, fullChapter.sections.findIndex((s) => s.id === targetSectionId))
         : 0;
-      setCurrentSectionIndex(sectionIndex);
       if (fullChapter.sections.length > 0) {
-        const sectionRes = await getSectionById(chapterId, fullChapter.sections[sectionIndex].id);
-        setSectionContent(sectionRes.data);
+        const unit = await buildReaderUnit(fullChapter, sectionIndex);
+        setCurrentSectionIndex(sectionIndex);
+        setReaderSections(unit);
       }
     } finally {
       setSectionLoading(false);
     }
   }
 
-  async function goToSection(index: number) {
+  async function goToReaderUnit(index: number) {
     if (!currentChapter) return;
     const section = currentChapter.sections[index];
     if (!section) return;
-    setSectionLoading(true);
-    setSectionContent(null);
-    try {
-      const sectionRes = await getSectionById(currentChapter.id, section.id);
-      setCurrentSectionIndex(index);
-      setSectionContent(sectionRes.data);
-    } finally {
-      setSectionLoading(false);
-    }
+    await loadReaderUnit(currentChapter, index);
+  }
+
+  async function goToPreviousReaderUnit() {
+    if (!currentChapter || currentSectionIndex === 0) return;
+    const previousSections = await Promise.all(
+      currentChapter.sections
+        .slice(0, currentSectionIndex)
+        .map((section) => fetchSection(currentChapter.id, section.id))
+    );
+    const previousStart = getPreviousReaderUnitStart(previousSections, currentSectionIndex);
+    await loadReaderUnit(currentChapter, previousStart);
   }
 
   useEffect(() => {
+    function getSectionIdFromNode(node: Node) {
+      const element =
+        node.nodeType === Node.ELEMENT_NODE ? (node as Element) : node.parentElement;
+      return element?.closest<HTMLElement>("[data-section-id]")?.dataset.sectionId ?? null;
+    }
+
     function handleMouseUp(e: MouseEvent) {
       // Ignore mouseup originating from inside the popover toolbar itself
       if (popoverRef.current?.contains(e.target as Node)) return;
@@ -191,13 +247,25 @@ export default function ChaptersPage() {
         setPopover(null);
         return;
       }
+      const startSectionId = getSectionIdFromNode(range.startContainer);
+      const endSectionId = getSectionIdFromNode(range.endContainer);
+      if (!startSectionId || startSectionId !== endSectionId) {
+        setPopover(null);
+        return;
+      }
       const text = selection.toString().trim();
       if (!text) {
         setPopover(null);
         return;
       }
       const rect = range.getBoundingClientRect();
-      setPopover({ x: rect.left + rect.width / 2, y: rect.top, text, mode: "buttons" });
+      setPopover({
+        x: rect.left + rect.width / 2,
+        y: rect.top,
+        text,
+        sectionId: startSectionId,
+        mode: "buttons",
+      });
     }
 
     function handleSelectionChange() {
@@ -225,11 +293,11 @@ export default function ChaptersPage() {
   }
 
   async function handleSaveNote() {
-    if (!popover || !currentChapter || !sectionContent) return;
+    if (!popover || !currentChapter) return;
     try {
       const res = await createAnnotation({
         chapter_id: currentChapter.id,
-        section_id: sectionContent.section_id,
+        section_id: popover.sectionId,
         selected_text: popover.text,
         note_text: noteText,
       });
@@ -250,12 +318,17 @@ export default function ChaptersPage() {
     }
   }
 
+  const readerSectionIds = useMemo(
+    () => new Set(readerSections.map((section) => section.section_id)),
+    [readerSections]
+  );
+
   const sectionNotes = useMemo(
     () =>
       annotations.filter(
-        (a) => a.note_text !== "" && a.section_id === sectionContent?.section_id
+        (a) => a.note_text !== "" && readerSectionIds.has(a.section_id)
       ),
-    [annotations, sectionContent?.section_id]
+    [annotations, readerSectionIds]
   );
 
   const apiBase = (import.meta.env.VITE_API_URL ?? "http://localhost:8000/api/v1").replace(
@@ -263,48 +336,54 @@ export default function ChaptersPage() {
     ""
   );
 
-  const sanitizedHtml = sectionContent?.html_content
-    ? DOMPurify.sanitize(
-        sectionContent.html_content.replace(/src="\/static\//g, `src="${apiBase}/static/`)
-      )
-    : null;
-
-  const displayHtml = useMemo(() => {
-    if (!sanitizedHtml) return null;
-    const currentSectionId = sectionContent?.section_id;
-    const highlights = annotations.filter(
-      (a) => a.note_text === "" && a.section_id === currentSectionId
-    );
-    const notes = annotations.filter(
-      (a) => a.note_text !== "" && a.section_id === currentSectionId
-    );
-    if (highlights.length === 0 && notes.length === 0) return sanitizedHtml;
-    let html = sanitizedHtml;
-    for (const ann of highlights) {
-      html = wrapAcrossBlocks(
-        html,
-        ann.selected_text,
-        (seg) => `<mark class="annotation-highlight">${seg}</mark>`
+  const displaySections = useMemo(() => {
+    return readerSections.map((section) => {
+      const readerHtml = formatReaderHtml(
+        section.html_content?.replace(/src="\/static\//g, `src="${apiBase}/static/`),
+        section.content
       );
-    }
-    notes.forEach((ann, i) => {
-      html = wrapAcrossBlocks(
-        html,
-        ann.selected_text,
-        (seg, isFirst) =>
-          isFirst
-            ? `<span class="annotation-note" data-note-id="${ann.id}" data-note-num="${i + 1}">${seg}</span>`
-            : `<span class="annotation-note" data-note-id="${ann.id}">${seg}</span>`
+      let html = readerHtml
+        ? DOMPurify.sanitize(stripLeadingDuplicateHeading(readerHtml, section.section_title))
+        : "";
+      const highlights = annotations.filter(
+        (a) => a.note_text === "" && a.section_id === section.section_id
       );
+      const notes = annotations.filter(
+        (a) => a.note_text !== "" && a.section_id === section.section_id
+      );
+      for (const ann of highlights) {
+        html = wrapAcrossBlocks(
+          html,
+          ann.selected_text,
+          (seg) => `<mark class="annotation-highlight">${seg}</mark>`
+        );
+      }
+      notes.forEach((ann) => {
+        const noteIndex = sectionNotes.indexOf(ann);
+        html = wrapAcrossBlocks(
+          html,
+          ann.selected_text,
+          (seg, isFirst) =>
+            isFirst
+              ? `<span class="annotation-note" data-note-id="${ann.id}" data-note-num="${noteIndex + 1}">${seg}</span>`
+              : `<span class="annotation-note" data-note-id="${ann.id}">${seg}</span>`
+        );
+      });
+      return { section, html };
     });
-    return html;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sanitizedHtml, annotations]);
+  }, [annotations, apiBase, readerSections, sectionNotes]);
 
   if (loading) return <p className="p-6 text-slate-600">Loading chapters...</p>;
   if (error) return <p className="p-6 text-red-600">{error}</p>;
 
   const totalSections = currentChapter?.sections.length ?? 0;
+  const readerUnitEndIndex = Math.min(currentSectionIndex + readerSections.length, totalSections);
+  const readerUnitLabel =
+    readerSections.length > 1
+      ? `Sections ${currentSectionIndex + 1}-${readerUnitEndIndex} of ${totalSections}`
+      : `Section ${currentSectionIndex + 1} of ${totalSections}`;
+  const nextReaderUnitIndex = readerUnitEndIndex;
+  const isGroupedReaderUnit = readerSections.length > 1;
 
   return (
     <div className="flex h-full">
@@ -339,13 +418,13 @@ export default function ChaptersPage() {
               </button>
               <button
                 onMouseDown={(e) => e.preventDefault()}
-                disabled={!currentChapter || !sectionContent}
+                disabled={!currentChapter}
                 onClick={async () => {
-                  if (!popover || !currentChapter || !sectionContent) return;
+                  if (!popover || !currentChapter) return;
                   try {
                     const res = await createAnnotation({
                       chapter_id: currentChapter.id,
-                      section_id: sectionContent.section_id,
+                      section_id: popover.sectionId,
                       selected_text: popover.text,
                       note_text: "",
                     });
@@ -393,84 +472,120 @@ export default function ChaptersPage() {
         </div>
       )}
 
-      {/* Left pane: ~260px sticky full-height */}
-      <aside className="w-[260px] flex-shrink-0 border-r border-slate-200 flex flex-col overflow-hidden">
-        <div className="p-3 border-b border-slate-100 flex-shrink-0">
-          <input
-            value={searchInput}
-            onChange={(e) => handleSearchChange(e.target.value)}
-            placeholder="Search chapters…"
-            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-          />
+      {/* Left pane: two-column secondary sidebar */}
+      <aside className="chapters-shell">
+        <div className="chapters-searchbar">
+          <div className="relative">
+            <input
+              value={searchInput}
+              onChange={(e) => handleSearchChange(e.target.value)}
+              placeholder="Search chapters..."
+              className="chapters-search-input pr-9"
+            />
+            {searchInput && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSearchInput("");
+                  setSearchQuery("");
+                }}
+                className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full px-2 py-0.5 text-sm text-[var(--ink-dim)] transition hover:bg-[var(--ink-4)] hover:text-[var(--ink)]"
+                aria-label="Clear chapter search"
+              >
+                x
+              </button>
+            )}
+          </div>
         </div>
 
-        <nav className="flex-1 overflow-y-auto">
-          {visibleParts.length === 0 && searchQuery && (
-            <p className="p-4 text-sm text-slate-500">
-              No results for &ldquo;{searchQuery}&rdquo;
-            </p>
-          )}
-          {visibleParts.map(([partNum, part]) => {
-            const isOpen = !!searchQuery || expandedPart === partNum;
-            const sorted = [...part.chapters].sort(
-              (a, b) => (a.chapter_number ?? 0) - (b.chapter_number ?? 0)
-            );
-            return (
-              <div key={partNum} className="border-b border-slate-100">
-                <button
-                  onClick={() => togglePart(partNum)}
-                  className={`flex w-full items-center justify-between px-3 py-2.5 text-left text-sm font-semibold transition ${
-                    isOpen
-                      ? "bg-blue-600 text-white"
-                      : "bg-slate-50 text-slate-800 hover:bg-slate-100"
-                  }`}
-                >
-                  <span className="min-w-0 truncate leading-snug">
-                    <span
-                      className={`block text-xs font-normal ${isOpen ? "text-blue-200" : "text-slate-400"}`}
-                    >
-                      Part {partNum}
-                    </span>
-                    {searchQuery ? highlight(part.title, searchQuery) : part.title}
-                  </span>
-                  <span
-                    className={`ml-2 shrink-0 text-xs ${isOpen ? "text-blue-100" : "text-slate-400"}`}
-                  >
-                    {isOpen ? "▾" : "▸"}
-                  </span>
-                </button>
-
-                {isOpen && (
-                  <div className="divide-y divide-slate-100 bg-white">
-                    {sorted.map((ch) => {
+        {searchQuery ? (
+          <nav className="modern-scrollbar flex-1 overflow-y-auto" aria-label="Chapter search results">
+            {visibleParts.length === 0 ? (
+              <p className="p-4 text-sm text-[var(--ink-dim)]">
+                No results for &ldquo;{searchQuery}&rdquo;
+              </p>
+            ) : (
+              visibleParts.map(([partNum, part]) => (
+                <div key={partNum} className="chapter-search-group">
+                  <div className="chapter-search-heading">Part {partNum}</div>
+                  {[...part.chapters]
+                    .sort((a, b) => (a.chapter_number ?? 0) - (b.chapter_number ?? 0))
+                    .map((ch) => {
                       const isActive = currentChapter?.id === ch.id;
                       return (
                         <button
                           key={ch.id}
                           onClick={() => handleChapterClick(ch.id)}
-                          className={`block w-full px-4 py-2 text-left text-sm transition ${
-                            isActive
-                              ? "bg-blue-50 font-semibold text-blue-700"
-                              : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
-                          }`}
+                          className={`chapter-row ${isActive ? "chapter-row-active" : ""}`}
                         >
                           {ch.chapter_number != null && (
-                            <span className="mr-1.5 text-xs text-slate-400">
-                              Ch. {ch.chapter_number}
-                            </span>
+                            <span className="chapter-number">Ch. {ch.chapter_number}</span>
                           )}
-                          {searchQuery ? highlight(ch.title, searchQuery) : ch.title}
+                          <span className="chapter-title">
+                            {highlight(ch.title, searchQuery)}
+                          </span>
                         </button>
                       );
                     })}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </nav>
-      </aside>
+                </div>
+              ))
+            )}
+          </nav>
+        ) : (
+          <div className="chapter-browser">
+            <div className="parts-rail modern-scrollbar">
+              {sortedParts.map(([partNum, part]) => (
+                <button
+                  key={partNum}
+                  onClick={() => setSelectedPart(partNum)}
+                  className={`part-button ${selectedPart === partNum ? "part-button-active" : ""}`}
+                >
+                  <span className="part-kicker">
+                    <span>Part {partNum}</span>
+                    <span>{part.chapters.length}</span>
+                  </span>
+                  <span className="part-title">{part.title}</span>
+                </button>
+              ))}
+            </div>
 
+            <nav className="chapters-rail modern-scrollbar" aria-label="Chapters">
+              {(() => {
+                const entry = sortedParts.find(([n]) => n === selectedPart);
+                if (!entry) return null;
+                const [partNum, part] = entry;
+                return (
+                  <>
+                    <div className="chapters-rail-header">
+                      <div className="chapters-rail-eyebrow">
+                        Part {partNum}, {part.chapters.length} chapters
+                      </div>
+                      <div className="chapters-rail-title">{part.title}</div>
+                    </div>
+                    {[...part.chapters]
+                      .sort((a, b) => (a.chapter_number ?? 0) - (b.chapter_number ?? 0))
+                      .map((ch) => {
+                        const isActive = currentChapter?.id === ch.id;
+                        return (
+                          <button
+                            key={ch.id}
+                            onClick={() => handleChapterClick(ch.id)}
+                            className={`chapter-row ${isActive ? "chapter-row-active" : ""}`}
+                          >
+                            {ch.chapter_number != null && (
+                              <span className="chapter-number">Ch. {ch.chapter_number}</span>
+                            )}
+                            <span className="chapter-title">{ch.title}</span>
+                          </button>
+                        );
+                      })}
+                  </>
+                );
+              })()}
+            </nav>
+          </div>
+        )}
+      </aside>
       {/* Right pane: book reader */}
       <main className="min-w-0 flex-1 flex overflow-hidden">
         {sectionLoading ? (
@@ -491,17 +606,22 @@ export default function ChaptersPage() {
               <div className="flex-shrink-0 flex items-start justify-between gap-4">
                 <div className="min-w-0">
                   <h1 className="text-2xl font-bold leading-tight text-slate-900">
-                    {sectionContent?.chapter_title ?? currentChapter.title}
-                    {sectionContent && (
+                    {readerSections[0]?.chapter_title ?? currentChapter.title}
+                    {readerSections[0] && (
                       <>
                         <span className="mx-2 font-normal text-slate-400">›</span>
-                        <span className="text-slate-700">{sectionContent.section_title}</span>
+                        <span className="text-slate-700">{readerSections[0].section_title}</span>
                       </>
                     )}
                   </h1>
-                  <p className="mt-1 text-sm text-slate-500">
-                    Section {currentSectionIndex + 1} of {totalSections}
-                  </p>
+                  <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-slate-500">
+                    <span>{readerUnitLabel}</span>
+                    {isGroupedReaderUnit && (
+                      <span className="rounded-full bg-blue-50 px-2 py-0.5 text-xs font-semibold text-blue-700">
+                        Grouped for readability
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <button
                   onClick={() => setShowNotesPanel((v) => !v)}
@@ -525,18 +645,20 @@ export default function ChaptersPage() {
               </div>
 
               {/* Scrollable section content */}
-              <div className="mt-6 flex-1 overflow-y-auto" ref={contentRef}>
-                {displayHtml ? (
-                  <div
-                    className="section-content"
-                    dangerouslySetInnerHTML={{ __html: displayHtml }}
-                  />
-                ) : sectionContent ? (
-                  <div className="space-y-4 text-[15px] leading-7 text-slate-800">
-                    {sectionContent.content.split("\n\n").map((para, i) => (
-                      <p key={i} className="m-0">
-                        {para.trim()}
-                      </p>
+              <div className="modern-scrollbar mt-6 flex-1 overflow-y-auto" ref={contentRef}>
+                {displaySections.length > 0 ? (
+                  <div className="section-content space-y-8">
+                    {displaySections.map(({ section, html }, index) => (
+                      <section
+                        key={section.section_id}
+                        data-section-id={section.section_id}
+                        className={index > 0 ? "border-t border-slate-200 pt-6" : undefined}
+                      >
+                        {isGroupedReaderUnit && (
+                          <h2 className="reader-subsection-title">{section.section_title}</h2>
+                        )}
+                        <div dangerouslySetInnerHTML={{ __html: html }} />
+                      </section>
                     ))}
                   </div>
                 ) : null}
@@ -545,18 +667,18 @@ export default function ChaptersPage() {
               {/* Prev / Next */}
               <div className=" mr-20 mt-4 flex-shrink-0 flex items-center justify-between border-t border-slate-200 pt-4">
                 <button
-                  onClick={() => goToSection(currentSectionIndex - 1)}
+                  onClick={goToPreviousReaderUnit}
                   disabled={currentSectionIndex === 0}
                   className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   ← Previous
                 </button>
                 <span className="text-sm text-slate-500">
-                  Section {currentSectionIndex + 1} of {totalSections}
+                  {readerUnitLabel}
                 </span>
                 <button
-                  onClick={() => goToSection(currentSectionIndex + 1)}
-                  disabled={currentSectionIndex >= totalSections - 1}
+                  onClick={() => goToReaderUnit(nextReaderUnitIndex)}
+                  disabled={nextReaderUnitIndex >= totalSections}
                   className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   Next →
@@ -579,7 +701,7 @@ export default function ChaptersPage() {
                     ×
                   </button>
                 </div>
-                <div className="flex-1 overflow-y-auto p-3 space-y-3">
+                <div className="modern-scrollbar flex-1 overflow-y-auto p-3 space-y-3">
                   {annotations.length === 0 ? (
                     <p className="text-xs text-slate-500 text-center mt-4">
                       No notes yet. Select text and click "Add Note".

@@ -22,16 +22,16 @@ export default function AiChatLauncher() {
     <>
       <button
         onClick={() => setOpen(!open)}
-        className="fixed bottom-6 right-5 z-30 rounded-full bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-lg transition hover:bg-blue-700"
+        className="fixed bottom-6 right-5 z-30 rounded-full bg-[var(--accent)] px-5 py-3 text-sm font-semibold text-white shadow-lg transition hover:bg-[var(--accent-hover)]"
         aria-label="Toggle AI Assistant"
+        aria-expanded={open}
       >
         Ask AI
       </button>
 
       {open && (
         <div
-          className="fixed bottom-20 right-5 z-50 flex w-[360px] flex-col rounded-2xl border border-slate-200 bg-white shadow-2xl"
-          style={{ maxHeight: "480px" }}
+          className="animate-slide-up fixed bottom-20 left-0 right-0 z-50 mx-4 flex max-h-[480px] flex-col rounded-2xl border border-slate-200 bg-white shadow-2xl sm:left-auto sm:mx-0 sm:right-5 sm:w-[360px]"
         >
           {/* Panel header */}
           <div className="flex flex-shrink-0 items-center justify-between rounded-t-2xl border-b border-slate-200 px-4 py-3">

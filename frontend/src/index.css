@@ -1,19 +1,118 @@
 @import "tailwindcss";
 
 :root {
-  --paper: #faf8f4;
-  --paper-2: #f0ede6;
-  --ink: #1a1814;
-  --ink-dim: #6b6760;
-  --ink-4: rgba(26, 24, 20, 0.08);
+  /* Light mode — warm cream, scholarly */
+  --paper: oklch(0.98 0.006 75);
+  --paper-2: oklch(0.95 0.008 75);
+  --ink: oklch(0.18 0.014 75);
+  --ink-dim: oklch(0.44 0.012 75);
+  --ink-4: rgba(28, 22, 12, 0.06);
   --accent: #2563eb;
+  --accent-hover: #1d4ed8;
+  --danger: #e11d48;
+  --danger-soft: #fff1f2;
+  --success: #059669;
+  --success-soft: #ecfdf5;
+  --surface: oklch(0.99 0.004 75);
+  --surface-2: oklch(0.96 0.007 75);
+  --border: rgba(28, 22, 12, 0.08);
 
   font-family: "Inter", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  color: #0f172a;
+  color: var(--ink);
   background-color: var(--paper);
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* Dark mode — warm scholarly palette, toggled via html.dark class */
+html.dark {
+  color-scheme: dark;
+  --paper: oklch(0.15 0.008 60);
+  --paper-2: oklch(0.20 0.006 60);
+  --ink: oklch(0.95 0.005 60);
+  --ink-dim: oklch(0.72 0.008 60);
+  --ink-4: rgba(250, 248, 244, 0.08);
+  --accent: oklch(0.65 0.18 264);
+  --accent-hover: oklch(0.72 0.16 264);
+  --danger: oklch(0.68 0.20 15);
+  --danger-soft: oklch(0.18 0.04 15);
+  --success: oklch(0.65 0.16 145);
+  --success-soft: oklch(0.18 0.04 145);
+  --surface: oklch(0.20 0.006 60);
+  --surface-2: oklch(0.24 0.006 60);
+  --border: rgba(250, 248, 244, 0.12);
+}
+
+/* ── Dark mode: remap hardcoded Tailwind neutrals ────────────────────────────
+   Specificity (0,2,1) beats Tailwind utilities (0,1,0) — no component edits needed. */
+
+/* Surfaces */
+html.dark .bg-white { background-color: var(--surface) !important; }
+html.dark .bg-slate-50 { background-color: var(--paper-2) !important; }
+html.dark .bg-slate-100 { background-color: oklch(0.25 0.006 60) !important; }
+html.dark .bg-slate-200 { background-color: oklch(0.28 0.006 60) !important; }
+
+/* Borders */
+html.dark .border-slate-100 { border-color: oklch(0.28 0.006 60) !important; }
+html.dark .border-slate-200 { border-color: var(--border) !important; }
+html.dark .border-slate-300 { border-color: oklch(0.32 0.006 60) !important; }
+
+/* Text */
+html.dark .text-slate-900,
+html.dark .text-slate-800,
+html.dark .text-slate-700 { color: var(--ink) !important; }
+html.dark .text-slate-600,
+html.dark .text-slate-500 { color: var(--ink-dim) !important; }
+html.dark .text-slate-400 { color: oklch(0.58 0.008 60) !important; }
+
+/* Semantic soft tints — darken for dark mode */
+html.dark .bg-emerald-50 { background-color: oklch(0.20 0.05 145) !important; }
+html.dark .bg-rose-50 { background-color: oklch(0.18 0.05 15) !important; }
+html.dark .bg-blue-50 { background-color: oklch(0.20 0.05 264) !important; }
+html.dark .bg-amber-50 { background-color: oklch(0.20 0.05 80) !important; }
+
+/* Semantic badge backgrounds */
+html.dark .bg-emerald-100 { background-color: oklch(0.24 0.06 145) !important; }
+html.dark .bg-amber-100 { background-color: oklch(0.24 0.06 80) !important; }
+html.dark .bg-rose-100 { background-color: oklch(0.22 0.06 15) !important; }
+html.dark .bg-blue-100 { background-color: oklch(0.24 0.06 264) !important; }
+
+/* Semantic text on soft tint backgrounds */
+html.dark .text-emerald-700 { color: oklch(0.75 0.14 145) !important; }
+html.dark .text-emerald-900 { color: oklch(0.85 0.12 145) !important; }
+html.dark .text-amber-700 { color: oklch(0.75 0.14 80) !important; }
+html.dark .text-rose-700 { color: oklch(0.75 0.14 15) !important; }
+html.dark .text-rose-900 { color: oklch(0.85 0.12 15) !important; }
+html.dark .text-blue-700 { color: oklch(0.75 0.14 264) !important; }
+
+/* Border colors on soft tint elements */
+html.dark .border-emerald-300 { border-color: oklch(0.38 0.08 145) !important; }
+html.dark .border-emerald-200 { border-color: oklch(0.32 0.06 145) !important; }
+html.dark .border-rose-300 { border-color: oklch(0.35 0.08 15) !important; }
+html.dark .border-rose-200 { border-color: oklch(0.30 0.06 15) !important; }
+
+/* Form controls — browser default bg is white */
+html.dark input,
+html.dark textarea,
+html.dark select {
+  background-color: var(--surface);
+  color: var(--ink);
+  border-color: oklch(0.32 0.006 60);
+  color-scheme: dark;
+}
+
+@keyframes slide-up-fade {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0);   }
+}
+
+.animate-slide-up {
+  animation: slide-up-fade 200ms ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-slide-up { animation: none; }
 }
 
 * {
@@ -31,14 +130,307 @@ body {
   background: var(--paper);
 }
 
+.modern-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: oklch(0.70 0.018 75 / 0.70) transparent;
+}
+
+.modern-scrollbar::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.modern-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.modern-scrollbar::-webkit-scrollbar-thumb {
+  background: oklch(0.72 0.018 75 / 0.62);
+  border: 3px solid transparent;
+  border-radius: 999px;
+  background-clip: padding-box;
+}
+
+.modern-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: oklch(0.60 0.025 75 / 0.82);
+  background-clip: padding-box;
+}
+
+.chapters-shell {
+  width: 30rem;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-right: 1px solid var(--border);
+  background:
+    linear-gradient(180deg, oklch(0.97 0.006 78), var(--paper-2) 42%),
+    var(--paper-2);
+}
+
+.chapters-searchbar {
+  flex-shrink: 0;
+  padding: 0.75rem;
+  border-bottom: 1px solid var(--border);
+  background: oklch(0.98 0.006 78 / 0.88);
+}
+
+.chapters-search-input {
+  width: 100%;
+  border-radius: 0.9rem;
+  border: 1px solid oklch(0.82 0.018 75);
+  background: var(--surface);
+  padding: 0.6rem 0.8rem;
+  font-size: 0.875rem;
+  color: var(--ink);
+  outline: none;
+  box-shadow: inset 0 1px 0 oklch(1 0 0 / 0.55);
+  transition: border-color 160ms ease, box-shadow 160ms ease, background 160ms ease;
+}
+
+.chapters-search-input:focus {
+  border-color: oklch(0.62 0.14 264);
+  box-shadow: 0 0 0 3px oklch(0.70 0.12 264 / 0.18);
+}
+
+.chapter-browser {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  overflow: hidden;
+}
+
+.parts-rail {
+  width: 13rem;
+  flex-shrink: 0;
+  overflow-y: auto;
+  border-right: 1px solid var(--border);
+  padding: 0.6rem;
+  background: oklch(0.94 0.01 78);
+}
+
+.part-button {
+  width: 100%;
+  border-radius: 0.95rem;
+  padding: 0.7rem 0.75rem;
+  text-align: left;
+  color: var(--ink-dim);
+  transition: background 160ms ease, color 160ms ease, box-shadow 160ms ease;
+}
+
+.part-button:hover {
+  background: oklch(0.99 0.004 75 / 0.78);
+  color: var(--ink);
+}
+
+.part-button:focus-visible,
+.chapter-row:focus-visible {
+  outline: 2px solid oklch(0.58 0.15 264);
+  outline-offset: 2px;
+}
+
+.part-button-active {
+  background: oklch(0.30 0.09 264);
+  color: oklch(0.98 0.004 75);
+  box-shadow: 0 12px 26px oklch(0.30 0.09 264 / 0.18);
+}
+
+.part-kicker {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: 0.69rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.66;
+}
+
+.part-title {
+  margin-top: 0.2rem;
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.8rem;
+  font-weight: 700;
+  line-height: 1.2;
+  text-wrap: auto;
+}
+
+.chapters-rail {
+  min-width: 0;
+  flex: 1;
+  overflow-y: auto;
+  padding: 0.7rem;
+  background: var(--surface);
+}
+
+.chapters-rail-header {
+  position: sticky;
+  top: -12px;
+  z-index: 1;
+  margin: -0.7rem -0.7rem 0.45rem;
+  padding: 0.75rem 0.85rem 0.65rem;
+  border-bottom: 1px solid var(--border);
+  background: oklch(0.99 0.004 75 / 0.96);
+}
+
+.chapters-rail-eyebrow {
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+}
+
+.chapters-rail-title {
+  margin-top: 0.12rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--ink);
+}
+
+.chapter-row {
+  display: block;
+  width: 100%;
+  border-radius: 0.9rem;
+  padding: 0.65rem 0.75rem;
+  text-align: left;
+  color: var(--ink-dim);
+  transition: background 150ms ease, color 150ms ease, box-shadow 150ms ease;
+}
+
+.chapter-row:hover {
+  background: var(--ink-4);
+  color: var(--ink);
+}
+
+.chapter-row-active {
+  background: oklch(0.96 0.035 264);
+  color: oklch(0.33 0.12 264);
+  box-shadow: inset 0 0 0 1px oklch(0.74 0.08 264 / 0.55);
+}
+
+.chapter-number {
+  display: block;
+  margin-bottom: 0.1rem;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  opacity: 0.64;
+}
+
+.chapter-title {
+  display: block;
+  font-size: 0.87rem;
+  font-weight: 650;
+  line-height: 1.25;
+}
+
+.chapter-search-group {
+  padding: 0.35rem 0.7rem 0.6rem;
+}
+
+.chapter-search-heading {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  margin: 0 -0.7rem 0.35rem;
+  border-bottom: 1px solid var(--border);
+  background: oklch(0.98 0.006 78 / 0.96);
+  padding: 0.55rem 0.85rem;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+}
+
+@media (max-width: 1120px) {
+  .chapters-shell {
+    width: 25rem;
+  }
+
+  .parts-rail {
+    width: 9.75rem;
+  }
+}
+
+@media (max-width: 880px) {
+  .chapters-shell {
+    width: 21.5rem;
+  }
+
+  .parts-rail {
+    width: 7.5rem;
+  }
+
+  .part-title,
+  .chapters-rail-title {
+    white-space: normal;
+  }
+}
+
+html.dark .modern-scrollbar {
+  scrollbar-color: oklch(0.42 0.012 60 / 0.9) transparent;
+}
+
+html.dark .modern-scrollbar::-webkit-scrollbar-thumb {
+  background: oklch(0.42 0.012 60 / 0.74);
+  background-clip: padding-box;
+}
+
+html.dark .modern-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: oklch(0.54 0.014 60 / 0.88);
+  background-clip: padding-box;
+}
+
+html.dark .chapters-shell {
+  background:
+    linear-gradient(180deg, oklch(0.21 0.007 60), var(--paper-2) 44%),
+    var(--paper-2);
+}
+
+html.dark .chapters-searchbar,
+html.dark .chapters-rail-header,
+html.dark .chapter-search-heading {
+  background: oklch(0.20 0.006 60 / 0.96);
+}
+
+html.dark .parts-rail {
+  background: oklch(0.17 0.006 60);
+}
+
+html.dark .chapters-rail {
+  background: var(--surface);
+}
+
+html.dark .part-button:hover {
+  background: var(--ink-4);
+}
+
+html.dark .chapter-row-active {
+  background: oklch(0.24 0.055 264);
+  color: oklch(0.78 0.13 264);
+  box-shadow: inset 0 0 0 1px oklch(0.48 0.11 264 / 0.55);
+}
+
 .section-content {
+  max-width: 78ch;
   line-height: 1.75;
   color: #1f2937;
   font-size: 1rem;
+  letter-spacing: 0.005em;
 }
 
 .section-content p {
-  margin: 0 0 1rem;
+  margin: 0 0 1.15rem;
 }
 
 .section-content h1,
@@ -47,8 +439,9 @@ body {
 .section-content h4 {
   font-weight: 700;
   line-height: 1.25;
-  margin: 1.5rem 0 0.75rem;
+  margin: 2rem 0 0.8rem;
   color: #0f172a;
+  letter-spacing: -0.015em;
 }
 
 .section-content h1 {
@@ -57,10 +450,20 @@ body {
 
 .section-content h2 {
   font-size: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid #e2e8f0;
+}
+
+.section-content .reader-subsection-title {
+  margin-top: 0;
+  border-top: 0;
+  padding-top: 0;
+  color: #0f172a;
 }
 
 .section-content h3 {
   font-size: 1.25rem;
+  color: #1e3a8a;
 }
 
 .section-content h4 {
@@ -95,11 +498,11 @@ body {
 .section-content ul,
 .section-content ol {
   padding-left: 1.5rem;
-  margin: 0.75rem 0;
+  margin: 0.75rem 0 1.2rem;
 }
 
 .section-content li {
-  margin-bottom: 0.25rem;
+  margin-bottom: 0.4rem;
 }
 
 .section-content strong,
@@ -131,6 +534,34 @@ body {
 .section-content ::selection {
   background: #93c5fd;
 }
+
+/* ── Section content: dark mode overrides ────────────────────────────────── */
+html.dark .section-content { color: var(--ink); }
+
+html.dark .section-content h1,
+html.dark .section-content h2,
+html.dark .section-content h3,
+html.dark .section-content h4 { color: var(--ink); }
+
+html.dark .section-content strong,
+html.dark .section-content b { color: var(--ink); }
+
+html.dark .section-content blockquote {
+  border-left-color: oklch(0.35 0.006 60);
+  color: var(--ink-dim);
+}
+
+html.dark .section-content th,
+html.dark .section-content td { border-color: oklch(0.30 0.006 60); }
+
+html.dark .section-content th { background: oklch(0.22 0.006 60); }
+
+html.dark .section-content code {
+  background: oklch(0.24 0.006 60);
+  color: var(--ink);
+}
+
+html.dark .section-content ::selection { background: oklch(0.38 0.12 264); }
 
 .annotation-highlight {
   background-color: #fef08a;

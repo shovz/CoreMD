@@ -94,6 +94,7 @@ export interface StageAExamSession {
   shortened_due_to_pool: boolean;
   scope: {
     topics: string[];
+    topic_weights: Record<string, number>;
     part_numbers: number[];
     chapter_ids: string[];
     exclude_answered_correctly: boolean;
@@ -124,6 +125,7 @@ export interface StageAReport {
   shortened_due_to_pool: boolean;
   scope: {
     topics: string[];
+    topic_weights: Record<string, number>;
     part_numbers: number[];
     chapter_ids: string[];
     exclude_answered_correctly: boolean;
@@ -154,6 +156,7 @@ export interface StageAReport {
 
 export interface StageAStartPayload {
   topics?: string[];
+  topic_weights?: Record<string, number>;
   part_numbers?: number[];
   chapter_ids?: string[];
   exclude_answered_correctly?: boolean;
@@ -170,6 +173,7 @@ export interface StageAPreset extends StageAStartPayload {
   preset_id: string;
   name: string;
   topics: string[];
+  topic_weights: Record<string, number>;
   part_numbers: number[];
   chapter_ids: string[];
   exclude_answered_correctly: boolean;
@@ -207,6 +211,7 @@ export const getStageAPresets = () => {
 export const createStageAPreset = (payload: {
   name: string;
   topics?: string[];
+  topic_weights?: Record<string, number>;
   part_numbers?: number[];
   chapter_ids?: string[];
   exclude_answered_correctly?: boolean;
@@ -219,6 +224,7 @@ export const updateStageAPreset = (
   payload: {
     name: string;
     topics?: string[];
+    topic_weights?: Record<string, number>;
     part_numbers?: number[];
     chapter_ids?: string[];
     exclude_answered_correctly?: boolean;

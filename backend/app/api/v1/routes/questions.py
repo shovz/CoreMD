@@ -114,8 +114,23 @@ def _score_stage_a(session_doc: dict) -> dict:
 
 def _normalized_scope(scope: StageAStartRequest | None) -> dict:
     s = scope or StageAStartRequest()
+    normalized_topics = sorted({t.strip() for t in s.topics if isinstance(t, str) and t.strip()})
+    normalized_weights = {}
+    for topic, weight in (s.topic_weights or {}).items():
+        if not isinstance(topic, str):
+            continue
+        topic_key = topic.strip()
+        if not topic_key:
+            continue
+        try:
+            weight_int = int(weight)
+        except (TypeError, ValueError):
+            continue
+        if weight_int > 0:
+            normalized_weights[topic_key] = min(weight_int, 5)
     return {
-        "topics": sorted({t.strip() for t in s.topics if isinstance(t, str) and t.strip()}),
+        "topics": normalized_topics,
+        "topic_weights": normalized_weights,
         "part_numbers": sorted({int(p) for p in s.part_numbers}),
         "chapter_ids": sorted({c.strip() for c in s.chapter_ids if isinstance(c, str) and c.strip()}),
         "exclude_answered_correctly": bool(s.exclude_answered_correctly),
@@ -176,6 +191,22 @@ def _eligible_stage_a_docs(db: Database, user_id: str, scope: dict) -> list[dict
     return filtered
 
 
+def _weighted_sample_without_replacement(docs: list[dict], k: int, topic_weights: dict[str, int]) -> list[dict]:
+    if k <= 0 or not docs:
+        return []
+    weighted_ranked = []
+    for doc in docs:
+        topic = doc.get("topic")
+        weight = int(topic_weights.get(topic, 1))
+        if weight < 1:
+            weight = 1
+        # Efraimidis-Spirakis weighted random sampling without replacement.
+        key = random.random() ** (1.0 / float(weight))
+        weighted_ranked.append((key, doc))
+    weighted_ranked.sort(key=lambda row: row[0], reverse=True)
+    return [doc for _, doc in weighted_ranked[:k]]
+
+
 def _build_stage_a_items(db: Database, user_id: str, scope: dict) -> tuple[list[dict], int, int, bool]:
     docs = _eligible_stage_a_docs(db, user_id, scope)
     if len(docs) == 0:
@@ -185,14 +216,13 @@ def _build_stage_a_items(db: Database, user_id: str, scope: dict) -> tuple[list[
     actual_count = min(requested_count, len(docs))
     shortened = actual_count < requested_count
 
+    topic_weights = scope.get("topic_weights", {}) if isinstance(scope, dict) else {}
+
     by_difficulty: dict[str, list[dict]] = {"easy": [], "medium": [], "hard": []}
     for doc in docs:
         diff = doc.get("difficulty")
         if diff in by_difficulty:
             by_difficulty[diff].append(doc)
-
-    for bucket in by_difficulty.values():
-        random.shuffle(bucket)
 
     targets = {
         "easy": int(actual_count * STAGE_A_BLUEPRINT["easy"]),
@@ -207,15 +237,15 @@ def _build_stage_a_items(db: Database, user_id: str, scope: dict) -> tuple[list[
     for diff, target in targets.items():
         bucket = by_difficulty[diff]
         take = min(target, len(bucket))
-        for doc in bucket[:take]:
+        sampled = _weighted_sample_without_replacement(bucket, take, topic_weights)
+        for doc in sampled:
             selected.append(doc)
             used_ids.add(doc["question_id"])
 
     if len(selected) < actual_count:
         remainder = [doc for doc in docs if doc["question_id"] not in used_ids]
-        random.shuffle(remainder)
         needed = actual_count - len(selected)
-        selected.extend(remainder[:needed])
+        selected.extend(_weighted_sample_without_replacement(remainder, needed, topic_weights))
 
     random.shuffle(selected)
 
@@ -616,6 +646,7 @@ def _preset_to_out(doc: dict) -> dict:
         "topics": doc.get("topics", []),
         "part_numbers": doc.get("part_numbers", []),
         "chapter_ids": doc.get("chapter_ids", []),
+        "topic_weights": doc.get("topic_weights", {}),
         "exclude_answered_correctly": bool(doc.get("exclude_answered_correctly", False)),
         "created_at": doc["created_at"],
         "updated_at": doc["updated_at"],
@@ -648,6 +679,7 @@ def create_stage_a_exam_preset(
     scope = _normalized_scope(
         StageAStartRequest(
             topics=body.topics,
+            topic_weights=body.topic_weights,
             part_numbers=body.part_numbers,
             chapter_ids=body.chapter_ids,
             exclude_answered_correctly=body.exclude_answered_correctly,
@@ -682,6 +714,7 @@ def update_stage_a_exam_preset(
     scope = _normalized_scope(
         StageAStartRequest(
             topics=body.topics,
+            topic_weights=body.topic_weights,
             part_numbers=body.part_numbers,
             chapter_ids=body.chapter_ids,
             exclude_answered_correctly=body.exclude_answered_correctly,

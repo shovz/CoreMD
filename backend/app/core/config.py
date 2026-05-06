@@ -18,7 +18,8 @@ class Settings(BaseSettings):
     OPENAI_API_KEY: str | None = None
 
     class Config:
-        env_file = ".env"  # Load from local .env file by default
+        env_file = ".env"
+        extra = "ignore"
 
 
 # Create a global settings instance

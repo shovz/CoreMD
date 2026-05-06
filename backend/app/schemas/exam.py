@@ -73,6 +73,7 @@ class StageAReportOut(BaseModel):
 
 class StageAStartRequest(BaseModel):
     topics: List[str] = Field(default_factory=list)
+    topic_weights: dict[str, int] = Field(default_factory=dict)
     part_numbers: List[int] = Field(default_factory=list)
     chapter_ids: List[str] = Field(default_factory=list)
     exclude_answered_correctly: bool = False
@@ -88,6 +89,7 @@ class StageAPreviewOut(BaseModel):
 class StageAExamPresetIn(BaseModel):
     name: str = Field(..., min_length=1, max_length=80)
     topics: List[str] = Field(default_factory=list)
+    topic_weights: dict[str, int] = Field(default_factory=dict)
     part_numbers: List[int] = Field(default_factory=list)
     chapter_ids: List[str] = Field(default_factory=list)
     exclude_answered_correctly: bool = False

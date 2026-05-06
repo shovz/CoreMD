@@ -185,7 +185,7 @@ export default function DashboardPage() {
                           </div>
                           <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
                             <div
-                              className="h-full rounded-full bg-blue-500 transition-all"
+                              className="h-full rounded-full bg-[var(--accent)] transition-all"
                               style={{ width: `${Math.round(d.accuracy)}%` }}
                             />
                           </div>
@@ -221,7 +221,7 @@ export default function DashboardPage() {
                         </div>
                         <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
                           <div
-                            className="h-full rounded-full bg-emerald-500 transition-all"
+                            className="h-full rounded-full bg-[var(--success)] transition-all"
                             style={{ width: `${Math.round(t.accuracy)}%` }}
                           />
                         </div>
