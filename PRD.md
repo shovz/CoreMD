@@ -107,11 +107,11 @@ CoreMD simulates this experience: GPT-4o generates a complete rolling case scena
 **Description:** As a resident, I need a custom audio player so I can play, pause, and replay the stage revelation without relying on the default browser audio control.
 
 **Acceptance Criteria:**
-- [ ] New file `frontend/src/components/AudioPlayer.tsx`
-- [ ] Props: `{ src: string; label?: string; autoPlay?: boolean; className?: string }`
-- [ ] Renders a custom play/pause button, progress bar, and elapsed/total time display over a hidden `<audio>` element via `useRef`
-- [ ] `autoPlay` triggers playback once `src` is set
-- [ ] Typecheck passes
+- [x] New file `frontend/src/components/AudioPlayer.tsx`
+- [x] Props: `{ src: string; label?: string; autoPlay?: boolean; className?: string }`
+- [x] Renders a custom play/pause button, progress bar, and elapsed/total time display over a hidden `<audio>` element via `useRef`
+- [x] `autoPlay` triggers playback once `src` is set
+- [x] Typecheck passes
 
 ### US-009: Frontend — AudioRecorder component
 **Description:** As a resident, I need a recording UI so I can answer questions by speaking instead of typing.
