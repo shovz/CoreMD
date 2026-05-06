@@ -130,11 +130,11 @@ CoreMD simulates this experience: GPT-4o generates a complete rolling case scena
 **Description:** As a resident preparing for Stage B, I want to configure an oral exam session so I can practise the case scenario format.
 
 **Acceptance Criteria:**
-- [ ] New file `frontend/src/pages/StageBExamPage.tsx`
-- [ ] Settings phase UI: topic multi-select (same topic list used by Stage A), case count radio (1/2/3, default 2), duration selector (30/45/60/90 min), difficulty selector (Easy/Medium/Hard), voice dropdown (alloy/echo/fable/onyx/nova/shimmer)
-- [ ] "Generate Exam" button calls `startStageBSession`; shows loading state with message "Generating cases…" during the GPT-4o call (~5–10s)
-- [ ] "Resume Active Session" button appears if `getActiveStageBSession` returns a result; clicking it loads the active session directly into running phase
-- [ ] Typecheck passes
+- [x] New file `frontend/src/pages/StageBExamPage.tsx`
+- [x] Settings phase UI: topic multi-select (same topic list used by Stage A), case count radio (1/2/3, default 2), duration selector (30/45/60/90 min), difficulty selector (Easy/Medium/Hard), voice dropdown (alloy/echo/fable/onyx/nova/shimmer)
+- [x] "Generate Exam" button calls `startStageBSession`; shows loading state with message "Generating cases…" during the GPT-4o call (~5–10s)
+- [x] "Resume Active Session" button appears if `getActiveStageBSession` returns a result; clicking it loads the active session directly into running phase
+- [x] Typecheck passes
 
 ### US-011: Frontend — StageBExamPage — running phase
 **Description:** As a resident, I want to work through each stage of the rolling case so I can practise clinical reasoning in a realistic oral exam format.

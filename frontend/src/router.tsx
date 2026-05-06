@@ -13,6 +13,7 @@ import HistoryPage from "./pages/HistoryPage";
 import BookmarksPage from "./pages/BookmarksPage";
 import NotesPage from "./pages/NotesPage";
 import ExamsPage from "./pages/ExamsPage";
+import StageBExamPage from "./pages/StageBExamPage";
 import AppShell from "./components/AppShell";
 import { AiContextProvider } from "./context/AiContext";
 import { AuthProvider, useAuthContext } from "./context/AuthContext";
@@ -67,6 +68,7 @@ export default function AppRouter() {
             <Route path="/history" element={<HistoryPage />} />
             <Route path="/bookmarks" element={<BookmarksPage />} />
             <Route path="/notes" element={<NotesPage />} />
+            <Route path="/stage-b" element={<StageBExamPage />} />
           </Route>
         </Route>
       </Routes>
