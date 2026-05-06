@@ -117,14 +117,14 @@ CoreMD simulates this experience: GPT-4o generates a complete rolling case scena
 **Description:** As a resident, I need a recording UI so I can answer questions by speaking instead of typing.
 
 **Acceptance Criteria:**
-- [ ] New file `frontend/src/components/AudioRecorder.tsx`
-- [ ] Props: `{ onRecordingComplete: (blob: Blob) => void; disabled?: boolean; maxSeconds?: number }`
-- [ ] Uses `useAudioRecorder` hook
-- [ ] Shows: microphone button (toggles recording), live duration counter during recording, simple CSS animation indicating active recording
-- [ ] After stop: shows playback preview via `AudioPlayer` + "Use This Recording" confirm button
-- [ ] Calls `onRecordingComplete(blob)` when confirmed
-- [ ] Shows readable error string if microphone permission denied
-- [ ] Typecheck passes
+- [x] New file `frontend/src/components/AudioRecorder.tsx`
+- [x] Props: `{ onRecordingComplete: (blob: Blob) => void; disabled?: boolean; maxSeconds?: number }`
+- [x] Uses `useAudioRecorder` hook
+- [x] Shows: microphone button (toggles recording), live duration counter during recording, simple CSS animation indicating active recording
+- [x] After stop: shows playback preview via `AudioPlayer` + "Use This Recording" confirm button
+- [x] Calls `onRecordingComplete(blob)` when confirmed
+- [x] Shows readable error string if microphone permission denied
+- [x] Typecheck passes
 
 ### US-010: Frontend — StageBExamPage — settings phase
 **Description:** As a resident preparing for Stage B, I want to configure an oral exam session so I can practise the case scenario format.
