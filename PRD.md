@@ -160,11 +160,11 @@ CoreMD simulates this experience: GPT-4o generates a complete rolling case scena
 **Description:** As a resident, I want to review my performance after completing a Stage B session so I can identify my weak areas.
 
 **Acceptance Criteria:**
-- [ ] Review phase shows overall stats: total questions answered, pass count, average score (0–10)
-- [ ] Per-case accordion: case topic + patient summary header; expandable per-stage sections
-- [ ] Per stage: revelation text, then per question: student answer, model answer, score badge, AI feedback, key points covered/missed
-- [ ] "Back to Exams" button navigates to `/exams`
-- [ ] Typecheck passes
+- [x] Review phase shows overall stats: total questions answered, pass count, average score (0–10)
+- [x] Per-case accordion: case topic + patient summary header; expandable per-stage sections
+- [x] Per stage: revelation text, then per question: student answer, model answer, score badge, AI feedback, key points covered/missed
+- [x] "Back to Exams" button navigates to `/exams`
+- [x] Typecheck passes
 
 ### US-013: Frontend — routing and navigation
 **Description:** As a resident, I need Stage B accessible from the sidebar and a protected route so I can navigate to it.

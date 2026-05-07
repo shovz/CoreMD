@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { AudioPlayer } from "../components/AudioPlayer";
 import { AudioRecorder } from "../components/AudioRecorder";
 import { getQuestionTopics } from "../api/questionsApi";
@@ -7,14 +8,19 @@ import {
   fetchStageBTts,
   finalizeStageBSession,
   getActiveStageBSession,
+  getStageBReport,
   startStageBSession,
   submitStageBAnswer,
   transcribeStageBRecording,
   type Difficulty,
   type StageBAnswerResult,
+  type StageBCaseReport,
   type StageBQuestion,
+  type StageBQuestionFull,
+  type StageBReport,
   type StageBSession,
   type StageBStage,
+  type StageBStageReport,
   type StageBStartPayload,
 } from "../api/stageBApi";
 import { useExamGuard } from "../context/ExamGuardContext";
@@ -99,7 +105,7 @@ function RunningPhase({
   onSessionEnd,
 }: {
   session: StageBSession;
-  onSessionEnd: () => void;
+  onSessionEnd: (report: StageBReport | null) => void;
 }) {
   const [session, setSession] = useState(initialSession);
   const [selCaseIdx, setSelCaseIdx] = useState(initialSession.current_case_idx);
@@ -126,7 +132,13 @@ function RunningPhase({
     const doFinalize = () => {
       if (finalizedRef.current) return;
       finalizedRef.current = true;
-      finalizeStageBSession(session.session_id).finally(onSessionEnd);
+      finalizeStageBSession(session.session_id)
+        .then(res => onSessionEnd(res.data))
+        .catch(() =>
+          getStageBReport(session.session_id)
+            .then(res => onSessionEnd(res.data))
+            .catch(() => onSessionEnd(null)),
+        );
     };
     if (remainingSeconds <= 0) { doFinalize(); return; }
     const id = setInterval(() => {
@@ -219,12 +231,17 @@ function RunningPhase({
     finalizedRef.current = true;
     setFinalizing(true);
     try {
-      await finalizeStageBSession(session.session_id);
+      const res = await finalizeStageBSession(session.session_id);
+      onSessionEnd(res.data);
     } catch {
-      // may already be finalized by timer
+      try {
+        const reportRes = await getStageBReport(session.session_id);
+        onSessionEnd(reportRes.data);
+      } catch {
+        onSessionEnd(null);
+      }
     } finally {
       setFinalizing(false);
-      onSessionEnd();
     }
   }, [session.session_id, onSessionEnd]);
 
@@ -557,6 +574,212 @@ function RunningPhase({
   );
 }
 
+// ---- Review Phase -----------------------------------------------------------
+
+function ScoreBadge({ score }: { score: number | null }) {
+  if (score === null) return null;
+  const cls =
+    score >= 7 ? "bg-green-100 text-green-700" :
+    score >= 4 ? "bg-amber-100 text-amber-700" :
+    "bg-red-100 text-red-700";
+  return (
+    <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-bold ${cls}`}>
+      {score}/10
+    </span>
+  );
+}
+
+function QuestionReview({ q, num }: { q: StageBQuestionFull; num: number }) {
+  const missed = (q.key_points ?? []).filter(kp => !(q.key_points_hit ?? []).includes(kp));
+  return (
+    <div className="border border-gray-200 rounded-lg overflow-hidden">
+      <div className="bg-gray-50 px-4 py-3 border-b border-gray-200">
+        <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Question {num}</p>
+        <p className="text-sm font-medium text-gray-800">{q.stem}</p>
+      </div>
+      <div className="p-4 space-y-3">
+        <div className="flex items-center gap-2">
+          <ScoreBadge score={q.score} />
+          {q.score === null && <span className="text-xs text-gray-400">Not answered</span>}
+        </div>
+        {q.student_answer && (
+          <div>
+            <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Your Answer</p>
+            <p className="text-sm text-gray-700 whitespace-pre-wrap">{q.student_answer}</p>
+          </div>
+        )}
+        {q.model_answer && (
+          <div>
+            <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Model Answer</p>
+            <p className="text-sm text-gray-700 bg-gray-50 border border-gray-100 p-3 rounded-md whitespace-pre-wrap">
+              {q.model_answer}
+            </p>
+          </div>
+        )}
+        {q.feedback && (
+          <div>
+            <p className="text-xs font-semibold text-gray-500 uppercase mb-1">AI Feedback</p>
+            <p className="text-sm text-gray-700">{q.feedback}</p>
+          </div>
+        )}
+        {q.key_points_hit && q.key_points_hit.length > 0 && (
+          <div>
+            <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Key Points Covered</p>
+            <ul className="space-y-0.5">
+              {q.key_points_hit.map((kp, ki) => (
+                <li key={ki} className="text-xs text-green-700 flex items-start gap-1">
+                  <span className="mt-0.5">✓</span>
+                  <span>{kp}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+        {missed.length > 0 && (
+          <div>
+            <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Key Points Missed</p>
+            <ul className="space-y-0.5">
+              {missed.map((kp, ki) => (
+                <li key={ki} className="text-xs text-red-600 flex items-start gap-1">
+                  <span className="mt-0.5">✗</span>
+                  <span>{kp}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function StageSection({ stage }: { stage: StageBStageReport }) {
+  const [open, setOpen] = useState(true);
+  return (
+    <div className="border-t">
+      <button
+        onClick={() => setOpen(prev => !prev)}
+        className="w-full flex items-center justify-between px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+      >
+        <span>{stage.title}</span>
+        <svg
+          viewBox="0 0 20 20"
+          fill="currentColor"
+          className={`h-4 w-4 text-gray-400 transition-transform ${open ? "rotate-180" : ""}`}
+        >
+          <path
+            fillRule="evenodd"
+            d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z"
+            clipRule="evenodd"
+          />
+        </svg>
+      </button>
+      {open && (
+        <div className="px-4 pb-4 space-y-4">
+          <p className="text-sm text-gray-700 bg-gray-50 border border-gray-100 rounded-md p-3">
+            {stage.context}
+          </p>
+          {stage.questions.map((q, qi) => (
+            <QuestionReview key={q.question_id} q={q} num={qi + 1} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function CaseAccordion({ caseReport, caseNum }: { caseReport: StageBCaseReport; caseNum: number }) {
+  const [open, setOpen] = useState(true);
+  return (
+    <div className="border border-gray-200 rounded-lg overflow-hidden">
+      <button
+        onClick={() => setOpen(prev => !prev)}
+        className="w-full flex items-start justify-between px-4 py-3 bg-gray-50 hover:bg-gray-100 transition-colors text-left gap-4"
+      >
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-gray-800">
+            Case {caseNum}: {caseReport.title}
+          </p>
+          <p className="text-xs text-gray-500 mt-0.5 truncate">{caseReport.chief_complaint}</p>
+        </div>
+        <div className="flex items-center gap-3 shrink-0">
+          {caseReport.avg_score !== null && (
+            <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-bold ${
+              caseReport.avg_score >= 7 ? "bg-green-100 text-green-700" :
+              caseReport.avg_score >= 4 ? "bg-amber-100 text-amber-700" :
+              "bg-red-100 text-red-700"
+            }`}>
+              Avg {caseReport.avg_score.toFixed(1)}/10
+            </span>
+          )}
+          <svg
+            viewBox="0 0 20 20"
+            fill="currentColor"
+            className={`h-4 w-4 text-gray-400 transition-transform ${open ? "rotate-180" : ""}`}
+          >
+            <path
+              fillRule="evenodd"
+              d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z"
+              clipRule="evenodd"
+            />
+          </svg>
+        </div>
+      </button>
+      {open && (
+        <div>
+          {caseReport.stages.map(stage => (
+            <StageSection key={stage.stage_index} stage={stage} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ReviewPhase({ report }: { report: StageBReport }) {
+  const navigate = useNavigate();
+  const allQuestions = report.cases.flatMap(c => c.stages.flatMap(s => s.questions));
+  const passCount = allQuestions.filter(q => q.score !== null && q.score >= 6).length;
+
+  return (
+    <div className="max-w-3xl mx-auto px-6 py-8 space-y-8">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold">Exam Review</h1>
+          <p className="text-sm text-gray-500 mt-0.5">
+            {report.difficulty} · {report.case_count} case{report.case_count !== 1 ? "s" : ""} · {report.duration_minutes} min
+          </p>
+        </div>
+        <button
+          onClick={() => navigate("/exams")}
+          className="shrink-0 px-4 py-2 border border-gray-300 text-gray-700 rounded-md text-sm font-medium hover:bg-gray-50 transition-colors"
+        >
+          Back to Exams
+        </button>
+      </div>
+
+      <div className="grid grid-cols-3 gap-4">
+        {[
+          { label: "Questions Answered", value: `${report.answered_count}/${report.total_questions}` },
+          { label: "Passed (≥6/10)", value: String(passCount) },
+          { label: "Average Score", value: report.avg_score !== null ? `${report.avg_score.toFixed(1)}/10` : "—" },
+        ].map(({ label, value }) => (
+          <div key={label} className="border border-gray-200 rounded-lg p-4 text-center">
+            <p className="text-2xl font-bold text-gray-800">{value}</p>
+            <p className="text-xs text-gray-500 mt-0.5">{label}</p>
+          </div>
+        ))}
+      </div>
+
+      <div className="space-y-4">
+        {report.cases.map((c, ci) => (
+          <CaseAccordion key={c.case_id} caseReport={c} caseNum={ci + 1} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ---- Main Page Component ---------------------------------------------------
 
 export default function StageBExamPage() {
@@ -568,6 +791,7 @@ export default function StageBExamPage() {
   const [loadingSettings, setLoadingSettings] = useState(true);
   const [activeSession, setActiveSession] = useState<StageBSession | null>(null);
   const [session, setSession] = useState<StageBSession | null>(null);
+  const [report, setReport] = useState<StageBReport | null>(null);
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -657,22 +881,30 @@ export default function StageBExamPage() {
   };
 
   if (phase === "running" && session) {
-    return <RunningPhase session={session} onSessionEnd={() => setPhase("review")} />;
+    return (
+      <RunningPhase
+        session={session}
+        onSessionEnd={r => { setReport(r); setPhase("review"); }}
+      />
+    );
   }
 
   if (phase === "review") {
-    return (
-      <div className="p-6 max-w-3xl mx-auto text-center py-20">
-        <h1 className="text-2xl font-bold mb-2">Exam Complete</h1>
-        <p className="text-gray-500 mb-6">Your session has been finalized.</p>
-        <button
-          onClick={() => { setPhase("settings"); setSession(null); }}
-          className="px-4 py-2 bg-indigo-600 text-white rounded-md text-sm font-medium hover:bg-indigo-700 transition-colors"
-        >
-          Start New Exam
-        </button>
-      </div>
-    );
+    if (!report) {
+      return (
+        <div className="p-6 max-w-3xl mx-auto text-center py-20">
+          <h1 className="text-2xl font-bold mb-2">Exam Complete</h1>
+          <p className="text-gray-500 mb-6">Report unavailable.</p>
+          <button
+            onClick={() => { setPhase("settings"); setSession(null); setReport(null); }}
+            className="px-4 py-2 bg-indigo-600 text-white rounded-md text-sm font-medium hover:bg-indigo-700 transition-colors"
+          >
+            Start New Exam
+          </button>
+        </div>
+      );
+    }
+    return <ReviewPhase report={report} />;
   }
 
   return (
