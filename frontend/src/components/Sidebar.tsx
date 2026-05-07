@@ -68,11 +68,21 @@ function ExamsIcon() {
   );
 }
 
+function MicrophoneIcon() {
+  return (
+    <svg className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M19 10v2a7 7 0 01-14 0v-2M12 19v4M8 23h8" />
+    </svg>
+  );
+}
+
 const navItems = [
   { to: "/dashboard", label: "Dashboard", icon: <DashboardIcon />, end: true },
   { to: "/chapters", label: "Chapters", icon: <ChaptersIcon />, end: false },
   { to: "/questions", label: "Question Bank", icon: <QuestionsIcon />, end: false },
-  { to: "/exams", label: "Exams", icon: <ExamsIcon />, end: false },
+  { to: "/exams", label: "Exams", icon: <ExamsIcon />, end: true },
+  { to: "/exams/stage-b", label: "Stage B Oral", icon: <MicrophoneIcon />, end: false, subItem: true },
   { to: "/cases", label: "Cases", icon: <CasesIcon />, end: false },
   { to: "/history", label: "History", icon: <HistoryIcon />, end: false },
   { to: "/bookmarks", label: "Bookmarks", icon: <BookmarksIcon />, end: false },
@@ -122,13 +132,15 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
       </div>
 
       <nav className="flex-1 space-y-0.5 px-3">
-        {navItems.map(({ to, label, icon, end }) => {
+        {navItems.map(({ to, label, icon, end, subItem }) => {
           const isActive = end ? location.pathname === to : location.pathname.startsWith(to);
           return (
             <button
               key={to}
               onClick={() => handleNav(to)}
-              className={`flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+              className={`flex w-full items-center gap-3 rounded-md py-2 text-sm font-medium transition-colors ${
+                subItem ? "pl-7 pr-3" : "px-3"
+              } ${
                 isActive
                   ? "bg-blue-600 text-white"
                   : "text-[var(--ink-dim)] hover:bg-[var(--ink-4)] hover:text-[var(--ink)]"

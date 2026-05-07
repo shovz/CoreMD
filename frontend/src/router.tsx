@@ -68,7 +68,7 @@ export default function AppRouter() {
             <Route path="/history" element={<HistoryPage />} />
             <Route path="/bookmarks" element={<BookmarksPage />} />
             <Route path="/notes" element={<NotesPage />} />
-            <Route path="/stage-b" element={<StageBExamPage />} />
+            <Route path="/exams/stage-b" element={<StageBExamPage />} />
           </Route>
         </Route>
       </Routes>

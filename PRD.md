@@ -170,9 +170,9 @@ CoreMD simulates this experience: GPT-4o generates a complete rolling case scena
 **Description:** As a resident, I need Stage B accessible from the sidebar and a protected route so I can navigate to it.
 
 **Acceptance Criteria:**
-- [ ] `frontend/src/router.tsx`: protected route `/exams/stage-b` → `StageBExamPage`
-- [ ] `frontend/src/components/Sidebar.tsx`: "Stage B Oral" nav entry beneath the "Exams" entry; uses a microphone SVG icon consistent in style with existing nav icons
-- [ ] Typecheck passes
+- [x] `frontend/src/router.tsx`: protected route `/exams/stage-b` → `StageBExamPage`
+- [x] `frontend/src/components/Sidebar.tsx`: "Stage B Oral" nav entry beneath the "Exams" entry; uses a microphone SVG icon consistent in style with existing nav icons
+- [x] Typecheck passes
 
 ## Non-Goals
 
