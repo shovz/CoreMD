@@ -140,10 +140,10 @@ CoreMD simulates this experience: GPT-4o generates a complete rolling case scena
 **Description:** As a resident, I want to work through each stage of the rolling case so I can practise clinical reasoning in a realistic oral exam format.
 
 **Acceptance Criteria:**
-- [ ] Running phase layout: left sidebar = case/stage navigator; main area = current stage content
-- [ ] Case/stage navigator shows all cases and their stages with status indicators (unanswered / in-progress / complete); future cases are locked until the previous case is fully completed
-- [ ] Timer countdown displayed in top-right; auto-finalizes session on expiry
-- [ ] Per-stage main area flow:
+- [x] Running phase layout: left sidebar = case/stage navigator; main area = current stage content
+- [x] Case/stage navigator shows all cases and their stages with status indicators (unanswered / in-progress / complete); future cases are locked until the previous case is fully completed
+- [x] Timer countdown displayed in top-right; auto-finalizes session on expiry
+- [x] Per-stage main area flow:
   - Stage title badge and patient context line
   - `AudioPlayer` — TTS fetched via `fetchStageBTts` on stage load; auto-plays; revelation text hidden until audio finishes or user clicks "Show Text"
   - Questions appear in sequence below the audio player; each question shows after the previous is answered
@@ -152,9 +152,9 @@ CoreMD simulates this experience: GPT-4o generates a complete rolling case scena
   - Audio mode: `<AudioRecorder>` → on complete calls `transcribeStageBRecording` → editable transcript textarea
   - Submit calls `submitStageBAnswer`; inline result displayed: score badge (colour-coded), examiner feedback, key points covered/missed, model answer
   - After all questions in stage answered: "Next Stage →" button (calls `advanceStage`)
-- [ ] Previous TTS object URLs revoked when stage changes (memory cleanup)
-- [ ] `setExamRunning(phase === "running")` wired to existing exam guard (same pattern as ExamsPage.tsx)
-- [ ] Typecheck passes; verify full flow works in browser
+- [x] Previous TTS object URLs revoked when stage changes (memory cleanup)
+- [x] `setExamRunning(phase === "running")` wired to existing exam guard (same pattern as ExamsPage.tsx)
+- [x] Typecheck passes; verify full flow works in browser
 
 ### US-012: Frontend — StageBExamPage — review phase
 **Description:** As a resident, I want to review my performance after completing a Stage B session so I can identify my weak areas.
