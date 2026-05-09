@@ -12,6 +12,7 @@ import CaseDetailPage from "./pages/CaseDetailPage";
 import HistoryPage from "./pages/HistoryPage";
 import BookmarksPage from "./pages/BookmarksPage";
 import NotesPage from "./pages/NotesPage";
+import ExamsLandingPage from "./pages/ExamsLandingPage";
 import ExamsPage from "./pages/ExamsPage";
 import StageBExamPage from "./pages/StageBExamPage";
 import AppShell from "./components/AppShell";
@@ -60,15 +61,18 @@ export default function AppRouter() {
           <Route element={<ProtectedRoute />}>
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/chapters" element={<ChaptersPage />} />
+            <Route path="/chapters/:chapterId" element={<ChaptersPage />} />
+            <Route path="/chapters/:chapterId/sections/:sectionId" element={<ChaptersPage />} />
             <Route path="/questions" element={<QuestionsPage />} />
-            <Route path="/exams" element={<ExamsPage />} />
+            <Route path="/exams" element={<ExamsLandingPage />} />
+            <Route path="/exams/stage-a" element={<ExamsPage />} />
+            <Route path="/exams/stage-b" element={<StageBExamPage />} />
             <Route path="/questions/:id" element={<QuestionDetailPage />} />
             <Route path="/cases" element={<CasesPage />} />
             <Route path="/cases/:id" element={<CaseDetailPage />} />
             <Route path="/history" element={<HistoryPage />} />
             <Route path="/bookmarks" element={<BookmarksPage />} />
             <Route path="/notes" element={<NotesPage />} />
-            <Route path="/exams/stage-b" element={<StageBExamPage />} />
           </Route>
         </Route>
       </Routes>

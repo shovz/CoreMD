@@ -129,6 +129,27 @@ export interface StageBAnswerPayload {
   answer_mode: AnswerMode;
 }
 
+export interface StageBChatMessage {
+  role: "user" | "assistant";
+  content: string;
+}
+
+export interface StageBChatPayload {
+  message: string;
+  history: StageBChatMessage[];
+}
+
+export interface StageBSessionSummary {
+  session_id: string;
+  status: string;
+  difficulty: Difficulty;
+  case_count: number;
+  duration_minutes: number;
+  voice: string;
+  started_at: string;
+  finalized_at: string | null;
+}
+
 // ---- Session management ---------------------------------------------------
 
 export const startStageBSession = (payload: StageBStartPayload = {}) =>
@@ -199,3 +220,25 @@ export const submitStageBAnswer = (
     `/stage-b/sessions/${sessionId}/answer/${caseIdx}/${stageIdx}/${questionNum}`,
     payload,
   );
+
+// ---- Examiner chat --------------------------------------------------------
+
+export const chatWithExaminer = (
+  sessionId: string,
+  caseIdx: number,
+  stageIdx: number,
+  questionNum: number,
+  payload: StageBChatPayload,
+) =>
+  api.post<{ reply: string }>(
+    `/stage-b/sessions/${sessionId}/chat/${caseIdx}/${stageIdx}/${questionNum}`,
+    payload,
+  );
+
+// ---- Session history / retake ---------------------------------------------
+
+export const listStageBSessions = () =>
+  api.get<StageBSessionSummary[]>("/stage-b/sessions");
+
+export const retakeStageBSession = (sessionId: string) =>
+  api.post<StageBSession>(`/stage-b/sessions/${sessionId}/retake`);

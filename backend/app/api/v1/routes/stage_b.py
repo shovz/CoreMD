@@ -14,8 +14,11 @@ from app.db.deps import mongo_db, redis_client
 from app.schemas.stage_b import (
     StageBAnswerCreate,
     StageBAnswerResult,
+    StageBChatReply,
+    StageBChatRequest,
     StageBReportOut,
     StageBSessionOut,
+    StageBSessionSummary,
     StageBStartRequest,
 )
 from app.services.audio_service import build_stage_tts_text, get_or_generate_tts, transcribe_audio
@@ -98,9 +101,9 @@ def _session_to_out(session_doc: dict) -> dict:
         "voice": session_doc["voice"],
         "case_count": session_doc["case_count"],
         "duration_minutes": session_doc["duration_minutes"],
-        "started_at": session_doc["started_at"],
-        "expires_at": session_doc["expires_at"],
-        "finalized_at": session_doc.get("finalized_at"),
+        "started_at": _to_utc(session_doc["started_at"]),
+        "expires_at": _to_utc(session_doc["expires_at"]),
+        "finalized_at": _to_utc(session_doc["finalized_at"]) if session_doc.get("finalized_at") else None,
         "current_case_idx": session_doc["current_case_idx"],
         "current_stage_idx": session_doc["current_stage_idx"],
         "cases": cases,
@@ -230,6 +233,7 @@ def _build_case_doc(raw_case: dict, case_index: int, difficulty: str, topic: str
             "stage_index": stage_index,
             "title": raw_stage.get("title", f"Stage {stage_index + 1}"),
             "context": raw_stage.get("revelation", ""),
+            "available_data": raw_stage.get("available_data", {}),
             "questions": questions,
         })
     stages.sort(key=lambda s: s["stage_index"])
@@ -312,6 +316,12 @@ def get_active_stage_b_session(
         sort=[("started_at", -1)],
     )
     if not active:
+        raise HTTPException(status_code=404, detail="No active Stage B session")
+    if _remaining_seconds(active) <= 0:
+        db["stage_b_sessions"].update_one(
+            {"_id": active["_id"]},
+            {"$set": {"status": "expired", "finalized_at": datetime.now(timezone.utc)}},
+        )
         raise HTTPException(status_code=404, detail="No active Stage B session")
     return _session_to_out(active)
 
@@ -521,3 +531,163 @@ def get_session_report(
     if session["status"] != "finalized":
         raise HTTPException(status_code=409, detail="Session is not finalized")
     return _compute_report(session)
+
+
+_EXAMINER_SYSTEM = """\
+You are a senior internal medicine examiner conducting an oral exam.
+
+QUESTION ASKED TO STUDENT:
+{stem}
+
+CLINICAL CONTEXT PRESENTED TO STUDENT:
+{context}
+
+ADDITIONAL CLINICAL DATA (share this when the student asks):
+- Vitals: {vitals}
+- Physical examination: {physical_exam}
+- Laboratory results: {labs}
+- Imaging / procedures: {imaging}
+- Additional history: {history}
+
+INSTRUCTIONS:
+- When the student asks about clinical data (vitals, labs, imaging, exam findings, history) — answer with the specific data listed above
+- Be a helpful examiner: provide the clinical information, do not withhold it
+- Do NOT reveal the diagnosis, model answer, or grading key points
+- If the student directly asks for the diagnosis or answer, say: "That's for you to determine — what does the data suggest to you?"
+- Respond in the same language the student writes in
+- Keep responses concise (1–3 sentences)\
+"""
+
+
+@router.post(
+    "/sessions/{session_id}/chat/{case_idx}/{stage_idx}/{question_num}",
+    response_model=StageBChatReply,
+)
+def chat_with_examiner(
+    session_id: str,
+    case_idx: int,
+    stage_idx: int,
+    question_num: int,
+    body: StageBChatRequest,
+    current_user: str = Depends(get_current_user_id),
+    db: Database = Depends(mongo_db),
+):
+    session = _get_session(db, session_id, current_user)
+    if session["status"] != "active":
+        raise HTTPException(status_code=409, detail="Session is not active")
+
+    cases = session["cases"]
+    if case_idx < 0 or case_idx >= len(cases):
+        raise HTTPException(status_code=400, detail="case_idx out of range")
+    stages = cases[case_idx]["stages"]
+    if stage_idx < 0 or stage_idx >= len(stages):
+        raise HTTPException(status_code=400, detail="stage_idx out of range")
+    questions = stages[stage_idx]["questions"]
+    if question_num < 0 or question_num >= len(questions):
+        raise HTTPException(status_code=400, detail="question_num out of range")
+
+    q = questions[question_num]
+    stage = stages[stage_idx]
+    avail = stage.get("available_data", {})
+    system_prompt = _EXAMINER_SYSTEM.format(
+        stem=q["stem"],
+        context=stage["context"],
+        vitals=avail.get("vitals", "not recorded"),
+        physical_exam=avail.get("physical_exam", "not recorded"),
+        labs=avail.get("labs", "not recorded"),
+        imaging=avail.get("imaging", "not yet performed"),
+        history=avail.get("history", "not available"),
+    )
+
+    messages = [{"role": "system", "content": system_prompt}]
+    for msg in body.history:
+        messages.append({"role": msg.role, "content": msg.content})
+    messages.append({"role": "user", "content": body.message})
+
+    client = OpenAI(api_key=settings.OPENAI_API_KEY)
+    completion = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=messages,
+        temperature=0.7,
+        max_tokens=300,
+    )
+    reply = completion.choices[0].message.content or ""
+    return {"reply": reply}
+
+
+@router.get("/sessions", response_model=list[StageBSessionSummary])
+def list_sessions(
+    current_user: str = Depends(get_current_user_id),
+    db: Database = Depends(mongo_db),
+):
+    docs = db["stage_b_sessions"].find(
+        {"user_id": ObjectId(current_user), "status": {"$in": ["finalized", "expired"]}},
+        sort=[("started_at", -1)],
+        limit=10,
+    )
+    return [
+        {
+            "session_id": d["session_id"],
+            "status": d["status"],
+            "difficulty": d["difficulty"],
+            "case_count": d["case_count"],
+            "duration_minutes": d["duration_minutes"],
+            "voice": d["voice"],
+            "started_at": d["started_at"],
+            "finalized_at": d.get("finalized_at"),
+        }
+        for d in docs
+    ]
+
+
+@router.post("/sessions/{session_id}/retake", response_model=StageBSessionOut)
+def retake_session(
+    session_id: str,
+    current_user: str = Depends(get_current_user_id),
+    db: Database = Depends(mongo_db),
+):
+    old = _get_session(db, session_id, current_user)
+    if old["status"] == "active":
+        raise HTTPException(status_code=409, detail="Cannot retake an active session")
+
+    now = datetime.now(timezone.utc)
+    duration = old["duration_minutes"]
+
+    new_cases = []
+    for case in old["cases"]:
+        new_stages = []
+        for stage in case["stages"]:
+            new_questions = [
+                {
+                    **q,
+                    "student_answer": None,
+                    "answer_mode": None,
+                    "score": None,
+                    "feedback": None,
+                    "key_points_hit": None,
+                    "answered_at": None,
+                }
+                for q in stage["questions"]
+            ]
+            new_stages.append({**stage, "questions": new_questions})
+        new_cases.append({**case, "stages": new_stages})
+
+    new_doc = {
+        "session_id": f"stage_b_{uuid.uuid4().hex[:12]}",
+        "user_id": old["user_id"],
+        "exam_type": "stage-b",
+        "status": "active",
+        "difficulty": old["difficulty"],
+        "voice": old["voice"],
+        "case_count": old["case_count"],
+        "duration_minutes": duration,
+        "started_at": now,
+        "expires_at": now + timedelta(minutes=duration),
+        "finalized_at": None,
+        "current_case_idx": 0,
+        "current_stage_idx": 0,
+        "cases": new_cases,
+        "report": None,
+    }
+    db["stage_b_sessions"].insert_one(new_doc)
+    return _session_to_out(new_doc)

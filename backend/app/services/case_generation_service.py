@@ -14,7 +14,14 @@ Generate a 5-stage rolling case scenario as valid JSON matching this exact schem
     {
       "stage_num": 1,
       "title": "<stage title>",
-      "revelation": "<clinical information revealed at this stage>",
+      "revelation": "<clinical information revealed at this stage — the narrative the student reads>",
+      "available_data": {
+        "vitals": "<specific vital signs with numbers, e.g. T 38.9C, HR 105, BP 115/75, RR 22, O2 sat 91% RA>",
+        "physical_exam": "<key physical examination findings with detail>",
+        "labs": "<relevant lab results with values, e.g. WBC 15,500, CRP 85 mg/L>",
+        "imaging": "<state explicitly whether each study was done and what it shows, e.g. 'CXR performed: right lower lobe consolidation. CT chest: not yet ordered.'>",
+        "history": "<additional patient history not in the revelation — PMH, social hx, medications, allergies>"
+      },
       "questions": [
         {
           "question_num": 1,
@@ -31,6 +38,10 @@ Generate a 5-stage rolling case scenario as valid JSON matching this exact schem
 Rules:
 - Exactly 5 stages. Each stage has 1-3 questions.
 - Difficulty levels: easy (straightforward presentation), medium (atypical features), hard (diagnostic dilemma with comorbidities).
+- available_data must be stage-appropriate: only include data that would realistically be available at that point in the encounter (e.g. Stage 1 = basic workup; later stages = follow-up results, advanced imaging, specialist findings).
+- available_data values must be specific with realistic clinical numbers — not vague.
+- available_data must be internally consistent with the case diagnosis and progression across all 5 stages.
+- For imaging: explicitly state if a study was NOT yet ordered (e.g. "CT chest: not yet ordered at this stage").
 - Return ONLY valid JSON. No prose, no markdown fences."""
 
 

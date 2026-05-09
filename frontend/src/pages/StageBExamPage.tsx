@@ -5,20 +5,25 @@ import { AudioRecorder } from "../components/AudioRecorder";
 import { getQuestionTopics } from "../api/questionsApi";
 import {
   advanceStage as apiAdvanceStage,
+  chatWithExaminer,
   fetchStageBTts,
   finalizeStageBSession,
   getActiveStageBSession,
   getStageBReport,
+  listStageBSessions,
+  retakeStageBSession,
   startStageBSession,
   submitStageBAnswer,
   transcribeStageBRecording,
   type Difficulty,
   type StageBAnswerResult,
   type StageBCaseReport,
+  type StageBChatMessage,
   type StageBQuestion,
   type StageBQuestionFull,
   type StageBReport,
   type StageBSession,
+  type StageBSessionSummary,
   type StageBStage,
   type StageBStageReport,
   type StageBStartPayload,
@@ -71,10 +76,18 @@ type QuestionAnswerState = {
   transcribing: boolean;
   submitting: boolean;
   result: StageBAnswerResult | null;
+  chatHistory: StageBChatMessage[];
+  chatOpen: boolean;
+  chatInput: string;
+  chatLoading: boolean;
 };
 
 function defaultQState(): QuestionAnswerState {
-  return { mode: "text", textDraft: "", transcriptDraft: "", transcribing: false, submitting: false, result: null };
+  return {
+    mode: "text", textDraft: "", transcriptDraft: "", transcribing: false,
+    submitting: false, result: null,
+    chatHistory: [], chatOpen: false, chatInput: "", chatLoading: false,
+  };
 }
 
 function isQuestionAnswered(q: StageBQuestion, qStates: Record<string, QuestionAnswerState>): boolean {
@@ -189,6 +202,29 @@ function RunningPhase({
       setQState(q.question_id, { transcribing: false });
     }
   }, [session.session_id, setQState]);
+
+  const handleChat = useCallback(async (
+    q: StageBQuestion, cIdx: number, sIdx: number, qNum: number,
+  ) => {
+    const qState = qStates[q.question_id] ?? defaultQState();
+    const msg = qState.chatInput.trim();
+    if (!msg || qState.chatLoading) return;
+    const userMsg: StageBChatMessage = { role: "user", content: msg };
+    const nextHistory = [...qState.chatHistory, userMsg];
+    setQState(q.question_id, { chatHistory: nextHistory, chatInput: "", chatLoading: true });
+    try {
+      const res = await chatWithExaminer(
+        session.session_id, cIdx, sIdx, qNum,
+        { message: msg, history: qState.chatHistory },
+      );
+      setQState(q.question_id, {
+        chatHistory: [...nextHistory, { role: "assistant", content: res.data.reply }],
+        chatLoading: false,
+      });
+    } catch {
+      setQState(q.question_id, { chatLoading: false });
+    }
+  }, [session.session_id, qStates, setQState]);
 
   const handleSubmitAnswer = useCallback(async (
     q: StageBQuestion, cIdx: number, sIdx: number, qNum: number,
@@ -390,7 +426,7 @@ function RunningPhase({
                 {visibleQuestions.map((q, i) => {
                   const qState = qStates[q.question_id] ?? defaultQState();
                   const answered = isQuestionAnswered(q, qStates);
-                  const qNum = i + 1;
+                  const qNum = i;
 
                   return (
                     <div key={q.question_id} className="border border-gray-200 rounded-lg overflow-hidden">
@@ -403,6 +439,64 @@ function RunningPhase({
 
                       {!answered ? (
                         <div className="p-4 space-y-4">
+                          {/* Examiner chat */}
+                          <div className="border border-indigo-100 rounded-lg overflow-hidden">
+                            <button
+                              onClick={() => setQState(q.question_id, { chatOpen: !qState.chatOpen })}
+                              className="w-full flex items-center justify-between px-3 py-2 text-xs font-medium text-indigo-700 bg-indigo-50 hover:bg-indigo-100 transition-colors"
+                            >
+                              <span>Ask the Examiner</span>
+                              <svg viewBox="0 0 20 20" fill="currentColor" className={`h-3.5 w-3.5 transition-transform ${qState.chatOpen ? "rotate-180" : ""}`}>
+                                <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clipRule="evenodd" />
+                              </svg>
+                            </button>
+                            {qState.chatOpen && (
+                              <div className="p-3 space-y-2">
+                                {qState.chatHistory.length > 0 && (
+                                  <div className="space-y-2 max-h-48 overflow-y-auto">
+                                    {qState.chatHistory.map((msg, mi) => (
+                                      <div key={mi} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
+                                        <div className={`max-w-[85%] rounded-lg px-3 py-1.5 text-xs ${
+                                          msg.role === "user"
+                                            ? "bg-indigo-600 text-white"
+                                            : "bg-gray-100 text-gray-800"
+                                        }`}>
+                                          {msg.content}
+                                        </div>
+                                      </div>
+                                    ))}
+                                    {qState.chatLoading && (
+                                      <div className="flex justify-start">
+                                        <div className="bg-gray-100 rounded-lg px-3 py-1.5 text-xs text-gray-500 flex items-center gap-1.5">
+                                          <span className="h-3 w-3 animate-spin rounded-full border border-gray-400 border-t-transparent inline-block" />
+                                          Thinking…
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+                                <div className="flex gap-2">
+                                  <input
+                                    type="text"
+                                    value={qState.chatInput}
+                                    onChange={e => setQState(q.question_id, { chatInput: e.target.value })}
+                                    onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleChat(q, selCaseIdx, selStageIdx, qNum); } }}
+                                    placeholder="Ask a clarifying question…"
+                                    className="flex-1 text-xs border border-gray-200 rounded-md px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                                    disabled={qState.chatLoading}
+                                  />
+                                  <button
+                                    onClick={() => handleChat(q, selCaseIdx, selStageIdx, qNum)}
+                                    disabled={!qState.chatInput.trim() || qState.chatLoading}
+                                    className="px-3 py-1.5 bg-indigo-600 text-white text-xs rounded-md hover:bg-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                                  >
+                                    Send
+                                  </button>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+
                           {/* Mode tabs */}
                           <div className="flex border border-gray-200 rounded-md overflow-hidden w-fit text-xs">
                             {(["text", "audio"] as const).map(mode => (
@@ -736,10 +830,27 @@ function CaseAccordion({ caseReport, caseNum }: { caseReport: StageBCaseReport; 
   );
 }
 
-function ReviewPhase({ report }: { report: StageBReport }) {
+function ReviewPhase({
+  report,
+  onRetake,
+}: {
+  report: StageBReport;
+  onRetake: (session: StageBSession) => void;
+}) {
   const navigate = useNavigate();
+  const [retaking, setRetaking] = useState(false);
   const allQuestions = report.cases.flatMap(c => c.stages.flatMap(s => s.questions));
   const passCount = allQuestions.filter(q => q.score !== null && q.score >= 6).length;
+
+  const handleRetake = async () => {
+    setRetaking(true);
+    try {
+      const res = await retakeStageBSession(report.session_id);
+      onRetake(res.data);
+    } catch {
+      setRetaking(false);
+    }
+  };
 
   return (
     <div className="max-w-3xl mx-auto px-6 py-8 space-y-8">
@@ -750,12 +861,21 @@ function ReviewPhase({ report }: { report: StageBReport }) {
             {report.difficulty} · {report.case_count} case{report.case_count !== 1 ? "s" : ""} · {report.duration_minutes} min
           </p>
         </div>
-        <button
-          onClick={() => navigate("/exams")}
-          className="shrink-0 px-4 py-2 border border-gray-300 text-gray-700 rounded-md text-sm font-medium hover:bg-gray-50 transition-colors"
-        >
-          Back to Exams
-        </button>
+        <div className="flex gap-2 shrink-0">
+          <button
+            onClick={handleRetake}
+            disabled={retaking}
+            className="px-4 py-2 bg-indigo-600 text-white rounded-md text-sm font-medium hover:bg-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          >
+            {retaking ? "Starting…" : "Retake Exam"}
+          </button>
+          <button
+            onClick={() => navigate("/exams")}
+            className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md text-sm font-medium hover:bg-gray-50 transition-colors"
+          >
+            Back to Exams
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-3 gap-4">
@@ -783,6 +903,7 @@ function ReviewPhase({ report }: { report: StageBReport }) {
 // ---- Main Page Component ---------------------------------------------------
 
 export default function StageBExamPage() {
+  const navigate = useNavigate();
   const { setExamRunning } = useExamGuard();
   const [phase, setPhase] = useState<Phase>("settings");
   const [settings, setSettings] = useState<StageBSettings>(DEFAULT_SETTINGS);
@@ -790,10 +911,12 @@ export default function StageBExamPage() {
   const [topicSearch, setTopicSearch] = useState("");
   const [loadingSettings, setLoadingSettings] = useState(true);
   const [activeSession, setActiveSession] = useState<StageBSession | null>(null);
+  const [pastSessions, setPastSessions] = useState<StageBSessionSummary[]>([]);
   const [session, setSession] = useState<StageBSession | null>(null);
   const [report, setReport] = useState<StageBReport | null>(null);
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [retakingId, setRetakingId] = useState<string | null>(null);
 
   // Same pattern as ExamsPage.tsx
   useEffect(() => {
@@ -805,12 +928,14 @@ export default function StageBExamPage() {
     (async () => {
       setLoadingSettings(true);
       try {
-        const [topicsRes, activeRes] = await Promise.allSettled([
+        const [topicsRes, activeRes, pastRes] = await Promise.allSettled([
           getQuestionTopics(),
           getActiveStageBSession(),
+          listStageBSessions(),
         ]);
         if (topicsRes.status === "fulfilled") setTopics(topicsRes.value.data);
         if (activeRes.status === "fulfilled") setActiveSession(activeRes.value.data);
+        if (pastRes.status === "fulfilled") setPastSessions(pastRes.value.data);
       } catch {
         // ignore
       } finally {
@@ -880,6 +1005,17 @@ export default function StageBExamPage() {
     setPhase("running");
   };
 
+  const handleRetakeFromSettings = async (sessionId: string) => {
+    setRetakingId(sessionId);
+    try {
+      const res = await retakeStageBSession(sessionId);
+      setSession(res.data);
+      setPhase("running");
+    } catch {
+      setRetakingId(null);
+    }
+  };
+
   if (phase === "running" && session) {
     return (
       <RunningPhase
@@ -904,12 +1040,24 @@ export default function StageBExamPage() {
         </div>
       );
     }
-    return <ReviewPhase report={report} />;
+    return (
+      <ReviewPhase
+        report={report}
+        onRetake={s => { setSession(s); setReport(null); setPhase("running"); }}
+      />
+    );
   }
 
   return (
     <div className="p-6 max-w-3xl mx-auto space-y-8">
       <div>
+        <button
+          onClick={() => navigate("/exams")}
+          className="mb-2 flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700"
+        >
+          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
+          Exams
+        </button>
         <h1 className="text-2xl font-bold">Stage B — Oral Exam Simulator</h1>
         <p className="text-sm text-gray-500 mt-1">
           Configure a case-based oral exam session.
@@ -932,6 +1080,36 @@ export default function StageBExamPage() {
           >
             Resume Active Session
           </button>
+        </div>
+      )}
+
+      {pastSessions.length > 0 && (
+        <div className="border border-gray-200 rounded-lg overflow-hidden">
+          <div className="px-4 py-2.5 border-b bg-gray-50">
+            <p className="text-sm font-semibold text-gray-700">Past Exams</p>
+          </div>
+          <div className="divide-y">
+            {pastSessions.map(s => (
+              <div key={s.session_id} className="flex items-center justify-between px-4 py-3 gap-4">
+                <div>
+                  <p className="text-sm font-medium text-gray-800 capitalize">
+                    {s.difficulty} · {s.case_count} case{s.case_count !== 1 ? "s" : ""} · {s.duration_minutes} min
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    {new Date(s.started_at).toLocaleDateString()}
+                    {s.status === "expired" && " · expired"}
+                  </p>
+                </div>
+                <button
+                  onClick={() => handleRetakeFromSettings(s.session_id)}
+                  disabled={retakingId === s.session_id}
+                  className="shrink-0 px-3 py-1.5 bg-indigo-600 text-white text-sm rounded-md hover:bg-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                >
+                  {retakingId === s.session_id ? "Starting…" : "Retake"}
+                </button>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 

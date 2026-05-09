@@ -128,3 +128,35 @@ class StageBReportOut(BaseModel):
     by_topic: List[dict]
     by_difficulty: List[dict]
     cases: List[StageBCaseReport]
+
+
+# ---- Chat with examiner ------------------------------------------------------
+
+class StageBChatMessage(BaseModel):
+    role: str  # "user" | "assistant"
+    content: str
+
+
+class StageBChatRequest(BaseModel):
+    message: str = Field(..., max_length=2000)
+    history: List[StageBChatMessage] = Field(default_factory=list)
+
+
+class StageBChatReply(BaseModel):
+    reply: str
+
+
+# ---- Session history / retake ------------------------------------------------
+
+class StageBSessionSummary(BaseModel):
+    session_id: str
+    status: str
+    difficulty: Difficulty
+    case_count: int
+    duration_minutes: int
+    voice: str
+    started_at: datetime
+    finalized_at: Optional[datetime] = None
+
+    class Config:
+        orm_mode = True

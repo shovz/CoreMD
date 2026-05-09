@@ -11,21 +11,32 @@ export default function AppShell() {
   const { isAuthenticated } = useAuthContext();
   const { examRunning, modalOpen, requestNavigation, confirmNavigation, cancelNavigation } = useExamGuard();
   const allowNextRouteRef = useRef(false);
+  const examPathRef = useRef<string>("/exams/stage-a");
+  const prevExamRunningRef = useRef<boolean>(false);
 
   const isAuthPage = ["/login", "/register"].includes(location.pathname);
   const showSidebar = isAuthenticated && !isAuthPage;
   const showLauncher = isAuthenticated && !isAuthPage;
 
+  const examPaths = ["/exams/stage-a", "/exams/stage-b"];
+
+  useEffect(() => {
+    if (examRunning && !prevExamRunningRef.current) {
+      examPathRef.current = location.pathname;
+    }
+    prevExamRunningRef.current = examRunning;
+  }, [examRunning, location.pathname]);
+
   useEffect(() => {
     if (!examRunning) return;
-    if (location.pathname === "/exams") return;
+    if (examPaths.includes(location.pathname)) return;
     if (allowNextRouteRef.current) {
       allowNextRouteRef.current = false;
       return;
     }
     const canLeave = requestNavigation(location.pathname);
     if (!canLeave) {
-      navigate("/exams", { replace: true });
+      navigate(examPathRef.current, { replace: true });
     }
   }, [examRunning, location.pathname, navigate, requestNavigation]);
 
@@ -34,6 +45,13 @@ export default function AppShell() {
     if (action === "navigate" && path) {
       allowNextRouteRef.current = true;
       navigate(path);
+    }
+  };
+
+  const handleStay = () => {
+    cancelNavigation();
+    if (location.pathname !== examPathRef.current) {
+      navigate(examPathRef.current, { replace: true });
     }
   };
 
@@ -54,7 +72,7 @@ export default function AppShell() {
             </p>
             <div className="mt-5 flex justify-end gap-2">
               <button
-                onClick={cancelNavigation}
+                onClick={handleStay}
                 className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
               >
                 Stay
