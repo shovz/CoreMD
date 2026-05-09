@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, type KeyboardEvent } from "react";
 import { Link } from "react-router-dom";
-import { askQuestion, type Message, type Citation } from "../api/aiApi";
+import { askQuestion, type Message, type Citation, type SelectedAiContext } from "../api/aiApi";
 
 const EXCHANGE_LIMIT = 10;
 const MESSAGE_LIMIT = EXCHANGE_LIMIT * 2;
@@ -19,14 +19,26 @@ function truncate(text: string, max: number): string {
 
 interface Props {
   compact?: boolean;
-  prefillText?: string;
-  onPrefillConsumed?: () => void;
+  selectedContext?: SelectedAiContext | null;
+  onSelectedContextConsumed?: () => void;
 }
 
-export default function AssistantChat({ compact = false, prefillText, onPrefillConsumed }: Props) {
+function citationPath(citation: Citation): string {
+  if (citation.section_id) {
+    return `/chapters/${citation.chapter_id}/sections/${citation.section_id}`;
+  }
+  return `/chapters/${citation.chapter_id}`;
+}
+
+export default function AssistantChat({
+  compact = false,
+  selectedContext,
+  onSelectedContextConsumed,
+}: Props) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [pendingContext, setPendingContext] = useState<SelectedAiContext | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -35,10 +47,11 @@ export default function AssistantChat({ compact = false, prefillText, onPrefillC
   }, [messages]);
 
   useEffect(() => {
-    if (!prefillText) return;
-    onPrefillConsumed?.();
-    submitQuestion(prefillText);
-  }, [prefillText]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (!selectedContext) return;
+    setPendingContext(selectedContext);
+    setInput("");
+    inputRef.current?.focus();
+  }, [selectedContext]);
 
   const completedMessages = messages.filter((m) => !m.loading);
   const limitReached = completedMessages.length >= MESSAGE_LIMIT;
@@ -47,6 +60,8 @@ export default function AssistantChat({ compact = false, prefillText, onPrefillC
   function startNewConversation() {
     setMessages([]);
     setInput("");
+    setPendingContext(null);
+    onSelectedContextConsumed?.();
   }
 
   async function submitQuestion(question: string) {
@@ -56,6 +71,7 @@ export default function AssistantChat({ compact = false, prefillText, onPrefillC
       role: m.role,
       content: m.content,
     }));
+    const contextForQuestion = pendingContext;
 
     setMessages((prev) => [
       ...prev,
@@ -66,11 +82,15 @@ export default function AssistantChat({ compact = false, prefillText, onPrefillC
     setIsLoading(true);
 
     try {
-      const res = await askQuestion(question, history);
+      const res = await askQuestion(question, history, contextForQuestion);
       setMessages((prev) => [
         ...prev.slice(0, -1),
         { role: "assistant", content: res.answer, citations: res.citations },
       ]);
+      if (contextForQuestion) {
+        setPendingContext(null);
+        onSelectedContextConsumed?.();
+      }
     } catch {
       setMessages((prev) => [
         ...prev.slice(0, -1),
@@ -116,6 +136,19 @@ export default function AssistantChat({ compact = false, prefillText, onPrefillC
           </p>
         )}
 
+        {pendingContext && (
+          <div className="rounded-xl border border-blue-200 bg-blue-50 p-3 text-xs text-blue-950">
+            <div className="mb-1 font-semibold">
+              Selected context
+              {pendingContext.chapter_title ? ` - ${pendingContext.chapter_title}` : ""}
+              {pendingContext.section_title ? ` - ${pendingContext.section_title}` : ""}
+            </div>
+            <div className="line-clamp-4 whitespace-pre-wrap">
+              {pendingContext.selected_text}
+            </div>
+          </div>
+        )}
+
         {messages.map((msg, i) => (
           <div
             key={i}
@@ -134,7 +167,7 @@ export default function AssistantChat({ compact = false, prefillText, onPrefillC
                 {msg.citations.map((c, ci) => (
                   <Link
                     key={ci}
-                    to={`/chapters/${c.chapter_id}`}
+                    to={citationPath(c)}
                     className="rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs text-blue-700 hover:bg-blue-100"
                     title={c.chapter_title}
                   >

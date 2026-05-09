@@ -1,6 +1,6 @@
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import DOMPurify from "dompurify";
-import { useLocation } from "react-router-dom";
+import { useLocation, useParams } from "react-router-dom";
 import { wrapAcrossBlocks } from "../utils/annotationHtml";
 import { formatReaderHtml, stripLeadingDuplicateHeading } from "../utils/readerFormatting";
 import {
@@ -63,15 +63,19 @@ export default function ChaptersPage() {
   const popoverRef = useRef<HTMLDivElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const sectionCacheRef = useRef<Map<string, SectionResponse>>(new Map());
+  const lastRouteLoadRef = useRef<string | null>(null);
 
   // Annotations
   const [annotations, setAnnotations] = useState<Annotation[]>([]);
   const [noteText, setNoteText] = useState("");
   const [showNotesPanel, setShowNotesPanel] = useState(false);
 
-  const { openWithText } = useAiContext();
+  const { openWithContext } = useAiContext();
   const location = useLocation();
+  const routeParams = useParams<{ chapterId?: string; sectionId?: string }>();
   const navState = (location.state ?? {}) as { chapterId?: string; sectionId?: string };
+  const initialChapterId = routeParams.chapterId ?? navState.chapterId;
+  const initialSectionId = routeParams.sectionId ?? navState.sectionId;
 
   useEffect(() => {
     getChapters()
@@ -82,15 +86,7 @@ export default function ChaptersPage() {
           const pd = (a.part_number ?? 0) - (b.part_number ?? 0);
           return pd !== 0 ? pd : (a.chapter_number ?? 0) - (b.chapter_number ?? 0);
         });
-        if (navState.chapterId) {
-          const target = res.data.find((ch) => ch.id === navState.chapterId);
-          if (target) {
-            setSelectedPart(target.part_number ?? null);
-            handleChapterClick(navState.chapterId, navState.sectionId);
-            return;
-          }
-        }
-        const first = sorted[0];
+        const first = !initialChapterId ? sorted[0] : null;
         if (first) {
           setSelectedPart(first.part_number ?? null);
           handleChapterClick(first.id);
@@ -104,6 +100,17 @@ export default function ChaptersPage() {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
   }, []);
+
+  useEffect(() => {
+    if (!initialChapterId || chapters.length === 0) return;
+    const routeLoadKey = `${initialChapterId}:${initialSectionId ?? ""}`;
+    if (lastRouteLoadRef.current === routeLoadKey) return;
+    const target = chapters.find((ch) => ch.id === initialChapterId);
+    if (!target) return;
+    lastRouteLoadRef.current = routeLoadKey;
+    setSelectedPart(target.part_number ?? null);
+    handleChapterClick(initialChapterId, initialSectionId);
+  }, [chapters, initialChapterId, initialSectionId]);
 
   const sortedParts = useMemo(() => {
     const partsMap = new Map<number, { title: string; chapters: Chapter[] }>();
@@ -285,11 +292,17 @@ export default function ChaptersPage() {
   }, []);
 
   function handleAskAi() {
-    if (!popover) return;
-    const text = popover.text;
+    if (!popover || !currentChapter) return;
+    const selectedSection = readerSections.find((section) => section.section_id === popover.sectionId);
     setPopover(null);
     window.getSelection()?.removeAllRanges();
-    openWithText(text);
+    openWithContext({
+      selected_text: popover.text,
+      chapter_id: currentChapter.id,
+      section_id: popover.sectionId,
+      chapter_title: currentChapter.title,
+      section_title: selectedSection?.section_title,
+    });
   }
 
   async function handleSaveNote() {

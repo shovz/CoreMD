@@ -3,7 +3,12 @@ from pymongo.database import Database
 from typing import List
 
 
-def get_relevant_chunks(db: Database, question_embedding: List[float], top_k: int = 5) -> List[dict]:
+def get_relevant_chunks(
+    db: Database,
+    question_embedding: List[float],
+    top_k: int = 5,
+    chapter_id: str | None = None,
+) -> List[dict]:
     """
     Loads all chunk embeddings from the text_chunks collection and returns
     the top-k most relevant chunks by cosine similarity to the question embedding.
@@ -11,7 +16,23 @@ def get_relevant_chunks(db: Database, question_embedding: List[float], top_k: in
     q_vec = np.array(question_embedding, dtype=np.float32)
     q_norm = q_vec / (np.linalg.norm(q_vec) + 1e-10)
 
-    chunks = list(db.text_chunks.find({}, {"_id": 0, "chunk_id": 1, "chapter_id": 1, "section_title": 1, "text": 1, "embedding": 1}))
+    query = {"chapter_id": chapter_id} if chapter_id else {}
+    chunks = list(
+        db.text_chunks.find(
+            query,
+            {
+                "_id": 0,
+                "chunk_id": 1,
+                "chapter_id": 1,
+                "section_id": 1,
+                "section_title": 1,
+                "text": 1,
+                "embedding": 1,
+            },
+        )
+    )
+
+    chunks = [c for c in chunks if c.get("embedding")]
 
     if not chunks:
         return []
@@ -32,14 +53,58 @@ def get_relevant_chunks(db: Database, question_embedding: List[float], top_k: in
     results = []
     for chunk in top_chunks:
         results.append({
-            "chunk_id": chunk["chunk_id"],
+            "chunk_id": chunk.get("chunk_id", ""),
             "chapter_id": chunk["chapter_id"],
             "chapter_title": chapter_title_map.get(chunk["chapter_id"], ""),
+            "section_id": chunk.get("section_id"),
             "section_title": chunk.get("section_title", ""),
             "text": chunk["text"],
         })
 
     return results
+
+
+def get_section_chunks(db: Database, chapter_id: str, section_id: str, limit: int = 5) -> List[dict]:
+    """
+    Return chunks from the selected reader section in document order.
+    """
+    chunks = list(
+        db.text_chunks.find(
+            {"chapter_id": chapter_id, "section_id": section_id},
+            {
+                "_id": 0,
+                "chunk_id": 1,
+                "chapter_id": 1,
+                "section_id": 1,
+                "section_title": 1,
+                "text": 1,
+                "chunk_index": 1,
+            },
+        )
+        .sort("chunk_index", 1)
+        .limit(limit)
+    )
+
+    if not chunks:
+        return []
+
+    chapter_doc = db.chapters.find_one(
+        {"chapter_id": chapter_id},
+        {"_id": 0, "title": 1},
+    )
+    chapter_title = chapter_doc.get("title", "") if chapter_doc else ""
+
+    return [
+        {
+            "chunk_id": chunk.get("chunk_id", ""),
+            "chapter_id": chunk["chapter_id"],
+            "chapter_title": chapter_title,
+            "section_id": chunk.get("section_id"),
+            "section_title": chunk.get("section_title", ""),
+            "text": chunk["text"],
+        }
+        for chunk in chunks
+    ]
 
 
 def build_context_prompt(chunks: List[dict]) -> str:

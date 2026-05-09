@@ -3,7 +3,7 @@ import AssistantChat from "./AssistantChat";
 import { useAiContext } from "../context/AiContext";
 
 export default function AiChatLauncher() {
-  const { open, setOpen, prefillText, clearPrefill } = useAiContext();
+  const { open, setOpen, selectedContext, clearSelectedContext } = useAiContext();
   const [chatKey, setChatKey] = useState(0);
 
   useEffect(() => {
@@ -42,7 +42,10 @@ export default function AiChatLauncher() {
             </div>
             <div className="flex items-center gap-1.5">
               <button
-                onClick={() => setChatKey((k) => k + 1)}
+                onClick={() => {
+                  setChatKey((k) => k + 1);
+                  clearSelectedContext();
+                }}
                 className="rounded-md border border-slate-200 px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-slate-100"
               >
                 New Chat
@@ -62,8 +65,8 @@ export default function AiChatLauncher() {
             <AssistantChat
               key={chatKey}
               compact
-              prefillText={prefillText}
-              onPrefillConsumed={clearPrefill}
+              selectedContext={selectedContext}
+              onSelectedContextConsumed={clearSelectedContext}
             />
           </div>
         </div>
