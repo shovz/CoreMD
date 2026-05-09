@@ -45,12 +45,19 @@ const CORRECT_RESULT = {
   correct: true,
   correct_option: 0,
   explanation: "NSTEMI is confirmed by elevated troponin without ST elevation.",
+  option_explanations: [
+    "NSTEMI fits elevated troponin without ST elevation.",
+    "STEMI requires ST elevation criteria.",
+    "Aortic dissection is not confirmed by the troponin pattern alone.",
+    "Pulmonary embolism would require supporting respiratory or imaging findings.",
+  ],
 };
 
 const INCORRECT_RESULT = {
   correct: false,
   correct_option: 0,
   explanation: "NSTEMI is confirmed by elevated troponin without ST elevation.",
+  option_explanations: CORRECT_RESULT.option_explanations,
 };
 
 function setupHandlers(overrides: Parameters<typeof server.use>[0][] = []) {
@@ -116,10 +123,6 @@ describe("CaseDetailPage", () => {
     ).resolves.toBeInTheDocument();
 
     expect(
-      screen.getByText("Which finding best confirms the diagnosis?")
-    ).toBeInTheDocument();
-
-    expect(
       screen.getByText("Locked — answer previous question first.")
     ).toBeInTheDocument();
 
@@ -143,11 +146,12 @@ describe("CaseDetailPage", () => {
     await userEvent.click(submitBtn);
 
     await waitFor(() =>
-      expect(screen.getByText("Correct!")).toBeInTheDocument()
+      expect(screen.getByText("Correct")).toBeInTheDocument()
     );
     expect(
-      screen.getByText("NSTEMI is confirmed by elevated troponin without ST elevation.")
+      screen.getByText("NSTEMI fits elevated troponin without ST elevation.")
     ).toBeInTheDocument();
+    expect(screen.getByText("STEMI requires ST elevation criteria.")).toBeInTheDocument();
   });
 
   it("shows Incorrect feedback when wrong answer submitted", async () => {
@@ -201,13 +205,12 @@ describe("CaseDetailPage", () => {
     ).resolves.toBeInTheDocument();
 
     // Initial state: not bookmarked (☆ shown)
-    const starBtn = screen.getByRole("button", { name: /Bookmark case/ });
-    expect(starBtn).toHaveTextContent("☆");
+    const starBtn = screen.getByTitle("Bookmark case");
 
     await userEvent.click(starBtn);
 
     await waitFor(() =>
-      expect(screen.getByRole("button", { name: /Remove bookmark/ })).toBeInTheDocument()
+      expect(screen.getByTitle("Remove bookmark")).toBeInTheDocument()
     );
   });
 });

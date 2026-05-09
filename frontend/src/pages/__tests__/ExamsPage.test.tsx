@@ -27,11 +27,25 @@ const MOCK_SESSION = {
       is_correct: null,
       correct_option: null,
       explanation: null,
+      option_explanations: null,
     },
   ],
 };
 
-const MOCK_ANSWER_RESULT = { correct: true, correct_option: 0 };
+const MOCK_ANSWER_RESULT = {
+  correct: true,
+  correct_option: 0,
+  explanation: "Elevated troponin without ST elevation confirms NSTEMI.",
+  option_explanations: [
+    "NSTEMI is correct because troponin is elevated without ST elevation.",
+    "STEMI requires diagnostic ST elevation.",
+    "Pericarditis usually has pleuritic pain and diffuse ST elevation.",
+    "Aortic dissection requires a different vascular presentation.",
+  ],
+  answered_count: 1,
+  correct_count: 1,
+  remaining_seconds: 14300,
+};
 
 const MOCK_CHAPTERS = [
   {
@@ -75,6 +89,7 @@ const MOCK_REPORT = {
       is_correct: true,
       correct_option: 0,
       explanation: "Elevated troponin without ST elevation confirms NSTEMI.",
+      option_explanations: MOCK_ANSWER_RESULT.option_explanations,
     },
   ],
 };

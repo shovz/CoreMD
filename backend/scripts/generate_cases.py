@@ -59,7 +59,8 @@ Return ONLY valid JSON (no markdown):
   "stem": "2-4 sentence clinical question stem",
   "options": ["option A text", "option B text", "option C text", "option D text"],
   "correct_option": <0-indexed int for the correct option>,
-  "explanation": "2-3 sentence explanation of the correct answer"
+  "explanation": "2-3 sentence explanation of the correct answer",
+  "option_explanations": ["why option A is correct/incorrect", "why option B is correct/incorrect", "why option C is correct/incorrect", "why option D is correct/incorrect"]
 }}"""
 
 STEP2_PROMPT = """\
@@ -80,16 +81,20 @@ Return ONLY valid JSON (no markdown):
   "stem": "2-4 sentence clinical question stem referencing the confirmed diagnosis",
   "options": ["option A text", "option B text", "option C text", "option D text"],
   "correct_option": <0-indexed int for the correct option>,
-  "explanation": "2-3 sentence explanation of the correct answer"
+  "explanation": "2-3 sentence explanation of the correct answer",
+  "option_explanations": ["why option A is correct/incorrect", "why option B is correct/incorrect", "why option C is correct/incorrect", "why option D is correct/incorrect"]
 }}"""
 
 
 def shuffle_options(q: dict) -> dict:
-    options = q["options"]
-    correct_answer = options[int(q["correct_option"])]
-    random.shuffle(options)
-    q["options"] = options
-    q["correct_option"] = options.index(correct_answer)
+    pairs = list(zip(q["options"], q.get("option_explanations", [])))
+    if len(pairs) != 4:
+        raise ValueError("option_explanations must contain exactly 4 items")
+    correct_answer = q["options"][int(q["correct_option"])]
+    random.shuffle(pairs)
+    q["options"] = [option for option, _ in pairs]
+    q["option_explanations"] = [explanation for _, explanation in pairs]
+    q["correct_option"] = q["options"].index(correct_answer)
     return q
 
 
@@ -192,6 +197,7 @@ def main():
                 "options": q["options"],
                 "correct_option": int(q["correct_option"]),
                 "explanation": q["explanation"],
+                "option_explanations": q["option_explanations"],
             }
             if not db["case_questions"].find_one({"case_question_id": doc["case_question_id"]}):
                 db["case_questions"].insert_one(doc)

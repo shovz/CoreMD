@@ -24,3 +24,4 @@ class QuestionOut(BaseModel):
 class QuestionFull(QuestionOut):
     correct_option: int
     explanation: str
+    option_explanations: List[str]

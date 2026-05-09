@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 from datetime import datetime
-from typing import Optional
+from typing import List, Optional
 
 
 # ---------------------------
@@ -19,6 +19,7 @@ class AttemptResult(BaseModel):
     correct: bool
     correct_option: int
     explanation: str
+    option_explanations: List[str]
 
 
 class QuestionAttemptOut(BaseModel):

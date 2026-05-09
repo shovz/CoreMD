@@ -60,6 +60,7 @@ Rules:
 - Q3: Deepest level. Tests a complication, edge case, or nuanced therapeutic decision.
 - Each question has exactly 4 options, one correct.
 - correct_option is 0-indexed (0=A, 1=B, 2=C, 3=D). Vary which option is correct across questions.
+- option_explanations is exactly 4 strings, aligned with options by index, explaining why each choice is correct or incorrect.
 - difficulty: Q1="medium", Q2="hard", Q3="hard"
 
 Return ONLY a JSON array of 3 objects, no other text:
@@ -69,6 +70,7 @@ Return ONLY a JSON array of 3 objects, no other text:
     "options": ["...", "...", "...", "..."],
     "correct_option": 0,
     "explanation": "2-3 sentence explanation of why this is correct.",
+    "option_explanations": ["why option A is correct/incorrect", "why option B is correct/incorrect", "why option C is correct/incorrect", "why option D is correct/incorrect"],
     "difficulty": "medium"
   }},
   {{
@@ -76,6 +78,7 @@ Return ONLY a JSON array of 3 objects, no other text:
     "options": ["...", "...", "...", "..."],
     "correct_option": 1,
     "explanation": "...",
+    "option_explanations": ["...", "...", "...", "..."],
     "difficulty": "hard"
   }},
   {{
@@ -83,17 +86,21 @@ Return ONLY a JSON array of 3 objects, no other text:
     "options": ["...", "...", "...", "..."],
     "correct_option": 2,
     "explanation": "...",
+    "option_explanations": ["...", "...", "...", "..."],
     "difficulty": "hard"
   }}
 ]"""
 
 
 def shuffle_options(q: dict) -> dict:
-    options = q["options"]
-    correct_answer = options[int(q["correct_option"])]
-    random.shuffle(options)
-    q["options"] = options
-    q["correct_option"] = options.index(correct_answer)
+    pairs = list(zip(q["options"], q.get("option_explanations", [])))
+    if len(pairs) != 4:
+        raise ValueError("option_explanations must contain exactly 4 items")
+    correct_answer = q["options"][int(q["correct_option"])]
+    random.shuffle(pairs)
+    q["options"] = [option for option, _ in pairs]
+    q["option_explanations"] = [explanation for _, explanation in pairs]
+    q["correct_option"] = q["options"].index(correct_answer)
     return q
 
 
@@ -162,6 +169,7 @@ def main():
                     "options": q["options"],
                     "correct_option": int(q["correct_option"]),
                     "explanation": q["explanation"],
+                    "option_explanations": q["option_explanations"],
                     "topic": topic,
                     "chapter_ref": None,
                     "difficulty": q.get("difficulty", "hard"),

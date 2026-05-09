@@ -12,6 +12,12 @@ SAMPLE_QUESTIONS = [
         "difficulty": "easy",
         "correct_option": 1,
         "explanation": "Potassium leak channels maintain the resting potential near -70 mV.",
+        "option_explanations": [
+            "Sodium is not the main determinant of resting membrane potential.",
+            "Potassium leak channels maintain the resting potential near -70 mV.",
+            "Calcium is not the primary resting membrane potential ion.",
+            "Chloride contributes but is not the primary determinant.",
+        ],
     },
     {
         "question_id": "q-test-002",
@@ -157,6 +163,8 @@ class TestGetQuestion:
         assert "explanation" in body
         assert body["correct_option"] == 1
         assert "Potassium" in body["explanation"]
+        assert len(body["option_explanations"]) == 4
+        assert "Sodium" in body["option_explanations"][0]
 
     def test_not_found(self, client: TestClient, auth_headers):
         resp = client.get("/api/v1/questions/q-nonexistent", headers=auth_headers)
@@ -201,6 +209,7 @@ class TestAttemptQuestion:
         )
         assert resp.status_code == 200
         assert resp.json()["correct"] is True
+        assert len(resp.json()["option_explanations"]) == 4
 
     def test_wrong_answer(self, client: TestClient, auth_headers):
         resp = client.post(

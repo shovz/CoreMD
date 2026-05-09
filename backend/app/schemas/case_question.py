@@ -21,3 +21,4 @@ class CaseAttemptResult(BaseModel):
     correct: bool
     correct_option: int
     explanation: str
+    option_explanations: List[str]

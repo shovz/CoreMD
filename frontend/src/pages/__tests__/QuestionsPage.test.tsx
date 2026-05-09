@@ -20,12 +20,19 @@ const CORRECT_RESULT = {
   correct: true,
   correct_option: 0,
   explanation: "Troponin I is released exclusively from cardiac muscle cells.",
+  option_explanations: [
+    "Troponin I is the most specific option for myocardial injury.",
+    "AST is nonspecific and can rise with hepatic or skeletal muscle injury.",
+    "LDH is nonspecific and not preferred for myocardial injury.",
+    "CK-MM reflects skeletal muscle rather than myocardium.",
+  ],
 };
 
 const INCORRECT_RESULT = {
   correct: false,
   correct_option: 0,
   explanation: "Troponin I is released exclusively from cardiac muscle cells.",
+  option_explanations: CORRECT_RESULT.option_explanations,
 };
 
 function setupHandlers(overrides: Parameters<typeof server.use>[0][] = []) {
@@ -108,9 +115,10 @@ describe("QuestionsPage", () => {
 
     await waitFor(() =>
       expect(
-        screen.getByText("Troponin I is released exclusively from cardiac muscle cells.")
+        screen.getByText("Troponin I is the most specific option for myocardial injury.")
       ).toBeInTheDocument()
     );
+    expect(screen.getByText("AST is nonspecific and can rise with hepatic or skeletal muscle injury.")).toBeInTheDocument();
   });
 
   it("shows Correct feedback when answer is right", async () => {

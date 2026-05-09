@@ -38,6 +38,12 @@ const MOCK_ANSWER_RESULT = {
   correct: true,
   correct_option: 0,
   explanation: "Troponin I is the most specific marker for myocardial injury.",
+  option_explanations: [
+    "Troponin I is the most specific marker for myocardial injury.",
+    "AST is nonspecific.",
+    "LDH is nonspecific.",
+    "CK-MM reflects skeletal muscle.",
+  ],
   answered_count: 1,
   correct_count: 1,
   remaining_seconds: 14399,
@@ -73,6 +79,7 @@ const MOCK_REPORT = {
       is_correct: true,
       correct_option: 0,
       explanation: "Troponin I is the most specific marker for myocardial injury.",
+      option_explanations: MOCK_ANSWER_RESULT.option_explanations,
     },
   ],
 };

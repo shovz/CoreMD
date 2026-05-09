@@ -32,6 +32,7 @@ export interface CaseAttemptResult {
   correct: boolean;
   correct_option: number;
   explanation: string;
+  option_explanations: string[];
 }
 
 export const getCases = (specialty?: string) => {

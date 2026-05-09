@@ -28,3 +28,5 @@ idna==3.11
 pydantic-core==2.41.5
 PyYAML==6.0.3
 typing-extensions==4.13.0
+notebooklm
+rapidfuzz

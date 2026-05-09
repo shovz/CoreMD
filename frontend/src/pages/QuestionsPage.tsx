@@ -12,6 +12,7 @@ import {
   type QuestionOut,
 } from "../api/questionsApi";
 import { addBookmark, removeBookmark } from "../api/bookmarksApi";
+import AnswerExplanationPanel from "../components/AnswerExplanationPanel";
 
 type Mode = "topic" | "random" | "multi-step";
 type Phase = "settings" | "playing";
@@ -209,12 +210,13 @@ function ChainCard({ question, result, onSubmit, timerSeconds = 0, onTimeUp }: C
       )}
 
       {result && (
-        <div className={`rounded-xl border p-5 ${result.correct ? "border-emerald-300 bg-emerald-50" : "border-rose-300 bg-rose-50"}`}>
-          <p className={`mb-2 font-semibold ${result.correct ? "text-emerald-700" : "text-rose-700"}`}>
-            {result.correct ? "Correct!" : "Incorrect"}
-          </p>
-          <p className="text-sm leading-relaxed text-slate-700">{result.explanation}</p>
-        </div>
+        <AnswerExplanationPanel
+          options={question.options}
+          correctOption={result.correct_option}
+          selectedOption={selected}
+          explanations={result.option_explanations}
+          summary={result.explanation}
+        />
       )}
     </div>
   );
@@ -971,16 +973,13 @@ export default function QuestionsPage() {
               </div>
 
               {attemptResult && (
-                <div className={`rounded-lg border px-4 py-3 ${
-                  attemptResult.correct
-                    ? "border-emerald-300 bg-emerald-50 text-emerald-900"
-                    : "border-rose-300 bg-rose-50 text-rose-900"
-                }`}>
-                  <p className="mb-1 text-sm font-semibold">
-                    {attemptResult.correct ? "Correct" : "Incorrect"}
-                  </p>
-                  <p className="text-sm leading-6">{attemptResult.explanation}</p>
-                </div>
+                <AnswerExplanationPanel
+                  options={currentQuestion.options}
+                  correctOption={attemptResult.correct_option}
+                  selectedOption={selectedOption}
+                  explanations={attemptResult.option_explanations}
+                  summary={attemptResult.explanation}
+                />
               )}
 
               {/* Session complete */}

@@ -9,6 +9,7 @@ from app.core.auth import get_current_user_id
 from app.schemas.case import CaseListItem, CaseOut
 from app.schemas.case_question import CaseQuestionOut, CaseAttemptCreate, CaseAttemptResult
 from app.db.deps import mongo_db
+from app.utils.answer_explanations import get_option_explanations
 
 router = APIRouter(
     prefix="/cases",
@@ -227,4 +228,5 @@ def attempt_case_question(
         "correct": is_correct,
         "correct_option": doc["correct_option"],
         "explanation": doc["explanation"],
+        "option_explanations": get_option_explanations(doc),
     }

@@ -12,6 +12,7 @@ import { addBookmark, removeBookmark, getBookmarks } from "../api/bookmarksApi";
 import { getChapterById, type Chapter } from "../api/chaptersApi";
 import { getSectionById, type SectionResponse } from "../api/sectionApi";
 import DOMPurify from "dompurify";
+import AnswerExplanationPanel from "../components/AnswerExplanationPanel";
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -100,18 +101,14 @@ function QuestionCard({ q, state, locked, onSelect, onSubmit }: QuestionCardProp
       )}
 
       {state.result && (
-        <div
-          className={`rounded-lg border-l-4 p-3 text-xs leading-relaxed ${
-            state.result.correct
-              ? "border-emerald-500 bg-emerald-50 text-emerald-800"
-              : "border-rose-500 bg-rose-50 text-rose-800"
-          }`}
-        >
-          <p className="font-semibold mb-1">
-            {state.result.correct ? "Correct!" : "Incorrect"}
-          </p>
-          <p>{state.result.explanation}</p>
-        </div>
+        <AnswerExplanationPanel
+          options={q.options}
+          correctOption={state.result.correct_option}
+          selectedOption={state.selected}
+          explanations={state.result.option_explanations}
+          summary={state.result.explanation}
+          compact
+        />
       )}
     </div>
   );
@@ -451,4 +448,3 @@ export default function CaseDetailPage() {
     </div>
   );
 }
-

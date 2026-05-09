@@ -46,6 +46,7 @@ class StageAAnswerResult(BaseModel):
     correct: bool
     correct_option: int
     explanation: str
+    option_explanations: List[str]
     answered_count: int
     correct_count: int
     remaining_seconds: int

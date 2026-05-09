@@ -24,6 +24,7 @@ from app.schemas.exam import (
 )
 from app.services.question_attempt_service import record_attempt
 from app.db.deps import mongo_db, redis_client
+from app.utils.answer_explanations import get_option_explanations
 
 
 router = APIRouter(prefix="/questions", tags=["questions"])
@@ -57,6 +58,7 @@ def _doc_to_question_full(doc: dict) -> dict:
         **_doc_to_question_out(doc),
         "correct_option": doc["correct_option"],
         "explanation": doc["explanation"],
+        "option_explanations": get_option_explanations(doc),
     }
 
 
@@ -262,6 +264,7 @@ def _build_stage_a_items(db: Database, user_id: str, scope: dict) -> tuple[list[
                 "difficulty": doc["difficulty"],
                 "correct_option": doc["correct_option"],
                 "explanation": doc["explanation"],
+                "option_explanations": get_option_explanations(doc),
                 "selected_option": None,
                 "is_correct": None,
                 "answered_at": None,
@@ -322,6 +325,7 @@ def _build_review_items(session_doc: dict) -> list[dict]:
                 "is_correct": item.get("is_correct"),
                 "correct_option": item.get("correct_option"),
                 "explanation": item.get("explanation"),
+                "option_explanations": get_option_explanations(item),
             }
         )
     return out
@@ -799,6 +803,7 @@ def answer_stage_a_exam_item(
         "correct": is_correct,
         "correct_option": correct_option,
         "explanation": item["explanation"],
+        "option_explanations": get_option_explanations(item),
         "answered_count": scored["answered_count"],
         "correct_count": scored["correct_count"],
         "remaining_seconds": max(0, remaining),
@@ -970,4 +975,5 @@ def attempt_question(
         "correct": attempt_db.is_correct,
         "correct_option": question["correct_option"],
         "explanation": question["explanation"],
+        "option_explanations": get_option_explanations(question),
     }

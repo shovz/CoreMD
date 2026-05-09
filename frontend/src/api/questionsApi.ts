@@ -14,6 +14,7 @@ export interface QuestionOut {
 export interface QuestionFull extends QuestionOut {
   correct_option: number;
   explanation: string;
+  option_explanations: string[];
 }
 
 export interface QuestionsFilter {
@@ -59,6 +60,7 @@ export interface AttemptResult {
   correct: boolean;
   correct_option: number;
   explanation: string;
+  option_explanations: string[];
 }
 
 export const submitAttempt = (questionId: string, selectedOption: number) => {
@@ -111,6 +113,7 @@ export interface StageAAnswerResult {
   correct: boolean;
   correct_option: number;
   explanation: string;
+  option_explanations: string[];
   answered_count: number;
   correct_count: number;
   remaining_seconds: number;
@@ -151,6 +154,7 @@ export interface StageAReport {
     is_correct: boolean | null;
     correct_option: number;
     explanation: string;
+    option_explanations: string[];
   }>;
 }
 

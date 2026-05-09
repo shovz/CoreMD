@@ -34,6 +34,12 @@ TEST_CASE_QUESTION = {
     "options": ["GERD", "Inferior STEMI", "Aortic stenosis", "Pneumonia"],
     "correct_option": 1,
     "explanation": "The ECG and elevated troponin support inferior STEMI.",
+    "option_explanations": [
+        "GERD does not explain the ECG and troponin findings.",
+        "Inferior STEMI is supported by inferior ST elevation and troponin rise.",
+        "Aortic stenosis does not cause this acute ECG pattern.",
+        "Pneumonia does not explain inferior ST elevations.",
+    ],
 }
 
 
@@ -99,4 +105,5 @@ class TestCaseQuestions:
         assert resp.status_code == 200
         assert resp.json()["correct"] is True
         assert resp.json()["correct_option"] == TEST_CASE_QUESTION["correct_option"]
+        assert len(resp.json()["option_explanations"]) == 4
 

@@ -86,6 +86,12 @@ def normalize_question(raw: dict[str, Any]) -> dict[str, Any]:
     options_raw = raw.get("options", [])
     options = [str(opt).strip() for opt in options_raw] if isinstance(options_raw, list) else []
     explanation = str(raw.get("explanation", "")).strip()
+    option_explanations_raw = raw.get("option_explanations", [])
+    option_explanations = (
+        [str(item).strip() for item in option_explanations_raw]
+        if isinstance(option_explanations_raw, list)
+        else []
+    )
     topic = str(raw.get("topic", "")).strip() or "Internal Medicine"
     chapter_ref = str(raw.get("chapter_ref", "")).strip()
     difficulty = str(raw.get("difficulty", "")).strip().lower()
@@ -104,6 +110,8 @@ def normalize_question(raw: dict[str, Any]) -> dict[str, Any]:
         raise ValueError("correct_option must be in range [0, 3]")
     if not explanation:
         raise ValueError("explanation is empty")
+    if len(option_explanations) != 4 or not all(option_explanations):
+        raise ValueError("option_explanations must contain exactly 4 non-empty items")
     if not chapter_ref:
         raise ValueError("chapter_ref is empty")
 
@@ -112,6 +120,7 @@ def normalize_question(raw: dict[str, Any]) -> dict[str, Any]:
         "options": options,
         "correct_option": correct_option,
         "explanation": explanation,
+        "option_explanations": option_explanations,
         "topic": topic,
         "chapter_ref": chapter_ref,
         "difficulty": difficulty,
@@ -141,6 +150,7 @@ def build_prompt(chunks: list[dict[str, Any]], count: int) -> str:
         '  "options": ["string","string","string","string"],\n'
         '  "correct_option": 0,\n'
         '  "explanation": "string",\n'
+        '  "option_explanations": ["why option A is correct/incorrect","why option B is correct/incorrect","why option C is correct/incorrect","why option D is correct/incorrect"],\n'
         '  "topic": "string",\n'
         '  "chapter_ref": "pXX_cYYY",\n'
         '  "difficulty": "easy|medium|hard"\n'
@@ -150,6 +160,7 @@ def build_prompt(chunks: list[dict[str, Any]], count: int) -> str:
         "- Avoid trivial wording; test reasoning.\n"
         "- Keep stem concise (1-3 sentences).\n"
         "- Ensure explanation explicitly references the excerpted concept.\n"
+        "- option_explanations must align with options by index and explain why each choice is correct or incorrect.\n"
         "- chapter_ref MUST match one of the provided chapter_ref values.\n\n"
         "HARRISON EXCERPTS:\n"
         f"{context}\n"
@@ -265,4 +276,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

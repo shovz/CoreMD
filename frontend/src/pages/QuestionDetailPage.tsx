@@ -8,6 +8,7 @@ import {
   type QuestionFull,
   type AttemptResult,
 } from "../api/questionsApi";
+import AnswerExplanationPanel from "../components/AnswerExplanationPanel";
 
 interface LocationState {
   questionIds?: string[];
@@ -120,24 +121,13 @@ function QuestionCard({ question, result, onResult, onError }: QuestionCardProps
       )}
 
       {result && (
-        <div
-          className={`rounded-xl border-l-4 p-5 ${
-            result.correct
-              ? "border-emerald-500 bg-emerald-50"
-              : "border-rose-500 bg-rose-50"
-          }`}
-        >
-          <p
-            className={`mb-2 font-semibold ${
-              result.correct ? "text-emerald-700" : "text-rose-700"
-            }`}
-          >
-            {result.correct ? "Correct!" : "Incorrect"}
-          </p>
-          <p className="text-sm leading-relaxed text-slate-700">
-            {result.explanation}
-          </p>
-        </div>
+        <AnswerExplanationPanel
+          options={question.options}
+          correctOption={result.correct_option}
+          selectedOption={selected}
+          explanations={result.option_explanations}
+          summary={result.explanation}
+        />
       )}
     </div>
   );

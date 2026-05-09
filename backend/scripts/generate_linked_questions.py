@@ -47,6 +47,7 @@ class GeneratedQuestion(TypedDict):
     options: list[str]
     correct_option: int
     explanation: str
+    option_explanations: list[str]
     difficulty: str
 
 
@@ -115,11 +116,17 @@ def extract_json_object(text: str) -> dict[str, Any]:
 def normalize_generated_question(raw: dict[str, Any], fallback_difficulty: str) -> GeneratedQuestion:
     stem = str(raw.get("stem", "")).strip()
     explanation = str(raw.get("explanation", "")).strip()
+    option_explanations_raw = raw.get("option_explanations")
 
     options_raw = raw.get("options")
     options: list[str] = []
     if isinstance(options_raw, list):
         options = [str(item).strip() for item in options_raw]
+    option_explanations = (
+        [str(item).strip() for item in option_explanations_raw]
+        if isinstance(option_explanations_raw, list)
+        else []
+    )
 
     correct_option_raw = raw.get("correct_option")
     try:
@@ -137,6 +144,8 @@ def normalize_generated_question(raw: dict[str, Any], fallback_difficulty: str) 
         raise ValueError("generated stem is empty")
     if not explanation:
         raise ValueError("generated explanation is empty")
+    if len(option_explanations) != 4 or not all(option_explanations):
+        raise ValueError("generated option_explanations must contain exactly 4 non-empty items")
     if correct_option < 0 or correct_option > 3:
         raise ValueError("correct_option must be in range [0, 3]")
 
@@ -145,6 +154,7 @@ def normalize_generated_question(raw: dict[str, Any], fallback_difficulty: str) 
         "options": options,
         "correct_option": correct_option,
         "explanation": explanation,
+        "option_explanations": option_explanations,
         "difficulty": difficulty,
     }
 
@@ -171,6 +181,7 @@ def generate_followups_for_parent(
         '      "options": ["string", "string", "string", "string"],\n'
         '      "correct_option": 0,\n'
         '      "explanation": "string",\n'
+        '      "option_explanations": ["why option A is correct/incorrect", "why option B is correct/incorrect", "why option C is correct/incorrect", "why option D is correct/incorrect"],\n'
         '      "difficulty": "easy|medium|hard"\n'
         "    }\n"
         "  ]\n"
@@ -178,6 +189,7 @@ def generate_followups_for_parent(
         f"Generate exactly {count} followups.\n"
         "Each follow-up must be clinically related to the parent question, but not a rephrase.\n"
         "Keep stems concise (1-2 sentences). Keep explanations short and educational.\n"
+        "option_explanations must align with options by index and explain every choice.\n"
         "Do not include markdown or code fences.\n\n"
         "Parent question:\n"
         f"stem: {parent_stem}\n"
@@ -370,6 +382,7 @@ def main() -> None:
                     "options": generated["options"],
                     "correct_option": generated["correct_option"],
                     "explanation": generated["explanation"],
+                    "option_explanations": generated["option_explanations"],
                     "topic": parent.get("topic"),
                     "chapter_ref": parent.get("chapter_ref"),
                     "difficulty": generated["difficulty"],

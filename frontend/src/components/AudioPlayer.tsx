@@ -5,6 +5,7 @@ interface AudioPlayerProps {
   label?: string;
   autoPlay?: boolean;
   className?: string;
+  onEnded?: () => void;
 }
 
 function formatTime(seconds: number): string {
@@ -13,7 +14,7 @@ function formatTime(seconds: number): string {
   return `${m}:${s.toString().padStart(2, "0")}`;
 }
 
-export function AudioPlayer({ src, label, autoPlay = false, className = "" }: AudioPlayerProps) {
+export function AudioPlayer({ src, label, autoPlay = false, className = "", onEnded }: AudioPlayerProps) {
   const audioRef = useRef<HTMLAudioElement>(null);
   const [playing, setPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -114,7 +115,7 @@ export function AudioPlayer({ src, label, autoPlay = false, className = "" }: Au
         onTimeUpdate={() => setCurrentTime(audioRef.current?.currentTime ?? 0)}
         onPlay={() => setPlaying(true)}
         onPause={() => setPlaying(false)}
-        onEnded={() => setPlaying(false)}
+        onEnded={() => { setPlaying(false); onEnded?.(); }}
       />
     </div>
   );
