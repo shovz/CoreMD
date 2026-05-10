@@ -294,6 +294,7 @@ def start_stage_b_session(
         "voice": body.voice,
         "case_count": body.case_count,
         "duration_minutes": body.duration_minutes,
+        "topics": topics,
         "started_at": now,
         "expires_at": now + timedelta(minutes=body.duration_minutes),
         "finalized_at": None,
@@ -625,8 +626,17 @@ def list_sessions(
         sort=[("started_at", -1)],
         limit=10,
     )
-    return [
-        {
+    result = []
+    for d in docs:
+        all_questions = [
+            q
+            for case in d.get("cases", [])
+            for stage in case.get("stages", [])
+            for q in stage.get("questions", [])
+        ]
+        scored = [q["score"] for q in all_questions if q.get("score") is not None]
+        avg_score = round(sum(scored) / len(scored), 2) if scored else None
+        result.append({
             "session_id": d["session_id"],
             "status": d["status"],
             "difficulty": d["difficulty"],
@@ -635,9 +645,10 @@ def list_sessions(
             "voice": d["voice"],
             "started_at": d["started_at"],
             "finalized_at": d.get("finalized_at"),
-        }
-        for d in docs
-    ]
+            "topics": d.get("topics", []),
+            "avg_score": avg_score,
+        })
+    return result
 
 
 @router.post("/sessions/{session_id}/retake", response_model=StageBSessionOut)
@@ -681,6 +692,7 @@ def retake_session(
         "voice": old["voice"],
         "case_count": old["case_count"],
         "duration_minutes": duration,
+        "topics": old.get("topics", []),
         "started_at": now,
         "expires_at": now + timedelta(minutes=duration),
         "finalized_at": None,
@@ -691,3 +703,16 @@ def retake_session(
     }
     db["stage_b_sessions"].insert_one(new_doc)
     return _session_to_out(new_doc)
+
+
+@router.delete("/sessions/{session_id}", status_code=204)
+def delete_session(
+    session_id: str,
+    current_user: str = Depends(get_current_user_id),
+    db: Database = Depends(mongo_db),
+):
+    result = db["stage_b_sessions"].delete_one(
+        {"session_id": session_id, "user_id": ObjectId(current_user), "status": {"$in": ["finalized", "expired"]}}
+    )
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Session not found")

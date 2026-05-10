@@ -113,14 +113,14 @@ test.describe("Exam flow", () => {
   });
 
   test("settings page shows exam controls and preview pool size", async ({ page }) => {
-    await page.goto("/exams");
+    await page.goto("/exams/stage-a");
     await expect(page.getByRole("button", { name: "Start Stage A Exam" })).toBeVisible({ timeout: 5000 });
     await expect(page.getByRole("heading", { name: "Exams" })).toBeVisible();
     await expect(page.getByText(/Eligible pool/)).toBeVisible({ timeout: 3000 });
   });
 
   test("starting exam transitions to running phase with first question visible", async ({ page }) => {
-    await page.goto("/exams");
+    await page.goto("/exams/stage-a");
     await page.getByRole("button", { name: "Start Stage A Exam" }).click();
 
     await expect(page.getByRole("heading", { name: "Stage A Exam" })).toBeVisible({ timeout: 5000 });
@@ -129,7 +129,7 @@ test.describe("Exam flow", () => {
   });
 
   test("selecting and submitting answer updates answered counter", async ({ page }) => {
-    await page.goto("/exams");
+    await page.goto("/exams/stage-a");
     await page.getByRole("button", { name: "Start Stage A Exam" }).click();
     await page.waitForSelector("text=A 65-year-old presents", { state: "visible" });
 
@@ -140,7 +140,7 @@ test.describe("Exam flow", () => {
   });
 
   test("finalizing exam without answering shows score report", async ({ page }) => {
-    await page.goto("/exams");
+    await page.goto("/exams/stage-a");
     await page.getByRole("button", { name: "Start Stage A Exam" }).click();
     await page.waitForSelector("text=A 65-year-old presents", { state: "visible" });
 
@@ -151,7 +151,7 @@ test.describe("Exam flow", () => {
   });
 
   test("report shows explanation and Build Another Exam returns to settings", async ({ page }) => {
-    await page.goto("/exams");
+    await page.goto("/exams/stage-a");
     await page.getByRole("button", { name: "Start Stage A Exam" }).click();
     await page.waitForSelector("text=A 65-year-old presents", { state: "visible" });
 

@@ -148,6 +148,8 @@ export interface StageBSessionSummary {
   voice: string;
   started_at: string;
   finalized_at: string | null;
+  topics: string[];
+  avg_score: number | null;
 }
 
 // ---- Session management ---------------------------------------------------
@@ -242,3 +244,6 @@ export const listStageBSessions = () =>
 
 export const retakeStageBSession = (sessionId: string) =>
   api.post<StageBSession>(`/stage-b/sessions/${sessionId}/retake`);
+
+export const deleteStageBSession = (sessionId: string) =>
+  api.delete(`/stage-b/sessions/${sessionId}`);

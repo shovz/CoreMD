@@ -148,8 +148,10 @@ backend/static/images/*.jpg
 GEMINI.md
 
 docs/generated questions/*
-docs/scripts/
 docs/test coverage
+
+# Windows Bash crash dumps
+bash.exe.stackdump
 
 graphify-out/*
 

@@ -157,6 +157,8 @@ class StageBSessionSummary(BaseModel):
     voice: str
     started_at: datetime
     finalized_at: Optional[datetime] = None
+    topics: List[str] = Field(default_factory=list)
+    avg_score: Optional[float] = None
 
     class Config:
         orm_mode = True

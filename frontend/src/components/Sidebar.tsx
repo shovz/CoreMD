@@ -68,21 +68,13 @@ function ExamsIcon() {
   );
 }
 
-function MicrophoneIcon() {
-  return (
-    <svg className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z" />
-      <path strokeLinecap="round" strokeLinejoin="round" d="M19 10v2a7 7 0 01-14 0v-2M12 19v4M8 23h8" />
-    </svg>
-  );
-}
 
 const navItems = [
   { to: "/dashboard", label: "Dashboard", icon: <DashboardIcon />, end: true },
   { to: "/chapters", label: "Chapters", icon: <ChaptersIcon />, end: false },
   { to: "/questions", label: "Question Bank", icon: <QuestionsIcon />, end: false },
-  { to: "/exams", label: "Exams", icon: <ExamsIcon />, end: false },
   { to: "/cases", label: "Cases", icon: <CasesIcon />, end: false },
+  { to: "/exams", label: "Exams", icon: <ExamsIcon />, end: false },
   { to: "/history", label: "History", icon: <HistoryIcon />, end: false },
   { to: "/bookmarks", label: "Bookmarks", icon: <BookmarksIcon />, end: false },
   { to: "/notes", label: "Notes", icon: <NotesIcon />, end: false },

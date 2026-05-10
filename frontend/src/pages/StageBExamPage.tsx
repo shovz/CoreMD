@@ -6,6 +6,7 @@ import { getQuestionTopics } from "../api/questionsApi";
 import {
   advanceStage as apiAdvanceStage,
   chatWithExaminer,
+  deleteStageBSession,
   fetchStageBTts,
   finalizeStageBSession,
   getActiveStageBSession,
@@ -917,6 +918,7 @@ export default function StageBExamPage() {
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [retakingId, setRetakingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   // Same pattern as ExamsPage.tsx
   useEffect(() => {
@@ -1016,6 +1018,16 @@ export default function StageBExamPage() {
     }
   };
 
+  const handleDeleteSession = async (sessionId: string) => {
+    setDeletingId(sessionId);
+    try {
+      await deleteStageBSession(sessionId);
+      setPastSessions(prev => prev.filter(s => s.session_id !== sessionId));
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
   if (phase === "running" && session) {
     return (
       <RunningPhase
@@ -1088,25 +1100,55 @@ export default function StageBExamPage() {
           <div className="px-4 py-2.5 border-b bg-gray-50">
             <p className="text-sm font-semibold text-gray-700">Past Exams</p>
           </div>
-          <div className="divide-y">
+          <div className="divide-y max-h-72 overflow-y-auto">
             {pastSessions.map(s => (
               <div key={s.session_id} className="flex items-center justify-between px-4 py-3 gap-4">
-                <div>
+                <div className="min-w-0">
                   <p className="text-sm font-medium text-gray-800 capitalize">
                     {s.difficulty} · {s.case_count} case{s.case_count !== 1 ? "s" : ""} · {s.duration_minutes} min
+                    {s.avg_score !== null && (
+                      <span className={`ml-2 inline-block px-1.5 py-0.5 rounded text-xs font-bold ${
+                        s.avg_score >= 7 ? "bg-green-100 text-green-700" :
+                        s.avg_score >= 4 ? "bg-amber-100 text-amber-700" :
+                        "bg-red-100 text-red-700"
+                      }`}>
+                        {s.avg_score.toFixed(1)}/10
+                      </span>
+                    )}
                   </p>
-                  <p className="text-xs text-gray-500">
+                  {s.topics.length > 0 && (
+                    <p className="text-xs text-indigo-600 truncate mt-0.5">
+                      {s.topics.join(", ")}
+                    </p>
+                  )}
+                  <p className="text-xs text-gray-500 mt-0.5">
                     {new Date(s.started_at).toLocaleDateString()}
                     {s.status === "expired" && " · expired"}
                   </p>
                 </div>
-                <button
-                  onClick={() => handleRetakeFromSettings(s.session_id)}
-                  disabled={retakingId === s.session_id}
-                  className="shrink-0 px-3 py-1.5 bg-indigo-600 text-white text-sm rounded-md hover:bg-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                >
-                  {retakingId === s.session_id ? "Starting…" : "Retake"}
-                </button>
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    onClick={() => handleRetakeFromSettings(s.session_id)}
+                    disabled={retakingId === s.session_id || deletingId === s.session_id}
+                    className="px-3 py-1.5 bg-indigo-600 text-white text-sm rounded-md hover:bg-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  >
+                    {retakingId === s.session_id ? "Starting…" : "Retake"}
+                  </button>
+                  <button
+                    onClick={() => handleDeleteSession(s.session_id)}
+                    disabled={deletingId === s.session_id || retakingId === s.session_id}
+                    className="p-1.5 text-gray-400 hover:text-red-500 disabled:opacity-40 disabled:cursor-not-allowed transition-colors rounded"
+                    title="Delete exam"
+                  >
+                    {deletingId === s.session_id ? (
+                      <span className="h-4 w-4 animate-spin rounded-full border-2 border-red-400 border-t-transparent inline-block" />
+                    ) : (
+                      <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
+                        <path fillRule="evenodd" d="M8.75 1A2.75 2.75 0 006 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 10.23 1.482l.149-.022.841 10.518A2.75 2.75 0 007.596 19h4.807a2.75 2.75 0 002.742-2.53l.841-10.52.149.023a.75.75 0 00.23-1.482A41.03 41.03 0 0014 4.193V3.75A2.75 2.75 0 0011.25 1h-2.5zM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4zM8.58 7.72a.75.75 0 00-1.5.06l.3 7.5a.75.75 0 101.5-.06l-.3-7.5zm4.34.06a.75.75 0 10-1.5-.06l-.3 7.5a.75.75 0 101.5.06l.3-7.5z" clipRule="evenodd" />
+                      </svg>
+                    )}
+                  </button>
+                </div>
               </div>
             ))}
           </div>
